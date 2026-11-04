@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
@@ -133,6 +134,44 @@ class TestMaterials(unittest.TestCase):
         raw = "apple\t苹果\n".encode("gb18030")
         _, words = materials.parse_material("x.txt", raw)
         self.assertEqual(words[0]["cn"], "苹果")
+
+    def test_docx_upload(self):
+        """Word 文档：段落和表格都能解析。"""
+        import tempfile
+        import zipfile
+        W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+        body = (
+            "<w:p><w:r><w:t>Unit 1</w:t></w:r></w:p>"
+            "<w:p><w:r><w:t>apple\t苹果</w:t></w:r></w:p>"
+            "<w:tbl><w:tr>"
+            "<w:tc><w:p><w:r><w:t>banana</w:t></w:r></w:p></w:tc>"
+            "<w:tc><w:p><w:r><w:t>香蕉</w:t></w:r></w:p></w:tc>"
+            "</w:tr></w:tbl>"
+        )
+        doc = (f'<?xml version="1.0" encoding="UTF-8"?>'
+               f"<w:document {W}><w:body>{body}</w:body></w:document>")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("word/document.xml", doc)
+        fmt, words = materials.parse_material("x.docx", buf.getvalue())
+        self.assertEqual(fmt, "docx")
+        self.assertEqual(len(words), 2)
+        self.assertEqual(words[0]["en"], "apple")
+        self.assertEqual(words[0]["cn"], "苹果")
+        self.assertEqual(words[0]["unit"], "Unit 1")
+        self.assertEqual(words[1]["en"], "banana")
+        self.assertEqual(words[1]["cn"], "香蕉")
+
+    def test_legacy_doc_rejected_with_hint(self):
+        """老式 .doc 要明确提示另存为 .docx。"""
+        raw = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 64
+        with self.assertRaises(materials.ParseError) as ctx:
+            materials.parse_material("x.doc", raw)
+        self.assertIn("docx", str(ctx.exception).lower())
+
+    def test_pdf_rejects_non_pdf(self):
+        with self.assertRaises(materials.ParseError):
+            materials.parse_material("x.pdf", b"not a pdf at all")
 
     def test_empty_raises(self):
         with self.assertRaises(materials.ParseError):

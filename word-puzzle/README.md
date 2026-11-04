@@ -76,10 +76,15 @@ python3 -m server.app --host 0.0.0.0 --port 8000
 
 ## 四、上传资料
 
-题库工作台点「📁 上传题库」选文件即可。支持三种格式：
+题库工作台点「📁 上传题库」选文件即可。**不需要调用大模型**，全部是本地规则解析。
+
+### 支持的格式
 
 | 格式 | 写法 | 识别方式 |
 | --- | --- | --- |
+| **Word** `.docx` | 段落或表格都行；`Unit 3` 单独一行算单元标题 | Python 标准库直接解 zip + 解析 XML |
+| **PDF**（文字版） | 文字版 PDF | `pdftotext`（poppler），没装则用内置解析器 |
+| **PDF**（图片/扫描版） | 扫描件、截图版 PDF | `pdftoppm` + `tesseract` OCR |
 | **TXT** | 每行 `english<TAB>中文`；单独一行 `Unit 3` 会被当作单元标题 | 自动 |
 | **CSV / TSV** | 有表头就按表头取（`unit, english, chinese, ipa`）；没表头就按「英文,中文」或「单元,英文,中文」猜 | 自动 |
 | **JSON** | `[{"english":"apple","chinese":"苹果"}]`，或 `{"units":[{"unit":"Unit 1","words":[...]}]}` | 自动 |
@@ -87,7 +92,71 @@ python3 -m server.app --host 0.0.0.0 --port 8000
 字段别名都认：`en / eng / english / word`、`cn / zh / chinese / meaning / translation`、
 `unit / section / chapter`、`ipa / phonetic`、`pos / partOfSpeech`。
 
+### Word / PDF 的几个注意点
+
+| 情况 | 怎么办 |
+| --- | --- |
+| `.doc`（老格式） | **不支持**，请在 Word 里「另存为 .docx」再传 |
+| `.pdf` 是扫描件 / 图片 | 会自动走 OCR（需要装 `tesseract-ocr`） |
+| `.pdf` 是两栏排版 | 内置解析器会按坐标还原列；`pdftotext -layout` 也保留列 |
+| 中文释义 + 英文混排一行 | 支持，一行里能拆出多个词条（多列表格） |
+| 音标列 | 认 `/.../` 和 `[...]` 两种写法；没写就自动补 |
+
+**提取流程**：`Word/PDF → 纯文本行 → 词条解析 → 音标补全`。
+前两步分别是 `server/docx.py` / `server/pdf.py`，第三步是 `server/wordlist.py`
+（TXT/CSV/JSON 用的是同一个解析器），最后 `server/ipa.py` 自动补音标。
+
+### 想装 OCR 和更好的 PDF 抽取
+
+```bash
+sudo apt install poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim
+```
+
+不装也能用：内置的 PDF 解析器（纯 Python）能读文字版 PDF，只是复杂排版准确率略低；
+扫描件必须有 OCR 才认得出来。
+
 上传后这份资料就能在「题源」里选中，用来生成题库。
+
+---
+
+## 四·五、发音：**美式女声**
+
+站里所有单词的音标和发音都固定为**美式英语**，不会出现英式读法。
+
+### 音标
+
+内置词库 **4791 / 4791 个词条全部带美式音标**（覆盖率 100%）。
+
+数据源是 **CMU Pronouncing Dictionary**（`cmusphinx/cmudict`）——它记录的是**美国发音**，
+由 ARPAbet 音素转换成本项目用的 IPA 格式。英式拼写会自动转成美式再查
+（`colour → color`、`organise → organize`、`centre → center`），
+教材里 CMUdict 没收录的专有名词（`Mount Huangshan`、`La Tomatina` 等）用一张手工表补齐。
+
+```bash
+# 重新生成音标表（需要先下载 cmudict）
+python3 tools/build_ipa_table.py --cmudict /path/to/cmudict.dict
+```
+
+### 发音
+
+| 阶段 | 用什么 | 说明 |
+| --- | --- | --- |
+| 1（首选） | **服务器端 espeak-ng**，`-v en-us+f3` | `en-us` = 美式英语，`+f3` = 该音色的**女声**变体。跟学生电脑装了什么语音包无关，**全班听到的都一样** |
+| 2（兜底） | 浏览器自带 TTS | 前端只挑 `en-US` 且**名字是女声**的音色（`Samantha` / `Zira` / `Aria` / `Jenny` / `Victoria` …），挑不到就退而求其次用任意 `en-US` 音色 |
+
+> **音色性别是实测过的**：`en-us+f3` 的基频 **208 Hz**，`en-us` 基频只有 100 Hz，
+> `+f1/+f5` 分别是 178 / 202 Hz；`+m1/+m3` 是 93 / 105 Hz（男声）。
+> 所以 `+fN` 系列确定是女声，`+mN` 是男声。
+
+服务器端渲染出来的音频缓存在 `var/audio/`（同一词只生成一次），
+通过 `GET /api/audio/<word>` 取。离线测试页也会内嵌音频，双击播放依然有声音。
+
+想换音色：改环境变量 `WP_TTS_VOICE`（只接受 `en-us` 和 `en-us+f1..+f5`，
+填错会自动退回 `en-us+f3`，**不可能读成英式或中文**）。
+
+```bash
+sudo apt install espeak-ng     # 想让服务器端发音更稳（有它就一定会走它）
+```
 
 ---
 
@@ -172,8 +241,12 @@ SQLite（Python 标准库自带，**免费、开源、零运维**），默认在
 sudo ./deploy/install.sh
 ```
 
-脚本会：建 `wordpuzzle` 系统用户 → 代码放到 `/srv/word-puzzle` → 数据目录
-`/var/lib/word-puzzle` → 生成内置词库 → 装并启动 systemd 服务 → 装 nginx 站点配置。
+脚本会：装可选工具（poppler-utils / tesseract-ocr / espeak-ng）→ 建 `wordpuzzle` 系统用户
+→ 代码放到 `/srv/word-puzzle` → 数据目录 `/var/lib/word-puzzle` → 生成内置词库
+→ 装并启动 systemd 服务 → 装 nginx 站点配置。
+
+可选工具装不上（离线机器）也不影响网站运行，只是：
+PDF 走内置解析器、扫描件读不了、发音走浏览器自带 TTS。
 
 手动部署的话：
 
@@ -206,7 +279,7 @@ nginx 做的事：**静态文件直接托管**，`/api/` 反代给后端（默�
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/api/health` | 健康检查 |
-| GET | `/api/meta` | 层级元数据 + 内置词库统计 |
+| GET | `/api/meta` | 层级元数据 + 内置词库统计 + 音标/OCR/语音能力自检 |
 | GET | `/api/terms?level1=&level2=` | 某年级的学期选项 |
 | GET | `/api/units?level1=&level2=&level3=` | 某学期的单元列表 |
 | GET | `/api/materials` | 资料列表 |
@@ -222,6 +295,7 @@ nginx 做的事：**静态文件直接托管**，`/api/` 反代给后端（默�
 | GET | `/api/scores?limit=&bank_id=` | 成绩列表 + 统计 |
 | POST | `/api/scores` | 写成绩 |
 | GET | `/api/stats` | 成绩统计 |
+| GET | `/api/audio/<word>` | 单词发音（WAV，美式女声 espeak-ng 渲染） |
 
 ---
 
@@ -237,19 +311,26 @@ word-puzzle/
 │   └── systemd/word-puzzle.service
 ├── server/                       # 后端（纯标准库）
 │   ├── app.py  db.py  hierarchy.py  materials.py  bank.py  offline.py
+│   ├── ipa.py                    # 美式音标（CMUdict ARPAbet → IPA + 英式→美式 + 专名）
+│   ├── tts.py                   # 美式女声发音（espeak-ng en-us+f3 + 缓存）
+│   ├── docx.py                  # Word 解析（zipfile + ElementTree）
+│   ├── pdf.py                   # PDF 解析（pdftotext / 内置解析器 / OCR）
+│   └── wordlist.py              # 通用词表解析（TXT/CSV/JSON/DOCX/PDF 共用）
 ├── web/                          # 前端（静态，nginx 直接托管）
 │   ├── index.html  bank.html  play.html  stats.html
 │   ├── css/{app,game}.css
 │   └── js/{api,selector,game-core,game-ui,game-adapter-online,game-adapter-offline,page-*}.js
 ├── data/
 │   ├── pep_curriculum.json       # 内置词库（生成物，已入库）
-│   └── raw/                      # 原始词表（脚本输入）
+│   └── raw/                      # 原始词表（脚本输入）+ us_ipa.tsv 美式音标表
 ├── tools/
 │   ├── build_seed_data.py        # 生成内置词库
+│   ├── build_ipa_table.py        # 从 cmudict 生成美式音标表
 │   └── check_js.py               # JS 语法体检
 ├── tests/test_server.py          # 后端测试（38 个）
 ├── var/                          # 运行期数据（已 gitignore）
 │   ├── app.db
+│   ├── audio/                    # 缓存的发音 WAV
 │   └── offline/                  # 生成的离线测试页
 └── Unit1单词消消乐.html           # 原始单文件版（保留）
 ```
@@ -262,16 +343,18 @@ word-puzzle/
 | --- | --- | --- |
 | 初中 | [`henry1786580051-lang/english-test`](https://github.com/henry1786580051-lang/english-test) `src/data/grade*.json` | 整理自人教版课本，参考 [`TapXWorld/ChinaTextbook`](https://github.com/TapXWorld/ChinaTextbook) 的教材数据 |
 | 高中 | [`lfcypo/pep-senior-eng-vocab-json`](https://github.com/lfcypo/pep-senior-eng-vocab-json) `vocabulary.json` | 人教版普通高中英语新教材七册 |
-| 音标（可选） | [`skywind3000/ECDICT`](https://github.com/skywind3000/ECDICT) `ecdict.csv` | 覆盖 3984/4791 词条 |
+| 音标 | [`cmusphinx/cmudict`](https://github.com/cmusphinx/cmudict) | **美式发音**（CMUdict 记录的是美国读音），ARPAbet → IPA 转换 |
 
 原始文件都放在 `data/raw/` 里，`tools/build_seed_data.py` 只做整理、不联网。
-想补音标：
+音标表是生成物 `data/raw/us_ipa.tsv`（12.6 万条），已入库。
+
+想重新生成音标表：
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/skywind3000/ECDICT/master/ecdict.csv \
-     -o data/raw/ecdict.csv
-python3 tools/build_seed_data.py --ecdict data/raw/ecdict.csv
-rm data/raw/ecdict.csv      # 66MB，别入库
+curl -sSL https://raw.githubusercontent.com/cmusphinx/cmudict/master/cmudict.dict \
+     -o /tmp/cmudict.dict
+python3 tools/build_ipa_table.py --cmudict /tmp/cmudict.dict
+python3 tools/build_seed_data.py
 ```
 
 > 课本原始内容版权归**人民教育出版社**所有；本仓库仅用于个人学习。

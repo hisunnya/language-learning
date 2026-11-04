@@ -13,6 +13,8 @@ Environment=WP_HOST=127.0.0.1
 Environment=WP_PORT=8765
 Environment=WP_DB=/var/lib/word-puzzle/app.db
 Environment=WP_QUIET=1
+# 发音音色：espeak-ng 的美式女声。想换其它美式女声就改这里（en-us+f1..+f5）。
+Environment=WP_TTS_VOICE=en-us+f3
 ExecStart=/usr/bin/python3 -m server.app
 Restart=on-failure
 RestartSec=3

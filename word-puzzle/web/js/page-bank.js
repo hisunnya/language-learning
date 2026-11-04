@@ -22,9 +22,19 @@
     msg.textContent = '正在上传 ' + file.name + '…';
     API.upload('/api/materials', fd).then(function (res) {
       var s = res.summary || {};
+      var fmtName = { docx: 'Word', pdf: 'PDF', csv: 'CSV', tsv: 'TSV',
+                      txt: 'TXT', json: 'JSON', md: 'Markdown' };
       msg.className = 'msg on ok';
       msg.textContent = '上传成功：' + res.material.name + ' · ' +
-        s.word_count + ' 个词条 · ' + s.unit_count + ' 个单元';
+        s.word_count + ' 个词条 · ' + s.unit_count + ' 个单元' +
+        (fmtName[res.material.fmt] ? '（' + fmtName[res.material.fmt] + '）' : '');
+      if (s.units && s.units.length) {
+        var preview = s.units.slice(0, 3).map(function (u) {
+          return u.name + '(' + u.count + ')';
+        }).join('、');
+        msg.textContent += ' · ' + preview +
+          (s.units.length > 3 ? ' 等' : '');
+      }
       API.toast('上传成功');
       loadMaterials();
     }).catch(function (e) {
