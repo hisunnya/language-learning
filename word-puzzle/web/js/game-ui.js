@@ -336,7 +336,7 @@
           esc(L.name) + '（' + L.words.length + '）</button>';
       });
 
-      var html = '<h1>' + esc(cfg.title || '单词消消乐') + '</h1>' +
+      var html = '<h1>' + esc(cfg.title || '词境 Lexica') + '</h1>' +
         '<p>' + esc(cfg.subtitle || '') + '<br>共 ' + total + ' 个词条 · ' +
         g.levels.length + ' 关</p>' +
         '<div class="rule">' +

@@ -145,7 +145,7 @@ def build_offline_html(bank: dict, groups: list[dict],
         raise ValueError("题库里没有单词，无法生成离线测试页")
 
     total = sum(len(l["words"]) for l in levels)
-    title = bank.get("title") or "单词消消乐"
+    title = bank.get("title") or "词境 Lexica"
     subtitle = " · ".join([
         bank.get("level1", ""), bank.get("level2", ""),
         bank.get("level3", ""), bank.get("level4", ""),

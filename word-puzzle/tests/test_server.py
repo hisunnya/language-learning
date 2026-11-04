@@ -407,7 +407,7 @@ class TestHTTP(unittest.TestCase):
     def test_static_index(self):
         with urllib.request.urlopen(self.base + "/", timeout=10) as r:
             body = r.read().decode()
-        self.assertIn("单词消消乐", body)
+        self.assertIn("词境 Lexica", body)
 
 
 if __name__ == "__main__":

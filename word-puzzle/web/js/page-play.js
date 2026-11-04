@@ -1,5 +1,5 @@
 /* ============================================================
-   page-play.js —— 在线消消乐
+   page-play.js —— 在线游玩
    ------------------------------------------------------------
    从 /api/banks/{id} 取题库 → 交给 WPGame 运算 → WPGameUI 渲染
    成绩由 game-adapter-online.js 写回后端。
@@ -33,7 +33,7 @@
       });
       if (!levels.length) { fail('这个题库里没有单词'); return; }
 
-      document.title = bank.title + ' · 单词消消乐';
+      document.title = bank.title + ' · 词境 Lexica';
 
       var game = new WPGame.Game({ levels: levels });
       var ui = WPGameUI.init({

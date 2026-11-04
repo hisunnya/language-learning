@@ -1,5 +1,5 @@
 [Unit]
-Description=word-puzzle 后端（Python 标准库 + SQLite）
+Description=词境 Lexica 后端（Python 标准库 + SQLite）
 Documentation=file:/srv/word-puzzle/README.md
 After=network-online.target
 Wants=network-online.target
