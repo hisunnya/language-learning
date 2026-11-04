@@ -1,0 +1,2161 @@
+{
+  "grade": "八年级",
+  "volume": "上册",
+  "units": [
+    {
+      "unit": "Unit 1",
+      "words": [
+        {
+          "english": "ancient",
+          "chinese": "古代的；古老的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "camp",
+          "chinese": "露营；扎营 营地；帐篷",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "landscape",
+          "chinese": "风景；景色",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "strange",
+          "chinese": "奇怪的；陌生的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "vacation",
+          "chinese": "假期",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "fantastic",
+          "chinese": "极好的；吸引人的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "town",
+          "chinese": "城镇；商业区",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "breath",
+          "chinese": "呼吸的空气；一口气",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "take sb's breath away",
+          "chinese": "令人惊叹；让人叹绝",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "especially",
+          "chinese": "尤其；特别",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "steamed",
+          "chinese": "蒸的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "anywhere",
+          "chinese": "在任何地方；随便哪个地方",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "nothing",
+          "chinese": "没有什么；没有东西",
+          "partOfSpeech": "pron."
+        },
+        {
+          "english": "guide",
+          "chinese": "导游；指引 指南；向导",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "scenery",
+          "chinese": "风景；景色",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "silk",
+          "chinese": "丝绸；（蚕）丝",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "scarf",
+          "chinese": "围巾；披巾",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "ready",
+          "chinese": "准备好的；现成的",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "ready to do sth",
+          "chinese": "准备好做某事",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "somewhere",
+          "chinese": "在某处；到某处",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "myself",
+          "chinese": "我自己",
+          "partOfSpeech": "pron."
+        },
+        {
+          "english": "nothing but",
+          "chinese": "只有；仅仅",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "hotel",
+          "chinese": "旅馆；旅社",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "comfortable",
+          "chinese": "使人舒服的；舒适的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "bored",
+          "chinese": "厌倦的；烦闷的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "sky",
+          "chinese": "天空",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "towards",
+          "chinese": "向；朝",
+          "partOfSpeech": "prep."
+        },
+        {
+          "english": "rainbow",
+          "chinese": "彩虹",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "square",
+          "chinese": "广场；正方形 正方形的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "during",
+          "chinese": "在……期间",
+          "partOfSpeech": "prep."
+        },
+        {
+          "english": "victory",
+          "chinese": "胜利；成功",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "Russian",
+          "chinese": "俄罗斯的；俄罗斯人/语的 俄罗斯人；俄语",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "fight",
+          "chinese": "战斗；搏斗；斗争",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "against",
+          "chinese": "反对；与……相反；紧靠",
+          "partOfSpeech": "prep."
+        },
+        {
+          "english": "artwork",
+          "chinese": "艺术作品；插图",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "thousands of",
+          "chinese": "数以千计的；成千上万的",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "tear",
+          "chinese": "眼泪；泪水",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "remind",
+          "chinese": "提醒；使想起",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "peace",
+          "chinese": "和平",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "easily",
+          "chinese": "容易地；轻易地",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "Seattle",
+          "chinese": "西雅图（美国城市）",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Red Square",
+          "chinese": "红场",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Alexander Garden",
+          "chinese": "亚历山大花园",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Vincent",
+          "chinese": "文森特",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Moscow",
+          "chinese": "莫斯科",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "the Victory Museum",
+          "chinese": "胜利博物馆",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Nazi",
+          "chinese": "纳粹分子",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "World War II",
+          "chinese": "第二次世界大战",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Moscow Metro",
+          "chinese": "莫斯科地铁",
+          "partOfSpeech": "n."
+        }
+      ]
+    },
+    {
+      "unit": "Unit 2",
+      "words": [
+        {
+          "english": "forget",
+          "chinese": "忘记；遗忘",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "noon",
+          "chinese": "正午；中午",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sick",
+          "chinese": "恶心的；生病的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "metro",
+          "chinese": "地下铁道系统",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "station",
+          "chinese": "车站；局",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "palace",
+          "chinese": "王宫；宫殿",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "accordion",
+          "chinese": "手风琴",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "get together",
+          "chinese": "聚会；相聚",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "in the sun",
+          "chinese": "在阳光下",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "tower",
+          "chinese": "塔；塔楼",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "might",
+          "chinese": "可能；可以",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "budget",
+          "chinese": "预算 精打细算",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "passport",
+          "chinese": "护照",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "forgetful",
+          "chinese": "健忘的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "faraway",
+          "chinese": "遥远的；远远的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "regular",
+          "chinese": "平整的；有规律的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "countryside",
+          "chinese": "乡村；农村",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "turn around",
+          "chinese": "转身；翻转",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "surprised",
+          "chinese": "惊奇的；惊讶的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "deer",
+          "chinese": "鹿",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "probably",
+          "chinese": "很可能；大概",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "look for",
+          "chinese": "寻找",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pack",
+          "chinese": "打包；收拾",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pack up",
+          "chinese": "打包；收拾行李",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "bathroom",
+          "chinese": "浴室；洗手间",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sort",
+          "chinese": "把……分类；整理 种类",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "bedroom",
+          "chinese": "卧室",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "balcony",
+          "chinese": "阳台",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "turn blind",
+          "chinese": "变瞎；失明",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "invite",
+          "chinese": "邀请",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "living room",
+          "chinese": "客厅",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "arrival",
+          "chinese": "到达；抵达",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "yet",
+          "chinese": "还；仍然（用于否定句和疑问句）",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "add",
+          "chinese": "添加；增加",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "add sth to sth",
+          "chinese": "把某物加到某物中",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "go shopping",
+          "chinese": "去购物",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "biscuit",
+          "chinese": "饼干",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "borrow",
+          "chinese": "借；借用",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "Scotland",
+          "chinese": "苏格兰",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Guest-Greeting Pine",
+          "chinese": "迎客松",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Sea of Clouds",
+          "chinese": "云海",
+          "partOfSpeech": "n."
+        }
+      ]
+    },
+    {
+      "unit": "Unit 3",
+      "words": [
+        {
+          "english": "compare",
+          "chinese": "比较；对比",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "shy",
+          "chinese": "害羞的；羞怯的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "lazy",
+          "chinese": "懒惰的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "loud",
+          "chinese": "响亮地；大声地 大声的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "outgoing",
+          "chinese": "外向的",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "hard-working",
+          "chinese": "勤奋的；工作努力的",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "perform",
+          "chinese": "表演；执行",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "alone",
+          "chinese": "独自；单独 单独的",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "solve",
+          "chinese": "解决；解答",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "flute",
+          "chinese": "长笛",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "congratulation",
+          "chinese": "祝贺；恭喜",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "prize",
+          "chinese": "奖品；奖金",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "attend",
+          "chinese": "参加；出席",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "besides",
+          "chinese": "除……之外（还） 此外",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "spare",
+          "chinese": "空闲的；备用的 抽出（时间）",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "spare time",
+          "chinese": "空闲时间",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pleasure",
+          "chinese": "乐事；荣誉；高兴",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "have sth in common",
+          "chinese": "有共同之处",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "appearance",
+          "chinese": "外表；外貌",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "personality",
+          "chinese": "性格；品质",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "serious",
+          "chinese": "严肃的；严重的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "strength",
+          "chinese": "优势；力量；长处",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "slim",
+          "chinese": "苗条的；薄的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "fact",
+          "chinese": "事实；现实",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "population",
+          "chinese": "人口",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "average",
+          "chinese": "平均的 平均数",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "rainfall",
+          "chinese": "降雨量",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pleasant",
+          "chinese": "令人愉快的；友好的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "difference",
+          "chinese": "差异；不同",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "alike",
+          "chinese": "相似的 相似地",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "mirror",
+          "chinese": "镜子",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "interest",
+          "chinese": "业余爱好；兴趣 使感兴趣",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "novel",
+          "chinese": "小说",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sense",
+          "chinese": "感觉；观念",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "humour",
+          "chinese": "幽默；诙谐",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sense of humour",
+          "chinese": "幽默感",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "thanks to",
+          "chinese": "由于；因为",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "opinion",
+          "chinese": "看法；意见",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "make a mistake",
+          "chinese": "犯错误",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "less",
+          "chinese": "较少；更少",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "less than",
+          "chinese": "少于",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "straightforward",
+          "chinese": "坦率的；简单的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "honest",
+          "chinese": "诚实的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "direct",
+          "chinese": "直接的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "similarity",
+          "chinese": "相似之处",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "friendship",
+          "chinese": "友谊；友情",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "metre",
+          "chinese": "米；公尺",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "prince",
+          "chinese": "王子",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "character",
+          "chinese": "人物；角色；个性",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pauper",
+          "chinese": "贫民；乞丐",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "exchange",
+          "chinese": "交换；交流",
+          "partOfSpeech": "v."
+        }
+      ]
+    },
+    {
+      "unit": "Unit 4",
+      "words": [
+        {
+          "english": "moss",
+          "chinese": "苔藓",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "redwood",
+          "chinese": "红杉；红木",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cheetah",
+          "chinese": "猎豹",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "folding",
+          "chinese": "折叠式的",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "folding fan",
+          "chinese": "折扇",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "bamboo",
+          "chinese": "竹；竹子",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "yeah",
+          "chinese": "是的；对",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "popular",
+          "chinese": "受欢迎的；通俗的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "accident",
+          "chinese": "意外（交通）事故",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "by accident",
+          "chinese": "偶然；意外地",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "expect",
+          "chinese": "预料；期待",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "silver",
+          "chinese": "银 银色的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "lining",
+          "chinese": "内衬；衬里",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "silver lining",
+          "chinese": "一线光明；积极的一面",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "situation",
+          "chinese": "情况；状况",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "care about",
+          "chinese": "关心；担心",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "reach",
+          "chinese": "达到；手伸向",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "reach for",
+          "chinese": "伸手拿",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "touch",
+          "chinese": "触动；触摸 触觉",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "goodness",
+          "chinese": "美德；善良 天哪",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "tool",
+          "chinese": "工具",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "actually",
+          "chinese": "实际上；居然",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "shoot",
+          "chinese": "（用枪等）开（枪）；射击",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "appear",
+          "chinese": "看来好像；出现",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "land",
+          "chinese": "降落；着陆 土地",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "African",
+          "chinese": "非洲的；非洲人的 非洲人",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "rose",
+          "chinese": "玫瑰；蔷薇",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "peony",
+          "chinese": "牡丹；芍药",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "lotus",
+          "chinese": "荷花；莲花",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "butterfly",
+          "chinese": "蝴蝶",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "wing",
+          "chinese": "翅膀；翼",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "frog",
+          "chinese": "青蛙",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "up to",
+          "chinese": "接近；直达；多达",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "weigh",
+          "chinese": "有……重；称重量",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "ginkgo",
+          "chinese": "银杏",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "believe",
+          "chinese": "相信；认为有可能",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "province",
+          "chinese": "省份",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "take a walk",
+          "chinese": "散步",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "connect",
+          "chinese": "关联；连接",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "connected",
+          "chinese": "连接的；有联系的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "be connected with",
+          "chinese": "连接",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "without",
+          "chinese": "没有；缺乏",
+          "partOfSpeech": "prep."
+        },
+        {
+          "english": "imagine",
+          "chinese": "想象；猜想",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Julie",
+          "chinese": "朱莉",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Vancouver",
+          "chinese": "温哥华（加拿大城市）",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Matt",
+          "chinese": "马特",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Stephen",
+          "chinese": "斯蒂芬",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "Diana",
+          "chinese": "戴安娜",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Edward",
+          "chinese": "爱德华",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "Mark Twain",
+          "chinese": "马克·吐温（美国作家）",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Rose",
+          "chinese": "罗斯",
+          "partOfSpeech": "n."
+        }
+      ]
+    },
+    {
+      "unit": "Unit 5",
+      "words": [
+        {
+          "english": "honey",
+          "chinese": "蜂蜜",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "disappointed",
+          "chinese": "失望的；沮丧的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "connection",
+          "chinese": "联系；连接",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pollination",
+          "chinese": "授粉",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pollen",
+          "chinese": "花粉",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "action",
+          "chinese": "行动；行为",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "in fact",
+          "chinese": "事实上；其实",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "per cent",
+          "chinese": "百分之……",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "for this reason",
+          "chinese": "鉴于这个原因",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "planet",
+          "chinese": "行信；行星",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "in order to",
+          "chinese": "为了",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "store",
+          "chinese": "贮存；储存 商店",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "honeycomb",
+          "chinese": "蜂巢",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "communicate",
+          "chinese": "交流；沟通",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "ecosystem",
+          "chinese": "生态系统",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "protect",
+          "chinese": "保护；防护",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "importance",
+          "chinese": "重要性",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "title",
+          "chinese": "题目；标题",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "human",
+          "chinese": "人；人类 人类的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "ant",
+          "chinese": "蚂蚁",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "be home to sb",
+          "chinese": "栖息地",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "happiness",
+          "chinese": "幸福；快乐",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "disappoint",
+          "chinese": "使失望",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "mushroom",
+          "chinese": "蘑菇",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "ton",
+          "chinese": "吨",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "role",
+          "chinese": "角色；作用",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pea",
+          "chinese": "豌豆",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "climate",
+          "chinese": "气候",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "ocean",
+          "chinese": "大海；海洋",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "except",
+          "chinese": "除……之外",
+          "partOfSpeech": "prep."
+        },
+        {
+          "english": "tiny",
+          "chinese": "极小的；微小的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "lively",
+          "chinese": "精力充沛的；生机勃勃的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "pepper",
+          "chinese": "胡椒粉；菜椒",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cut up",
+          "chinese": "切碎",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "mix",
+          "chinese": "（使）混合；融合",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "oven",
+          "chinese": "烤箱；烤炉",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pour sth into sth",
+          "chinese": "将某物倒入某物中",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "bake",
+          "chinese": "烘焙；烤",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "boil",
+          "chinese": "沸腾；烧开",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "butter",
+          "chinese": "黄油",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cheese",
+          "chinese": "奶酪；干酪",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "tablespoon",
+          "chinese": "大汤匙",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "mash",
+          "chinese": "捣碎；捣烂",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "mashed potatoes",
+          "chinese": "土豆泥",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "stir-fry",
+          "chinese": "炒；煸",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "do with",
+          "chinese": "处理；安置",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "bowl",
+          "chinese": "碗；盆",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "heat",
+          "chinese": "加热 炎热天气",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "oil",
+          "chinese": "食用油；石油",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pan",
+          "chinese": "平底锅",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "put sth back",
+          "chinese": "把某物放回原处",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "simple",
+          "chinese": "简单的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "ingredient",
+          "chinese": "食材；成分",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "instruction",
+          "chinese": "用法说明；指南",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "steamed fish",
+          "chinese": "清蒸鱼",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "sour",
+          "chinese": "酸的；有酸味的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "hot and sour soup",
+          "chinese": "酸辣汤",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "messy",
+          "chinese": "凌乱的；肮脏的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "pretty",
+          "chinese": "相当；很 漂亮的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "Christmas",
+          "chinese": "圣诞节",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pancake",
+          "chinese": "薄烤饼；烙饼",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "dream",
+          "chinese": "梦想；梦 做梦",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "university",
+          "chinese": "大学",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "go boating",
+          "chinese": "去划船",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "memory",
+          "chinese": "记忆；回忆",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "visible",
+          "chinese": "看得见的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "pumpkin",
+          "chinese": "南瓜",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "pie",
+          "chinese": "馅饼",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "warm up",
+          "chinese": "变暖；加热",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cinnamon",
+          "chinese": "肉桂；桂皮",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sweetness",
+          "chinese": "甜味；甜蜜",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "college",
+          "chinese": "学院；职业学校",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "host",
+          "chinese": "主人；主办方",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "hostess",
+          "chinese": "女主人",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "recipe",
+          "chinese": "食谱；烹饪法",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cream",
+          "chinese": "奶油；乳脂",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "crust",
+          "chinese": "饼底；面包皮",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "mixture",
+          "chinese": "混合物",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "least",
+          "chinese": "最小的；最少的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "at least",
+          "chinese": "至少",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "secret",
+          "chinese": "秘诀；秘密 秘密的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "according to",
+          "chinese": "根据；依照",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "whenever",
+          "chinese": "每当；无论何时",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "spaghetti",
+          "chinese": "意大利面条",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "spoon",
+          "chinese": "匙；调羹",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "slice",
+          "chinese": "薄片 切片",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "couple",
+          "chinese": "两人；两件事物；夫妇",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "island",
+          "chinese": "岛",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "wife",
+          "chinese": "妻子",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "separate",
+          "chinese": "单独的；分开的",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "born",
+          "chinese": "出生",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "one by one",
+          "chinese": "一个接一个地",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "the Arctic Ocean",
+          "chinese": "北冰洋",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Billy",
+          "chinese": "比利",
+          "partOfSpeech": "adj."
+        }
+      ]
+    },
+    {
+      "unit": "Unit 6",
+      "words": [
+        {
+          "english": "yourself",
+          "chinese": "你自己；您自己",
+          "partOfSpeech": "pron."
+        },
+        {
+          "english": "engineer",
+          "chinese": "工程师；技师",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "fashion",
+          "chinese": "时装业；时尚",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "designer",
+          "chinese": "设计师",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "director",
+          "chinese": "导演；主任",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "musician",
+          "chinese": "音乐家；乐师",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "fireman",
+          "chinese": "消防队员",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "AI",
+          "chinese": "人工智能",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "essay",
+          "chinese": "小品文；文章",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "classic",
+          "chinese": "经典的 经典作品；名著",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "keep on doing sth",
+          "chinese": "继续做；反复做",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "make sure",
+          "chinese": "确保；保证",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "try one's best",
+          "chinese": "尽最大努力",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "literature",
+          "chinese": "文学；文献",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "athlete",
+          "chinese": "运动员",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "photographer",
+          "chinese": "摄影师；拍照片的人",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "painter",
+          "chinese": "画家；油漆工",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "businessman",
+          "chinese": "商界人士；企业家",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "actress",
+          "chinese": "女演员",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "lawyer",
+          "chinese": "律师",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "law",
+          "chinese": "法律；法规",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Thanksgiving",
+          "chinese": "感恩节",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "Guoqiao Rice Noodles",
+          "chinese": "过桥米线",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "bath",
+          "chinese": "洗澡；浴缸",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "miss",
+          "chinese": "想念；错过",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "able",
+          "chinese": "能够",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "stick",
+          "chinese": "坚持；粘贴",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "stick to sth",
+          "chinese": "坚持；维持",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "resolution",
+          "chinese": "决心；决定；决议",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "achieve",
+          "chinese": "（经过努力）达到；完成",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "physical",
+          "chinese": "身体的；物质的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "health",
+          "chinese": "健康",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "healthily",
+          "chinese": "健康地",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "take up",
+          "chinese": "开始学习；开始从事",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "photography",
+          "chinese": "照相术；摄影",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "self-improvement",
+          "chinese": "自我改进；自我提高",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "confident",
+          "chinese": "自信的；肯定的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "organized",
+          "chinese": "有条理的；有组织的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "wisely",
+          "chinese": "聪明地；明智地",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "possible",
+          "chinese": "可能的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "paragraph",
+          "chinese": "段落",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "introduce",
+          "chinese": "介绍；引见；引进",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "meaning",
+          "chinese": "意义；意思",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "fail",
+          "chinese": "未能（做到）；失败",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "ahead",
+          "chinese": "向前；在前面",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "put out",
+          "chinese": "扑灭；熄灭",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "design",
+          "chinese": "设计；图案",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "bridge",
+          "chinese": "桥；桥梁",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "final",
+          "chinese": "决赛；期末考试 最后的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "confidence",
+          "chinese": "信心；信任",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "draw to a close",
+          "chinese": "即将结束",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "form",
+          "chinese": "表格；形式 组成",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "relationship",
+          "chinese": "关系；联系",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "push-up",
+          "chinese": "俯卧撑",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "energetic",
+          "chinese": "精力充沛的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "last but not least",
+          "chinese": "最后但同样重要的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Jason",
+          "chinese": "杰森",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "Tina",
+          "chinese": "蒂娜",
+          "partOfSpeech": "n."
+        }
+      ]
+    },
+    {
+      "unit": "Unit 7",
+      "words": [
+        {
+          "english": "prediction",
+          "chinese": "预测；预言",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "outer",
+          "chinese": "外面的；外部的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "outer space",
+          "chinese": "太空；外层空间",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "worse",
+          "chinese": "更差的；更坏的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "take over",
+          "chinese": "接管；接收",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sci-fi",
+          "chinese": "科幻小说（或影片等）",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "ticket",
+          "chinese": "票；入场券",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "positive",
+          "chinese": "积极的；肯定的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "traffic",
+          "chinese": "交通；运输",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "technology",
+          "chinese": "科技；工艺",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "video",
+          "chinese": "录像；视频",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "transport",
+          "chinese": "运输系统；交通工具",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "system",
+          "chinese": "系统；体制",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "transport system",
+          "chinese": "交通运输系统",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "efficient",
+          "chinese": "高效率的；有效的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "education",
+          "chinese": "教育",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "length",
+          "chinese": "长度",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "topic",
+          "chinese": "话题；题目",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "partner",
+          "chinese": "搭档；伙伴",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "shall",
+          "chinese": "将要；应该",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "pass",
+          "chinese": "通过；传递",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "winner",
+          "chinese": "赢家；胜利者",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cure",
+          "chinese": "治愈；疗法",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cancer",
+          "chinese": "癌症",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "concert",
+          "chinese": "音乐会",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "cash",
+          "chinese": "现金",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "wallet",
+          "chinese": "钱包",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "guest",
+          "chinese": "客人；宾客",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "chief",
+          "chinese": "主要的；首要的 首领",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "researcher",
+          "chinese": "研究员",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "research",
+          "chinese": "研究；调查",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "futurist",
+          "chinese": "未来主义者；未来学家",
+          "partOfSpeech": "n."
+        }
+      ]
+    },
+    {
+      "unit": "Unit 8",
+      "words": [
+        {
+          "english": "communication",
+          "chinese": "表达；交流；通信",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "face to face",
+          "chinese": "面对面",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "text message",
+          "chinese": "短信",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sign",
+          "chinese": "符号；迹象 签名",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "speaker",
+          "chinese": "说话者；发言者",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "rehearsal",
+          "chinese": "排练；彩排",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "show sb around",
+          "chinese": "领某人参观",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "local",
+          "chinese": "当地的；地方的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "professor",
+          "chinese": "教授",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "speech",
+          "chinese": "发言；演讲",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "argue",
+          "chinese": "争论；争吵",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "in person",
+          "chinese": "亲自；亲身",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "prefer",
+          "chinese": "更喜欢",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "calm",
+          "chinese": "镇静的 使平静",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "expression",
+          "chinese": "表达方式；表情",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "chance",
+          "chinese": "机会；可能性",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "meeting",
+          "chinese": "会议；集会",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "difficulty",
+          "chinese": "困难；难题",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "right away",
+          "chinese": "立即；马上",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "line",
+          "chinese": "线；电话线路",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "detail",
+          "chinese": "细节",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "reunion",
+          "chinese": "团聚；聚会",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "seriously",
+          "chinese": "严肃地；认真地",
+          "partOfSpeech": "adv."
+        },
+        {
+          "english": "training",
+          "chinese": "训练；培训",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "nervous",
+          "chinese": "担心的；焦虑的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "stranger",
+          "chinese": "陌生人",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "tip",
+          "chinese": "提示；小费",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "carefully",
+          "chinese": "认真地；仔细地",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "show interest in sth",
+          "chinese": "对某事表现出兴趣",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "listener",
+          "chinese": "听众；倾听者",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "point",
+          "chinese": "观点；要点",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "surely",
+          "chinese": "肯定；当然",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "continue",
+          "chinese": "继续",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "impolite",
+          "chinese": "无礼的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "personal",
+          "chinese": "个人的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "argue with sb",
+          "chinese": "与某人争吵",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "sincere",
+          "chinese": "真诚的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "find out",
+          "chinese": "查明；发现",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "pay",
+          "chinese": "付钱",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "attention",
+          "chinese": "注意；留心",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "be yourself",
+          "chinese": "做你自己",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "offer",
+          "chinese": "提供；主动提出",
+          "partOfSpeech": "v."
+        },
+        {
+          "english": "reasonable",
+          "chinese": "合理的",
+          "partOfSpeech": "adj."
+        },
+        {
+          "english": "social",
+          "chinese": "社会的；社交的",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "medium",
+          "chinese": "媒介",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "social media",
+          "chinese": "社交媒体",
+          "partOfSpeech": "n."
+        },
+        {
+          "english": "trust",
+          "chinese": "信任；相信",
+          "partOfSpeech": "n."
+        }
+      ]
+    }
+  ]
+}

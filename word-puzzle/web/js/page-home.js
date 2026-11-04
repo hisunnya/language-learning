@@ -1,0 +1,167 @@
+/* ============================================================
+   page-home.js —— 首页
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var sel = null;
+  var banks = [];
+
+  function esc(s) { return API.esc(s); }
+
+  function defaultBank() {
+    for (var i = 0; i < banks.length; i++) {
+      var b = banks[i];
+      if (b.source === 'seed' && b.level1 === '初中' && b.level2 === '九年级' &&
+          b.level3 === '上册' && b.unit_mode === 'all') {
+        return b;
+      }
+    }
+    return banks.length ? banks[0] : null;
+  }
+
+  function renderDefault() {
+    var box = document.getElementById('defaultList');
+    var card = document.getElementById('defaultCard');
+    var b = defaultBank();
+    if (!b) { card.hidden = true; return; }
+    card.hidden = false;
+    box.innerHTML =
+      '<div class="item">' +
+      '  <div class="main"><b>' + esc(b.title) + '</b>' +
+      '    <small>' + b.word_count + ' 词 · ' + b.unit_count + ' 单元 · ' +
+      esc(API.fmtTime(b.created_at)) + '</small></div>' +
+      '  <div class="ops">' +
+      '    <a class="btn sm" href="/play.html?bank=' + b.id + '">开始游戏</a>' +
+      '    <button class="btn sm ghost" data-offline="' + b.id + '">生成离线测试</button>' +
+      '  </div></div>';
+
+    var btn = box.querySelector('[data-offline]');
+    if (btn) btn.onclick = function () { makeOffline(b.id); };
+  }
+
+  function renderBanks() {
+    var box = document.getElementById('bankList');
+    if (!banks.length) {
+      box.innerHTML = '<div class="empty">还没有题库，先在上面生成一个吧</div>';
+      return;
+    }
+    box.innerHTML = banks.map(function (b) {
+      var src = b.source === 'material' ? '<span class="pill gray">上传资料</span>'
+                                        : '<span class="pill">内置词库</span>';
+      return '<div class="item">' +
+        '  <div class="main"><b>' + esc(b.title) + '</b>' + ' ' + src +
+        '    <small>' + b.word_count + ' 词 · ' + b.unit_count + ' 单元 · ' +
+        esc(API.fmtTime(b.created_at)) + '</small></div>' +
+        '  <div class="ops">' +
+        '    <a class="btn sm" href="/play.html?bank=' + b.id + '">开始游戏</a>' +
+        '    <button class="btn sm ghost" data-offline="' + b.id + '">生成离线测试</button>' +
+        '    <button class="btn sm danger" data-del="' + b.id + '">删除</button>' +
+        '  </div></div>';
+    }).join('');
+
+    box.querySelectorAll('[data-offline]').forEach(function (btn) {
+      btn.onclick = function () { makeOffline(parseInt(btn.dataset.offline, 10)); };
+    });
+    box.querySelectorAll('[data-del]').forEach(function (btn) {
+      btn.onclick = function () {
+        var id = parseInt(btn.dataset.del, 10);
+        if (!confirm('确定删除这个题库？')) return;
+        API.del('/api/banks/' + id).then(loadBanks)
+          .catch(function (e) { API.toast(e.message); });
+      };
+    });
+  }
+
+  function loadBanks() {
+    return API.get('/api/banks').then(function (res) {
+      banks = res.banks || [];
+      renderBanks();
+      renderDefault();
+    }).catch(function (e) { API.toast(e.message); });
+  }
+
+  function makeOffline(bankId) {
+    API.toast('正在生成离线测试页…', 8000);
+    API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
+      API.toast('已生成：' + res.filename);
+      var a = document.createElement('a');
+      a.href = res.url;
+      a.download = res.filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }).catch(function (e) { API.toast(e.message); });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    sel = new Selector('#levelBox', {
+      onChange: function () { updateInfo(); }
+    });
+
+    API.get('/api/meta').then(function (meta) {
+      var c = meta.curriculum || {};
+      document.getElementById('curTotal').textContent = c.word_total || '—';
+      document.getElementById('curUnits').textContent = c.unit_total || '—';
+    }).catch(function () { });
+
+    sel.init().then(function () { updateInfo(); }).catch(function (e) {
+      API.toast(e.message);
+    });
+
+    loadBanks();
+
+    document.getElementById('btnMake').onclick = function () {
+      var s = sel.get();
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '生成中…';
+      API.post('/api/banks', s).then(function (res) {
+        location.href = '/play.html?bank=' + res.bank.id;
+      }).catch(function (e) {
+        API.toast(e.message);
+        btn.disabled = false;
+        btn.textContent = '生成题库并开始';
+      });
+    };
+
+    document.getElementById('btnUpload').onclick = function () {
+      location.href = '/bank.html';
+    };
+
+    document.getElementById('btnOffline').onclick = function () {
+      var s = sel.get();
+      var btn = this;
+      btn.disabled = true;
+      API.post('/api/banks', s).then(function (res) {
+        return API.post('/api/banks/' + res.bank.id + '/offline', {});
+      }).then(function (res) {
+        var a = document.createElement('a');
+        a.href = res.url;
+        a.download = res.filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        API.toast('已生成：' + res.filename);
+        btn.disabled = false;
+        loadBanks();
+      }).catch(function (e) {
+        API.toast(e.message);
+        btn.disabled = false;
+      });
+    };
+  });
+
+  function updateInfo() {
+    if (!sel) return;
+    var s = sel.summary();
+    var box = document.getElementById('selInfo');
+    if (!s.units) {
+      box.textContent = '当前范围在内置词库里没有内容（小学 / 大学 / 自定义层级目前只能用自己的资料）。' +
+        '可以换个层级，或到「题库工作台」上传资料。';
+      return;
+    }
+    box.textContent = '当前范围：' + s.path + ' · ' +
+      s.units + ' 个单元 · ' + s.words + ' 个词条';
+  }
+})();

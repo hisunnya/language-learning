@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>单词消消乐 · 首页</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">单词消消乐<small>人教版英语词汇 · 四级题库</small></div>
+    <nav class="nav">
+      <a href="/" class="on">首页</a>
+      <a href="/bank.html">题库工作台</a>
+      <a href="/stats.html">成绩记录</a>
+    </nav>
+  </div>
+
+  <h1 class="page">选个题库，开始消消乐</h1>
+  <p class="lead">
+    内置<b>人教版 PEP 初中（5 册）与高中（7 册）</b>共 <span id="curTotal">—</span> 个词条、
+    <span id="curUnits">—</span> 个单元。也可以上传自己的资料做成题库。
+  </p>
+
+  <!-- 默认题库 -->
+  <div class="card" id="defaultCard" hidden>
+    <h2>默认题库</h2>
+    <p class="sub">系统内置，开箱即用</p>
+    <div class="list" id="defaultList"></div>
+  </div>
+
+  <!-- 层级选择 -->
+  <div class="card">
+    <h2>按层级生成题库</h2>
+    <p class="sub">第一级 学段 → 第二级 年级 → 第三级 学期 → 第四级 单元；每一级都可以自定义名称</p>
+    <div id="levelBox"></div>
+    <div class="msg info" id="selInfo"></div>
+    <div class="actions">
+      <button class="btn lg gold" id="btnMake">生成题库并开始</button>
+      <button class="btn lg ghost" id="btnUpload">上传题库</button>
+      <button class="btn lg ghost" id="btnOffline">生成离线测试</button>
+    </div>
+  </div>
+
+  <!-- 题库列表 -->
+  <div class="card">
+    <h2>我的题库</h2>
+    <p class="sub">生成过的题库都在这里，可以直接玩，也可以下载成离线网页</p>
+    <div class="list" id="bankList"><div class="empty">加载中…</div></div>
+  </div>
+
+  <footer class="foot">
+    玩法：点英文卡片听发音 → 点对应中文卡片配对成功 · 配对 +100 分，连击额外加分，答错扣 3 秒。<br>
+    离线测试页是单个 HTML 文件，双击即可在没网的电脑上玩。
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/js/api.js"></script>
+<script src="/js/selector.js"></script>
+<script src="/js/page-home.js"></script>
+</body>
+</html>

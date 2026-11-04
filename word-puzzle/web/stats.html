@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>成绩记录 · 单词消消乐</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">成绩记录<small>在线玩法的成绩都存在服务器数据库里</small></div>
+    <nav class="nav">
+      <a href="/">首页</a>
+      <a href="/bank.html">题库工作台</a>
+      <a href="/stats.html" class="on">成绩记录</a>
+    </nav>
+  </div>
+
+  <div class="stats" id="statCards">
+    <div class="stat"><div class="k">总场次</div><div class="v blue" id="sCount">—</div></div>
+    <div class="stat"><div class="k">最高分</div><div class="v orange" id="sBest">—</div></div>
+    <div class="stat"><div class="k">平均分</div><div class="v" id="sAvg">—</div></div>
+    <div class="stat"><div class="k">累计得分</div><div class="v green" id="sTotal">—</div></div>
+  </div>
+
+  <div class="card">
+    <h2>按题库统计</h2>
+    <p class="sub">每个题库玩了多少次、最高多少分</p>
+    <div class="scroll"><table class="tbl" id="byBankTable">
+      <thead><tr><th>题库</th><th>次数</th><th>最高分</th><th>累计</th></tr></thead>
+      <tbody><tr><td colspan="4" class="empty">加载中…</td></tr></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h2>成绩明细</h2>
+    <p class="sub">最近 200 条</p>
+    <div class="scroll"><table class="tbl" id="scoreTable">
+      <thead><tr>
+        <th>时间</th><th>题库</th><th>得分</th><th>配对</th>
+        <th>答错</th><th>最高连击</th><th>用时</th><th>关数</th>
+      </tr></thead>
+      <tbody><tr><td colspan="8" class="empty">加载中…</td></tr></tbody>
+    </table></div>
+  </div>
+
+  <footer class="foot">
+    离线测试页的成绩存在浏览器本地（localStorage），不会出现在这里；<br>
+    同一台设备上重复玩，排名按最高分计。
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/js/api.js"></script>
+<script src="/js/page-stats.js"></script>
+</body>
+</html>

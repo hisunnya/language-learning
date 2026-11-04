@@ -1,11 +1,23 @@
 # language-learning
 
-个人学习工具集。两个项目都是**纯前端、零依赖、零联网**——下载后直接用，不需要装任何东西。
+个人学习工具集。两个项目互相独立，各自都能单独跑起来。
 
-| 项目 | 内容 |
-| --- | --- |
-| [`word-puzzle/`](word-puzzle/) | 《新视野大学英语 4th Edition》Unit 1 单词消消乐（学生版网页 + 课堂投屏版 PPT + 使用说明 PDF） |
-| [`ham-exam/`](ham-exam/) | 业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） |
+| 项目 | 内容 | 技术栈 |
+| --- | --- | --- |
+| [`word-puzzle/`](word-puzzle/) | **单词消消乐**（网站版）：人教版 PEP 初中 + 高中英语词汇题库、四级层级选题、上传资料、导出单文件离线测试页、成绩入库 | Python 标准库 + SQLite + 原生 JS，nginx 部署 |
+| [`ham-exam/`](ham-exam/) | 业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
+
+---
+
+## 快速开始
+
+```bash
+# word-puzzle（网站版）
+cd word-puzzle && ./run.sh        # → http://127.0.0.1:8000
+
+# ham-exam（纯前端）
+cd ham-exam && ./start.sh         # → http://127.0.0.1:8080
+```
 
 ---
 
@@ -15,86 +27,89 @@
 language-learning/
 ├── README.md
 ├── .gitignore
-├── word-puzzle/
-│   ├── Unit1单词消消乐.html                    # 学生版网页游戏（主程序）
-│   ├── Unit1单词消消乐-课堂投屏版 .pptx        # 课堂投屏版（PowerPoint 超链接配对游戏，173 页）
-│   └── Unit1单词消消乐-使用说明.pdf            # 发给家长/学生的使用说明
+├── word-puzzle/                            # 单词消消乐（网站版）
+│   ├── README.md                           # 详细文档
+│   ├── run.sh                              # 一键起本地服务
+│   ├── deploy/                             # Ubuntu 部署
+│   │   ├── install.sh
+│   │   ├── nginx/word-puzzle.conf
+│   │   └── systemd/word-puzzle.service
+│   ├── server/                             # 后端（Python 标准库，无第三方依赖）
+│   │   ├── app.py                          # HTTP 服务 + 路由
+│   │   ├── db.py                           # SQLite 数据层
+│   │   ├── hierarchy.py                    # 四级层级模型
+│   │   ├── materials.py                    # 上传资料解析
+│   │   ├── bank.py                         # 题库生成
+│   │   └── offline.py                      # 单文件离线页生成
+│   ├── web/                                # 前端（静态，nginx 直接托管）
+│   │   ├── index.html  bank.html  play.html  stats.html
+│   │   ├── css/{app,game}.css
+│   │   └── js/*.js
+│   ├── data/
+│   │   ├── pep_curriculum.json             # 内置词库（4791 词 / 84 单元）
+│   │   └── raw/                            # 原始词表（脚本输入）
+│   ├── tools/{build_seed_data.py,check_js.py}
+│   ├── tests/test_server.py                # 后端测试（38 个用例）
+│   ├── var/                                # 运行期数据（gitignore）
+│   ├── Unit1单词消消乐.html                # 原始单文件版（保留）
+│   ├── Unit1单词消消乐-课堂投屏版 .pptx
+│   └── Unit1单词消消乐-使用说明.pdf
 └── ham-exam/
-    ├── index.html                              # 入口
-    ├── start.sh / start.bat                    # 一键起本地服务
-    ├── css/style.css                           # 样式（含深色模式）
-    ├── js/{app.js,store.js}                    # 应用逻辑 / localStorage 数据层
-    ├── data/{bank.js,bank.json}                # 题库（两份内容完全一致）
-    ├── images/                                 # 53 张电路附图
-    └── tools/                                  # 题库生成脚本（从官方 PDF 生成 bank.json）
+    ├── README.md
+    ├── index.html                          # 入口
+    ├── start.sh / start.bat                # 一键起本地服务
+    ├── css/style.css                       # 样式（含深色模式）
+    ├── js/{app.js,store.js}                # 应用逻辑 / localStorage 数据层
+    ├── data/{bank.js,bank.json}            # 题库（两份内容完全一致）
+    ├── images/                             # 53 张电路附图
+    └── tools/                              # 题库生成脚本（从官方 PDF 生成 bank.json）
 ```
 
 ---
 
-# 一、word-puzzle · 单词消消乐
+# 一、word-puzzle · 单词消消乐（网站版）
 
-## 一、学生版（网页版）
+## 是什么
 
-`word-puzzle/Unit1单词消消乐.html`
+一个能部署到 **Ubuntu + nginx** 的英语单词消消乐网站。
+
+内置**人教版 PEP 初中（5 册）+ 高中（7 册）**共 **4791 个词条 / 84 个单元**，
+用四级层级选题：**学段 → 年级 → 学期 → 单元**，每一级都能自定义名称。
 
 | 特性 | 说明 |
 | --- | --- |
-| 单文件 | 词表、发音（base64 内嵌 MP3）、CSS、JS 全部内联，**离线可用** |
-| 无依赖 | 不加载任何 CDN / 字体 / 框架 |
-| 依赖 | 浏览器需支持 ES5 + WebAudio + Fullscreen API（Chrome / Edge / Safari / 微信内置浏览器均可） |
-| 适配 | 响应式栅格（2–6 列自动布局），手机、平板、投影大屏通用 |
-| 发音 | 54 条真人朗读（美式女声，32 kHz 单声道 MP3），播放失败时自动回退到 `speechSynthesis` |
+| 四级层级 | 学段（小学/初中/高中/大学）→ 年级 → 学期（默认「整学年」）→ 单元（全部单元 / 分单元 / 第 N 至第 M 单元） |
+| 自定义命名 | 每一级都能填自己的名字，自定义名会进题库标题和离线文件名 |
+| 上传资料 | TXT / CSV / TSV / JSON，自动识别表头、单元列、中英文列 |
+| 默认题库 | **人教版初中三年级上学期**（239 词 / 7 单元），启动时自动建好 |
+| 离线测试页 | 任意题库一键导出成**单个自包含 HTML**，文件名 `层级+日期+时间.html` |
+| 分数入库 | 在线成绩写 SQLite；离线页成绩写浏览器 localStorage |
+| 零依赖 | 后端只用 Python 标准库，数据库用 SQLite，服务器上不用 `pip install` |
 
-### 玩法
+完整文档见 [`word-puzzle/README.md`](word-puzzle/README.md)。
 
-1. **点英文卡片** → 卡片高亮选中，同时朗读该词发音（右下角 🔊 可再听一遍）
-2. **点对应中文卡片** → 配对成功，两张卡冒出星星特效并消失
-3. **配错** → 卡片抖动，扣 3 秒、扣 20 分，连击清零
-4. **全部配完** → 结算页显示本关得分与剩余时间奖励，可进入下一关
+## 界面
 
-### 计分与时间
+沿用原来的 `Unit1单词消消乐.html` 的样式和玩法：点英文卡片听发音 → 点对应中文卡片配对成功。
 
 | 项目 | 规则 |
 | --- | --- |
-| 每关限时 | 120 秒（第 1 关）；上一关剩余时间越多，下一关时间越长，最多 150 秒 |
+| 每关限时 | 120 秒，上一关剩余时间越多下一关时间越长，最多 150 秒 |
 | 配对得分 | 每对 +100 分 |
-| 连击奖励 | 连续配对成功，每多一次 +20 分，最高 +100 分 |
+| 连击奖励 | 连续配对每多一次 +20 分，最高 +100 分 |
 | 配错惩罚 | 扣 3 秒、扣 20 分，连击清零 |
-| 过关奖励 | 剩余每秒折算 10 分，直接计入总分 |
+| 过关奖励 | 剩余每秒折算 10 分 |
 
-底部四个按钮：**玩法**（规则说明）· **全屏**（投影用）· **重玩本关**（只重置当前关）· **从头开始**（回到首页重打全部）。
+## 运算与存储分离
 
-### 词表结构
-
-共 **54 个词条 / 7 个关卡**，数据全部位于 `<script>` 顶部的 `var WORDS`：
-
-```js
-{ "en": "triumph", "ipa": "/ˈtraɪʌmf/", "cn": "胜利；成功；成就",
-  "full": "an important victory or success after a difficult struggle", "lv": 1 }
+```
+game-core.js        纯运算（关卡/计分/计时/连击），不碰 DOM、不碰网络
+game-ui.js          纯界面，只把 core 的状态画出来
+game-adapter-*.js   存储适配：online 走后端 / offline 走 localStorage
 ```
 
-- `lv` 决定关卡归属，关卡由 `LEVELS` 按 `lv` 自动分组、排序
-- 第 1–5 关为**单词**，第 6–7 关为课本的**常用表达（短语）**
-- 发音表 `var AUDIO` 的 key 是 `slugify(en)`，即小写 + 非字母数字替换为 `_`
-- 改词表后需同步更新 `AUDIO`，否则该词会回退到浏览器 TTS 朗读
-
----
-
-## 二、课堂投屏版（PowerPoint）
-
-`word-puzzle/Unit1单词消消乐-课堂投屏版 .pptx`
-
-173 页超链接配对游戏：每关一张棋盘（左侧英文、右侧打乱的中文），点任意一张卡片进入配对题，选对有庆祝页、选错有提示页。适合教师在教室大屏上演示。
-
-> ⚠️ **词表是写死在 slide XML 里的。** 修改 `WORDS` 后，PPTX 不会自动同步，必须重新生成或手工改 `ppt/slides/slide*.xml` 中对应的文本。2026-11-04 修复 `faulty` 释义时即采用批量文本替换的方式同步了 11 张幻灯片。
-
----
-
-## 三、使用说明（PDF）
-
-`word-puzzle/Unit1单词消消乐-使用说明.pdf`
-
-讲清楚「怎么把游戏发到微信 → 怎么打开 → 怎么玩」，可直接转发给同学和家长。内容为纯操作流程，**不含词表**，因此词表变更无需同步。
+在线页面用 `<script src>` 引用这两个文件，离线页由 `server/offline.py` 把它们**内联进单个 HTML**，
+所以离线页和在线页玩法、分数完全一致。
 
 ---
 
@@ -110,16 +125,7 @@ language-learning/
 | B 类 | 1143 | 947 | 196 | 24 | 95 |
 | C 类 | 1282 | 1072 | 210 | 53 | 104 |
 
-合并去重后共 **1375** 道题、**112** 个知识点（三个类别的题目有重叠，级别越高包含越多）。
-
-## 怎么打开
-
-```bash
-# 方式 1：直接双击 index.html（题库内嵌，file:// 也能用）
-# 方式 2：起本地服务（推荐）
-cd ham-exam && ./start.sh          # macOS / Linux
-start.bat                         # Windows
-```
+合并去重后共 **1375** 道题、**112** 个知识点。
 
 ## 四个模块
 
@@ -128,93 +134,25 @@ start.bat                         # Windows
 | **模拟考试** | 规则与正式考试一致：A 类 40 题/40 分钟、B 类 60 题/60 分钟、C 类 90 题/90 分钟；随机抽题、题序打乱、倒计时自动交卷、答题卡跳题、未答按错计、多选必须与标准答案完全一致才得分 |
 | **练习模式** | 不限时，答完立即给答案 + 解析；题量 10/20/30/50/不限；范围可限定单选/多选/附图/错题/未做过/收藏/某知识点 |
 | **题库** | 左侧知识点目录树（5 部分 / 29 二级 / 112 三级），右侧逐题浏览；全文搜索；逐题收藏 |
-| **统计** | 总览、112 个知识点掌握度（正确率低的排前面，可一键专项突破）、模拟考试记录、错题本 |
+| **统计** | 总览、112 个知识点掌握度、模拟考试记录、错题本 |
 
-## 数据存在哪
+数据全部在**自己浏览器的 localStorage**，键名 `ham_exam_data_v1`。不上传、不联网、无服务端。
 
-全部在**自己浏览器的 localStorage**，键名 `ham_exam_data_v1`。不上传、不联网、无服务端。
-
-> ⚠️ 换浏览器、换设备、清理浏览器数据都会丢。请用「统计 → 数据管理 → 导出备份（JSON）」定期备份。
-
-## 快捷键
-
-| 按键 | 作用 |
-|---|---|
-| `1` `2` `3` `4` | 选择 A / B / C / D |
-| `←` `→` `↑` `↓` | 上一题 / 下一题 |
-| `Enter` | 下一题（练习模式多选未提交时为提交本题） |
-| `F` | 标记 / 取消标记 |
-| `Esc` | 关闭弹窗 |
-
-## 题库数据结构
-
-`data/bank.json`（`data/bank.js` 是同一份内容的 JS 版本，供 `file://` 直接引用，两者字节级一致）：
-
-```jsonc
-{
-  "meta":    { "title": "...", "bank": "...", "note": "...", "generated": "2026-10-23" },
-  "groups":  { "1": "第一部分 无线电管理相关法规", ... },      // 5 大部分
-  "sections":{ "1.1": "无线电管理法规", ... },                // 29 个二级
-  "points":  { "1.1.1": "无线电管理基本法规", ... },           // 112 个三级
-  "tree":    { "1": { "1.1": { "1.1.1": 5, ... } } },         // 目录树 + 各点题量
-  "questions": [
-    {
-      "id":  "MC3-0027",        // 全局唯一，**localStorage 以此为键**
-      "no":  "LY0343",          // 原始题号，仅用于展示
-      "uid": "LY0343",
-      "cls": ["A","B","C"],     // 归属类别（同一题可属多类）
-      "p":   "1.1.1",           // 知识点 id
-      "t":   "s",               // s=单选 / m=多选
-      "q":   "题干…",
-      "o":   ["A 选项", ...],
-      "a":   "A",               // 多选为 "AB" 这种形式
-      "img": null               // 附图路径，如 "images/LK0497.jpg"
-    }
-  ]
-}
-```
-
-> ⚠️ **`id` 才是唯一键**。`no` 并非唯一（部分题目在原 PDF 中无编号，被统一填成 `LX`），只能用于展示。应用代码里所有进度、收藏、错题标记都以 `q.id` 为键。
-
-## 重新生成题库
-
-`tools/` 下是从官方题库 PDF 重建 `data/bank.json` 的脚本，详见 [`ham-exam/tools/README.md`](ham-exam/tools/README.md)。需要 `pdfplumber`、`pypdf` 与系统的 `pdftotext`。
+完整文档见 [`ham-exam/README.md`](ham-exam/README.md)。
 
 ---
 
 ## 维护记录
 
-### 2026-11-04 — 词表释义错误修复 + 逻辑缺陷清理
+### 2026-11-04 — word-puzzle 改造成网站
 
-**数据错误（P0，会教错知识）**
+* 新增 `word-puzzle/server/`（Python 标准库 HTTP 服务 + SQLite）、`word-puzzle/web/`（四个页面）、
+  `word-puzzle/deploy/`（nginx + systemd + 一键安装脚本）、`word-puzzle/tools/`、`word-puzzle/tests/`
+* 内置人教版 PEP 初中 5 册 + 高中 7 册，共 4791 词条 / 84 单元，附带 3984 条 ECDICT 音标
+* 原单文件版拆成 `game-core.js`（运算）/ `game-ui.js`（界面）/ `game-adapter-*.js`（存储），
+  在线页和离线页共用同一份代码
+* 保留 `Unit1单词消消乐.html`、课堂投屏版 PPTX、使用说明 PDF 原样不动
 
-第 1 关的 `faulty` 词条，其 `cn` / `full` 字段被误填成了 **faculty** 的释义：
+### 2026-11-04 — 词表释义错误修复（ham-exam 同批）
 
-```
-错误：faulty → 全体教员 / (AmE) all the teachers in a university, college, or school
-正确：faulty → 有缺陷的；有毛病的；错误的 / not working correctly; having a fault or defect
-```
-
-成因：生成词表时 `faulty` 与 `faculty` 两行合并，`faculty` 的释义覆盖了 `faulty`。
-已修正 HTML 与 PPTX 两处（PPTX 同步替换 11 张幻灯片）。
-
-> 教材中的 `faculty`（n. 全体教员）由此从词表中丢失。其释义已确认可复原为
-> `{ "en": "faculty", "ipa": "/ˈfækəlti/", "cn": "全体教员", "full": "(AmE) all the teachers in a university, college, or school" }`，
-> 但因 PPTX 投屏版每关按 8 对设计、新增词条需要重排版，暂未补入，留待后续版本处理。
-
-**代码缺陷**
-
-| # | 位置 | 问题 | 处理 |
-| --- | --- | --- | --- |
-| 1 | `sfx.combo()` | `beep([880*n>0?880:880, ...])` 三元表达式两边相同，连击音效音高永远不变 | 改为随连击数递增 |
-| 2 | `levelClear()` | `st.lv = st.lv;` 空赋值 | 删除 |
-| 3 | `gainOfLevel()` | 死代码，返回恒为 0 且无人调用 | 删除 |
-| 4 | `levelClear()` | 结算面板有 520 ms 延迟，期间点「重玩本关」会弹出结算面板压在新棋盘上 | 引入 `st.gen` 代数计数器，面板弹出前校验 |
-| 5 | `showPanel()` | `showList()` 绑定的 `$('panel').onclick` 不会被清理，跨面板泄漏 | `showPanel()` 内统一置空 |
-| 6 | `st` 初始值 | `timeLeft/limit` 写死 60，与 `LEVEL_TIME = 120` 不一致 | 改用 `LEVEL_TIME` |
-
-**验证**
-
-- `node --check` 通过；浏览器实测无 console error
-- 54 条发音全部解码校验通过（ID3 头合法，时长 0.86 s – 3 s），词表与音频 key 一一对应、无缺失、无孤儿
-- PPTX 以 python-pptx 复读通过，173 页结构完整
+第 1 关 `faulty` 词条的释义曾被误填成 faculty 的（"全体教员"），已修正为"有缺陷的；有毛病的；错误的"。

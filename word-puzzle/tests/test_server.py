@@ -1,0 +1,375 @@
+"""word-puzzle 后端测试。
+
+跑法::
+
+    python3 -m unittest discover -s tests -v
+    # 或
+    python3 tests/test_server.py
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import tempfile
+import unittest
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from server import bank as bank_mod          # noqa: E402
+from server import hierarchy, materials, offline  # noqa: E402
+from server.db import Database               # noqa: E402
+
+
+class TempDB(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = Database(Path(self.tmp.name) / "test.db")
+
+    def tearDown(self) -> None:
+        self.db.close()
+        self.tmp.cleanup()
+
+
+# ---------------------------------------------------------------- 层级
+
+class TestHierarchy(unittest.TestCase):
+    def test_levels_present(self):
+        self.assertIn("初中", [o["key"] for o in hierarchy.level1_options()])
+        self.assertIn("高中", [o["key"] for o in hierarchy.level1_options()])
+        self.assertIn("小学", [o["key"] for o in hierarchy.level1_options()])
+        self.assertIn("大学", [o["key"] for o in hierarchy.level1_options()])
+
+    def test_term_default_is_full_year(self):
+        opts = hierarchy.level3_options("初中", "九年级")
+        defaults = [o for o in opts if o["default"]]
+        self.assertEqual(len(defaults), 1)
+        self.assertEqual(defaults[0]["key"], "整学年")
+
+    def test_unit_modes(self):
+        modes = hierarchy.level4_options("初中", "九年级", "上册")
+        keys = [m["key"] for m in modes]
+        self.assertEqual(keys, ["all", "per-unit", "range"])
+
+    def test_default_selection_is_grade9_up(self):
+        d = hierarchy.DEFAULT_SELECTION
+        self.assertEqual(d["level1"], "初中")
+        self.assertEqual(d["level2"], "九年级")
+        self.assertEqual(d["level3"], "上册")
+
+    def test_units_for_grade9_up(self):
+        units = hierarchy.CURRICULUM_OBJ.units_for("初中", "九年级", "上册")
+        self.assertEqual(len(units), 7)
+        self.assertTrue(all(u["count"] > 0 for u in units))
+
+    def test_full_year_has_both_volumes(self):
+        units = hierarchy.CURRICULUM_OBJ.units_for("初中", "九年级", "整学年")
+        self.assertEqual(len(units), 14)
+
+    def test_curriculum_loaded(self):
+        meta = hierarchy.CURRICULUM_OBJ.meta
+        self.assertGreater(meta.get("word_total", 0), 3000)
+        self.assertGreater(meta.get("unit_total", 0), 50)
+
+
+# ---------------------------------------------------------------- 资料解析
+
+class TestMaterials(unittest.TestCase):
+    def test_json_flat(self):
+        raw = json.dumps([
+            {"english": "apple", "chinese": "苹果"},
+            {"en": "banana", "cn": "香蕉"},
+        ]).encode()
+        fmt, words = materials.parse_material("x.json", raw)
+        self.assertEqual(fmt, "json")
+        self.assertEqual(len(words), 2)
+        self.assertEqual(words[0]["en"], "apple")
+
+    def test_json_units(self):
+        raw = json.dumps({"units": [
+            {"unit": "Unit 1", "words": [{"en": "a", "cn": "甲"}]},
+            {"unit": "Unit 2", "words": [{"en": "b", "cn": "乙"}]},
+        ]}).encode()
+        _, words = materials.parse_material("x.json", raw)
+        self.assertEqual([w["unit"] for w in words], ["Unit 1", "Unit 2"])
+
+    def test_csv_with_header(self):
+        raw = b"unit,english,chinese\nUnit 1,apple,\xe8\x8b\xb9\xe6\x9e\x9c\n"
+        _, words = materials.parse_material("x.csv", raw)
+        self.assertEqual(len(words), 1)
+        self.assertEqual(words[0]["en"], "apple")
+        self.assertEqual(words[0]["unit"], "Unit 1")
+
+    def test_csv_unit_first_no_header(self):
+        raw = ("Unit 1,apple,苹果\n"
+               "Unit 1,banana,香蕉\n"
+               "Unit 2,computer,电脑\n").encode()
+        _, words = materials.parse_material("x.csv", raw)
+        self.assertEqual(len(words), 3)
+        self.assertEqual(words[0]["unit"], "Unit 1")
+        self.assertEqual(words[0]["en"], "apple")
+        self.assertEqual(words[2]["unit"], "Unit 2")
+        self.assertEqual(words[2]["en"], "computer")
+
+    def test_csv_two_columns(self):
+        raw = "apple,苹果\nbanana,香蕉\n".encode()
+        _, words = materials.parse_material("x.csv", raw)
+        self.assertEqual(len(words), 2)
+        self.assertEqual(words[1]["en"], "banana")
+
+    def test_txt_with_unit_header(self):
+        raw = "Unit 3\nhello\t你好\nworld\t世界\n".encode()
+        _, words = materials.parse_material("x.txt", raw)
+        self.assertEqual(len(words), 2)
+        self.assertEqual(words[0]["unit"], "Unit 3")
+        self.assertEqual(words[1]["cn"], "世界")
+
+    def test_gb18030(self):
+        raw = "apple\t苹果\n".encode("gb18030")
+        _, words = materials.parse_material("x.txt", raw)
+        self.assertEqual(words[0]["cn"], "苹果")
+
+    def test_empty_raises(self):
+        with self.assertRaises(materials.ParseError):
+            materials.parse_material("x.csv", b"")
+        with self.assertRaises(materials.ParseError):
+            materials.parse_material("x.txt", b"onlyonecolumn\n")
+
+    def test_dedup(self):
+        raw = json.dumps([
+            {"en": "apple", "cn": "苹果"},
+            {"en": "apple", "cn": "苹果"},
+        ]).encode()
+        _, words = materials.parse_material("x.json", raw)
+        self.assertEqual(len(words), 1)
+
+
+# ---------------------------------------------------------------- 题库
+
+class TestBank(TempDB):
+    def test_create_from_seed(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+        })
+        self.assertEqual(b["word_count"], 239)
+        self.assertEqual(b["unit_count"], 7)
+        self.assertIn("初中", b["title"])
+
+    def test_custom_names_override(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+            "custom": {"level1": "我班", "level2": "九", "level3": "上", "level4": ""},
+        })
+        self.assertEqual(b["level1"], "我班")
+        self.assertEqual(b["level2"], "九")
+        self.assertEqual(b["level3"], "上")
+        self.assertTrue(b["title"].startswith("我班-九-上"))
+
+    def test_unit_mode_range(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "range", "unit_mode": "range",
+            "unit_from": 2, "unit_to": 3,
+        })
+        self.assertEqual(b["unit_count"], 2)
+        self.assertEqual(b["level4"], "第2至第3单元")
+        self.assertIn("第2至第3单元", b["title"])
+
+    def test_unit_mode_per_unit(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "per-unit", "unit_mode": "per-unit",
+        })
+        self.assertEqual(b["unit_mode"], "per-unit")
+        self.assertEqual(b["word_count"], 239)
+
+    def test_missing_material_raises(self):
+        with self.assertRaises(bank_mod.BankError):
+            bank_mod.create_bank(self.db, {"source": "material"})
+
+    def test_bank_from_material(self):
+        mid = self.db.insert_material("t", "t.csv", "csv", 10, "", [
+            {"unit": "Unit 1", "en": "a", "cn": "甲", "ipa": "", "pos": ""},
+            {"unit": "Unit 2", "en": "b", "cn": "乙", "ipa": "", "pos": ""},
+        ])
+        b = bank_mod.create_bank(self.db, {
+            "source": "material", "material_id": mid,
+            "level1": "初中", "level2": "九年级", "level3": "上册",
+            "level4": "all", "unit_mode": "all",
+        })
+        self.assertEqual(b["word_count"], 2)
+        self.assertEqual(b["unit_count"], 2)
+
+    def test_bank_payload_groups(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+        })
+        payload = bank_mod.bank_payload(self.db, b["id"])
+        self.assertEqual(len(payload["groups"]), 7)
+        self.assertEqual(sum(len(g["words"]) for g in payload["groups"]), 239)
+
+    def test_seed_default_bank_idempotent(self):
+        a = bank_mod.seed_default_bank(self.db)
+        b = bank_mod.seed_default_bank(self.db)
+        self.assertEqual(a, b)
+        bank = self.db.get_bank(a)
+        self.assertEqual(bank["title"], "人教版初中三年级上学期")
+        self.assertEqual(bank["word_count"], 239)
+
+
+# ---------------------------------------------------------------- 离线产物
+
+class TestOffline(TempDB):
+    def make(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+        })
+        payload = bank_mod.bank_payload(self.db, b["id"])
+        groups = payload["groups"]
+        return b, groups
+
+    def test_filename_pattern(self):
+        b, groups = self.make()
+        name = offline.build_filename(b)
+        self.assertTrue(name.endswith(".html"))
+        self.assertIn("初中-九年级-上册", name)
+        # 日期 + 时间
+        self.assertRegex(name, r"-\d{8}-\d{6}\.html$")
+
+    def test_html_is_self_contained(self):
+        b, groups = self.make()
+        name, html = offline.build_offline_html(b, groups)
+        self.assertIn("<!DOCTYPE html>", html)
+        self.assertIn("var WP_DATA", html)
+        self.assertIn("WPGame.Game", html)
+        self.assertIn("game-core", html)  # 注释里带文件名，确认脚本被内联
+        self.assertNotIn("<script src=", html)
+        self.assertNotIn("<link rel=\"stylesheet\"", html)
+
+    def test_html_contains_words(self):
+        b, groups = self.make()
+        _, html = offline.build_offline_html(b, groups)
+        self.assertIn("textbook", html)
+
+    def test_empty_bank_raises(self):
+        b, _ = self.make()
+        with self.assertRaises(ValueError):
+            offline.build_offline_html(b, [])
+
+    def test_safe_filename(self):
+        self.assertEqual(offline.safe_filename("a/b:c*d"), "a-b-c-d")
+        self.assertEqual(offline.safe_filename("   "), "题库")
+
+
+# ---------------------------------------------------------------- HTTP 接口
+
+class TestHTTP(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import threading
+        cls.tmp = tempfile.TemporaryDirectory()
+        os.environ["WP_DB"] = str(Path(cls.tmp.name) / "http.db")
+        from server import app as app_mod
+        cls.httpd = app_mod.build_server("127.0.0.1", 0, str(Path(cls.tmp.name) / "http.db"))
+        cls.port = cls.httpd.server_address[1]
+        cls.base = f"http://127.0.0.1:{cls.port}"
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever,
+                                      kwargs={"poll_interval": 0.05}, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        from server.app import Handler
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.thread.join(timeout=5)
+        Handler.db.close()
+        cls.tmp.cleanup()
+        os.environ.pop("WP_DB", None)
+
+    def get(self, path):
+        with urllib.request.urlopen(self.base + urllib.parse.quote(path, safe="/?=&"),
+                                    timeout=10) as r:
+            return json.loads(r.read().decode())
+
+    def post(self, path, payload=None):
+        data = json.dumps(payload or {}).encode()
+        req = urllib.request.Request(self.base + path, data=data,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.loads(r.read().decode())
+
+    def test_health(self):
+        self.assertTrue(self.get("/api/health")["ok"])
+
+    def test_meta(self):
+        meta = self.get("/api/meta")
+        self.assertEqual(meta["default_term"], "整学年")
+        self.assertEqual(meta["default_selection"]["level2"], "九年级")
+
+    def test_terms_and_units(self):
+        terms = self.get("/api/terms?level1=初中&level2=九年级")
+        keys = [o["key"] for o in terms["options"]]
+        self.assertEqual(keys, ["上册", "下册", "整学年"])
+        units = self.get("/api/units?level1=初中&level2=九年级&level3=上册")
+        self.assertEqual(len(units["units"]), 7)
+
+    def test_default_bank_seeded(self):
+        banks = self.get("/api/banks")["banks"]
+        titles = [b["title"] for b in banks]
+        self.assertIn("人教版初中三年级上学期", titles)
+
+    def test_create_bank_and_play(self):
+        res = self.post("/api/banks", {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+        })
+        bid = res["bank"]["id"]
+        payload = self.get(f"/api/banks/{bid}")
+        self.assertEqual(sum(len(g["words"]) for g in payload["groups"]), 239)
+
+    def test_offline_generation_and_download(self):
+        res = self.post("/api/banks", {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+        })
+        bid = res["bank"]["id"]
+        off = self.post(f"/api/banks/{bid}/offline")
+        self.assertTrue(off["filename"].endswith(".html"))
+        with urllib.request.urlopen(self.base + off["url"], timeout=10) as r:
+            html = r.read().decode()
+        self.assertIn("var WP_DATA", html)
+
+    def test_scores(self):
+        self.post("/api/scores", {
+            "bank_id": 1, "bank_title": "测试", "device": "d-test",
+            "score": 1234, "matched": 10, "total_pairs": 20,
+            "wrong": 2, "best_combo": 5, "duration": 30, "level_count": 1,
+            "detail": [{"level": 0, "score": 1234}],
+        })
+        res = self.get("/api/scores?limit=10")
+        self.assertGreaterEqual(res["stats"]["best"], 1234)
+        self.assertTrue(any(s["bank_title"] == "测试" for s in res["scores"]))
+
+    def test_unknown_api_404(self):
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            self.get("/api/nope")
+        self.assertEqual(ctx.exception.code, 404)
+
+    def test_static_index(self):
+        with urllib.request.urlopen(self.base + "/", timeout=10) as r:
+            body = r.read().decode()
+        self.assertIn("单词消消乐", body)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

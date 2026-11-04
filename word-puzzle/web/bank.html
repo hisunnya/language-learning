@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>题库工作台 · 单词消消乐</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">题库工作台<small>上传资料 · 生成题库 · 离线测试</small></div>
+    <nav class="nav">
+      <a href="/">首页</a>
+      <a href="/bank.html" class="on">题库工作台</a>
+      <a href="/stats.html">成绩记录</a>
+    </nav>
+  </div>
+
+  <!-- 两个主按钮 -->
+  <div class="card">
+    <h2>主要操作</h2>
+    <p class="sub">上传自己的词表，或把当前选好的层级直接导出成离线测试网页</p>
+    <div class="actions">
+      <button class="btn lg gold" id="btnUpload">📁 上传题库</button>
+      <button class="btn lg green" id="btnOffline">🧪 生成离线测试</button>
+    </div>
+    <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json,.md" hidden>
+    <div class="msg" id="upMsg"></div>
+  </div>
+
+  <!-- 层级选择 -->
+  <div class="card">
+    <h2>题源与层级</h2>
+    <p class="sub">第一级 学段 → 第二级 年级 → 第三级 学期 → 第四级 单元；每一级都可以自定义名称</p>
+
+    <div class="row" style="margin-bottom:12px">
+      <div class="field">
+        <label>题源</label>
+        <select id="sourceSel">
+          <option value="seed">内置词库（人教版）</option>
+          <option value="material">使用上传的资料</option>
+        </select>
+      </div>
+      <div class="field" id="matField" style="display:none">
+        <label>选择资料</label>
+        <select id="matSel"></select>
+      </div>
+    </div>
+
+    <div id="levelBox"></div>
+    <div class="msg info" id="selInfo"></div>
+    <div class="actions">
+      <button class="btn" id="btnMake">生成题库</button>
+    </div>
+  </div>
+
+  <!-- 资料列表 -->
+  <div class="card">
+    <h2>已上传的资料</h2>
+    <p class="sub">支持 TXT / CSV / TSV / JSON；JSON、CSV 会自动识别单元字段</p>
+    <div class="list" id="matList"><div class="empty">还没有上传资料</div></div>
+  </div>
+
+  <!-- 题库列表 -->
+  <div class="card">
+    <h2>已生成的题库</h2>
+    <p class="sub">可以直接玩，也可以导出成离线单文件网页</p>
+    <div class="list" id="bankList"><div class="empty">加载中…</div></div>
+  </div>
+
+  <!-- 离线文件 -->
+  <div class="card">
+    <h2>已生成的离线测试页</h2>
+    <p class="sub">文件名规则：层级 + 日期 + 时间.html</p>
+    <div class="list" id="fileList"><div class="empty">还没有生成过</div></div>
+  </div>
+
+  <footer class="foot">
+    离线测试页是<b>单个 HTML 文件</b>，词表、样式、脚本全部内嵌，双击即可在没网的电脑上玩，
+    成绩存在浏览器本地。
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/js/api.js"></script>
+<script src="/js/selector.js"></script>
+<script src="/js/page-bank.js"></script>
+</body>
+</html>
