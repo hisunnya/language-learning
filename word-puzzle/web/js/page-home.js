@@ -96,6 +96,12 @@
       onChange: function () { updateInfo(); }
     });
 
+    /* 「每关词数」：交给后端分组时用 */
+    var pairsInput = document.getElementById('pairsPerLevel');
+    if (pairsInput) {
+      pairsInput.oninput = function () { updateInfo(); };
+    }
+
     API.get('/api/meta').then(function (meta) {
       var c = meta.curriculum || {};
       document.getElementById('curTotal').textContent = c.word_total || '—';
@@ -110,6 +116,7 @@
 
     document.getElementById('btnMake').onclick = function () {
       var s = sel.get();
+      s.pairs_per_level = pairsPerLevel();
       var btn = this;
       btn.disabled = true;
       btn.textContent = '生成中…';
@@ -128,6 +135,7 @@
 
     document.getElementById('btnOffline').onclick = function () {
       var s = sel.get();
+      s.pairs_per_level = pairsPerLevel();
       var btn = this;
       btn.disabled = true;
       API.post('/api/banks', s).then(function (res) {
@@ -147,6 +155,14 @@
     };
   });
 
+  /* 「每关词数」：默认 15，输错了也按默认值来 */
+  function pairsPerLevel() {
+    var input = document.getElementById('pairsPerLevel');
+    var value = input ? parseInt(input.value, 10) : 15;
+    if (!value || value < 4 || value > 40) return 15;
+    return value;
+  }
+
   function updateInfo() {
     if (!sel) return;
     var s = sel.summary();
@@ -156,7 +172,10 @@
         '可以换个层级，或到「题库工作台」上传资料。';
       return;
     }
+    var per = pairsPerLevel();
+    var levels = Math.ceil(s.words / per);
     box.textContent = '当前范围：' + s.path + ' · ' +
-      s.units + ' 个单元 · ' + s.words + ' 个词条';
+      s.units + ' 个单元 · ' + s.words + ' 个词条 · ' +
+      '每关最多 ' + per + ' 词（约 ' + levels + ' 关）';
   }
 })();

@@ -30,7 +30,7 @@
       score: 0,
       matched: 0,
       total_pairs: 0,
-      sel: null,          /* 当前选中的英文卡片 {id, index} */
+      sel: null,          /* 当前选中的卡片 {id, card}，英文中文皆可 */
       combo: 0,
       best: 0,
       wrong: 0,
@@ -89,6 +89,13 @@
 
     /**
      * 点一张卡片。
+     *
+     * 规则：**英文和中文都可以先点**。
+     *   * 第一次点：选中这张卡（英文或中文都行），并朗读单词。
+     *   * 再点同一张卡：重新朗读，保持选中。
+     *   * 又点了同一侧的另一张卡：换选中，不算错，并提示「再点另一侧」。
+     *   * 点另一侧的卡片：同一个词 → 配对成功；不同的词 → 配错（扣分扣时间）。
+     *
      * @returns {null|{type:string}} 命中的事件（同时通过 onEvent 抛出）
      */
     pick: function (card) {
@@ -97,50 +104,62 @@
       var level = this.levels[st.lv];
       if (!level || !level.words[card.id]) return null;
 
-      if (card.t === 'en') {
-        if (st.sel && st.sel.id === card.id) {
-          /* 再点同一个单词：重新朗读，保持选中 */
+      if (st.sel) {
+        var prev = st.sel.card;
+        var sameCard = prev.t === card.t && prev.id === card.id;
+
+        /* 再点同一张卡：重新朗读，保持选中 */
+        if (sameCard) {
           this.emit({ type: 'repeat', word: card.word, card: card });
           return null;
         }
-        st.sel = { id: card.id, card: card };
-        this.emit({ type: 'select', word: card.word, card: card });
-        return null;
-      }
 
-      if (!st.sel) {
-        this.emit({ type: 'needEnglish', card: card });
-        return null;
-      }
+        /* 又点了同一侧（两个英文或两个中文）：换选中，不算错 */
+        if (prev.t === card.t) {
+          st.sel = { id: card.id, card: card };
+          this.emit({ type: 'switch', word: card.word, card: card,
+                      prevCard: prev, prevSide: prev.t, side: card.t });
+          return null;
+        }
 
-      if (st.sel.id === card.id) {
-        /* 配对成功 */
-        var gain = PAIR_SCORE + Math.min(st.combo, COMBO_CAP) * COMBO_STEP;
-        st.combo++;
-        if (st.combo > st.best) st.best = st.combo;
-        st.score += gain;
-        st.matched++;
+        /* 点了另一侧：判断是不是同一个词 */
+        var enCard = prev.t === 'en' ? prev : card;
+        var cnCard = prev.t === 'cn' ? prev : card;
+
+        if (st.sel.id === card.id) {
+          /* 配对成功 */
+          var gain = PAIR_SCORE + Math.min(st.combo, COMBO_CAP) * COMBO_STEP;
+          st.combo++;
+          if (st.combo > st.best) st.best = st.combo;
+          st.score += gain;
+          st.matched++;
+          this.emit({
+            type: 'match', word: card.word, gain: gain, combo: st.combo,
+            enCard: enCard, cnCard: cnCard
+          });
+          st.sel = null;
+          if (st.matched >= st.total_pairs) this.levelClear();
+          return { type: 'match', gain: gain };
+        }
+
+        /* 配对错误 */
+        st.combo = 0;
+        st.wrong++;
+        st.score = Math.max(0, st.score - MISS_SCORE);
+        st.deadline -= MISS_TIME * 1000;
+        st.timeLeft = Math.max(0, (st.deadline - Date.now()) / 1000);
         this.emit({
-          type: 'match', word: card.word, gain: gain, combo: st.combo,
-          enCard: st.sel.card, cnCard: card
+          type: 'miss', timeLeft: st.timeLeft,
+          enCard: enCard, cnCard: cnCard
         });
         st.sel = null;
-        if (st.matched >= st.total_pairs) this.levelClear();
-        return { type: 'match', gain: gain };
+        return { type: 'miss' };
       }
 
-      /* 配对错误 */
-      st.combo = 0;
-      st.wrong++;
-      st.score = Math.max(0, st.score - MISS_SCORE);
-      st.deadline -= MISS_TIME * 1000;
-      st.timeLeft = Math.max(0, (st.deadline - Date.now()) / 1000);
-      this.emit({
-        type: 'miss', timeLeft: st.timeLeft,
-        enCard: st.sel.card, cnCard: card
-      });
-      st.sel = null;
-      return { type: 'miss' };
+      /* 第一次点：选中（英文或中文都行） */
+      st.sel = { id: card.id, card: card };
+      this.emit({ type: 'select', word: card.word, card: card, side: card.t });
+      return null;
     },
 
     /* ---------- 计时 ---------- */

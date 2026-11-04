@@ -212,6 +212,11 @@ A regression here must fail the suite rather than ship.
   `unittest` (Python) — no new frameworks without a reason. There is **no
   Node.js on the target host**, so JavaScript is checked with
   `word-puzzle/tools/check_js.py`, not `node --check`.
+- The pure-computation layer `word-puzzle/web/js/game-core.js` has a
+  behaviour test at `word-puzzle/tests/js/game_core.test.js`, driven by
+  `word-puzzle/tests/test_game_core.py`. It runs under `node` where node is
+  available and **skips** where it is not, so the target host stays
+  dependency-free. A change to the scoring or matching rules belongs there.
 - Run the suite before committing. A change that cannot be verified on this
   machine must say so explicitly instead of claiming success.
 - Verification means the real path, not only unit tests: a unit test with mock
