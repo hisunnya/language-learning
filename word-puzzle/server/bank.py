@@ -16,9 +16,10 @@
 一关放不下
 ----------
 有些单元词很多（三十几个），一关全放进去卡片会挤成一团。
-所以词条按 :data:`MAX_PAIRS_PER_LEVEL` 切块：``Unit 1`` 会变成
+所以词条按 :data:`MAX_PAIRS_PER_LEVEL` 切块：37 个词的 ``Unit 1`` 会变成
 ``Unit 1（1/3）``、``Unit 1（2/3）``、``Unit 1（3/3）``，
-每关最多 8 个词。词少的单元保持原样。
+每关最多 15 个词。最后一关不足时，从前面出现过的词里补齐（复习），
+补进来的词在本关里不会重复。
 """
 from __future__ import annotations
 
@@ -33,7 +34,7 @@ from .hierarchy import CURRICULUM_OBJ
 UNIT_MODE_LABELS = dict(hierarchy.UNIT_MODES)
 
 # 一关最多多少对词。单元词多时按这个上限切块。
-MAX_PAIRS_PER_LEVEL = 8
+MAX_PAIRS_PER_LEVEL = 15
 
 
 class BankError(Exception):
@@ -129,36 +130,64 @@ def build_words(units: list[dict]) -> list[dict]:
 
 def chunk_groups(groups: list[dict],
                  max_pairs: int = MAX_PAIRS_PER_LEVEL) -> list[dict]:
-    """把词量大的单元拆成多个小组（每组一关）。
+    """把词量大的单元拆成多个关卡，并给不足的关卡补上复习词。
 
-    词数不超过 max_pairs 的单元原样保留；超过的按顺序切块，
-    名字标成「单元名（i/n）」。词条顺序和数量都不变。
+    切分
+    ----
+    一个单元按 max_pairs 切开：37 个词的 ``Unit 1`` 变成
+    ``Unit 1（1/3）`` 15 词、``Unit 1（2/3）`` 15 词、``Unit 1（3/3）`` 7 词。
 
-    切块是**均分**的：41 个词、每关最多 8 个，会切成 7/7/7/7/7/6，
-    而不是 8/8/8/8/8/1 —— 不留只有一两个词的空关。
+    补齐
+    ------
+    不足 max_pairs 的关卡，从**前面已经出现过的关卡**里取词补齐（相当于复习），
+    补进来的词在本关里不会和已有词重复——英文和中文都不重复，
+    所以一关里不会出现两张一模一样的卡片（那会让配对变得含糊）。
+    补过词的关卡名字后面会标上「含复习」。
     """
-    out: list[dict] = []
+    parts: list[dict] = []
     for group in groups:
         words = list(group.get("words") or [])
         if not words:
             continue
         unit = str(group.get("unit") or "")
         if max_pairs <= 0 or len(words) <= max_pairs:
-            out.append({"unit": unit, "words": words})
+            parts.append({"unit": unit, "words": words})
             continue
-        total_words = len(words)
-        parts_count = (total_words + max_pairs - 1) // max_pairs
-        size, extra = divmod(total_words, parts_count)
-        parts: list[list[dict]] = []
-        index = 0
-        for part in range(parts_count):
-            length = size + (1 if part < extra else 0)
-            parts.append(words[index:index + length])
-            index += length
-        for part_index, part in enumerate(parts, start=1):
-            out.append({"unit": f"{unit}（{part_index}/{parts_count}）",
-                        "words": part})
-    return out
+        parts_count = (len(words) + max_pairs - 1) // max_pairs
+        for index in range(parts_count):
+            chunk = words[index * max_pairs:(index + 1) * max_pairs]
+            parts.append({
+                "unit": f"{unit}（{index + 1}/{parts_count}）",
+                "words": chunk,
+            })
+
+    # 补齐：把之前出现过的词拿来复习，但本关里不重复
+    pool: list[dict] = []
+    pool_keys: set[tuple[str, str]] = set()
+    for part in parts:
+        words = part["words"]
+        used_en = {w.get("en", "") for w in words}
+        used_cn = {w.get("cn", "") for w in words}
+        added = 0
+        for word in pool:
+            if len(words) >= max_pairs:
+                break
+            en = word.get("en", "")
+            cn = word.get("cn", "")
+            if en in used_en or cn in used_cn:
+                continue
+            words.append(dict(word))
+            used_en.add(en)
+            used_cn.add(cn)
+            added += 1
+        if added:
+            part["unit"] = f"{part['unit']} · 含复习"
+        for word in words:
+            key = (word.get("en", ""), word.get("cn", ""))
+            if key not in pool_keys:
+                pool_keys.add(key)
+                pool.append(word)
+    return parts
 
 
 def create_bank(db: Database, payload: dict) -> dict:

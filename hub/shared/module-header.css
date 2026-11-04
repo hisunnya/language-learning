@@ -64,6 +64,11 @@
 .portal-brand-copy em { margin-left: 4px; color: var(--mh-accent); font-size: 10px; font-style: normal; letter-spacing: 1px; }
 .portal-brand-copy small { color: var(--mh-muted); font-size: 11.5px; font-weight: 500; }
 .portal-nav { display: flex; align-items: center; gap: 5px; margin-left: auto; flex-wrap: wrap; }
+/* 游戏页只有一个「退出游戏」，用紧凑型导航，不占满整行。
+   写成复合选择器是为了压过下面媒体查询里的 .portal-nav 规则。 */
+.portal-nav.portal-nav--compact { width: auto; margin-left: auto; order: 0; }
+.portal-nav.portal-nav--compact a,
+.portal-nav.portal-nav--compact button { flex: 0 0 auto; }
 .portal-nav a, .portal-nav button {
   padding: 7px 12px;
   border: 0;

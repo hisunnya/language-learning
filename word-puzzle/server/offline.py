@@ -81,8 +81,7 @@ var WP_DATA = {data};
     game: game,
     title: WP_DATA.title,
     subtitle: WP_DATA.subtitle,
-    pickUnit: WP_DATA.pickUnit,
-    homeExtra: WP_DATA.homeExtra,
+    pickUnit: WP_DATA.pickUnit,    wordTotal: WP_DATA.wordTotal,    homeExtra: WP_DATA.homeExtra,
     onFinish: function (report) {{
       WPAdapter.save(report, WP_DATA.meta);
     }}
@@ -144,7 +143,7 @@ def build_offline_html(bank: dict, groups: list[dict],
     if not levels:
         raise ValueError("题库里没有单词，无法生成离线测试页")
 
-    total = sum(len(l["words"]) for l in levels)
+    total = bank.get("word_count") or sum(len(l["words"]) for l in levels)
     title = bank.get("title") or "词境 Lexica"
     subtitle = " · ".join([
         bank.get("level1", ""), bank.get("level2", ""),
@@ -156,6 +155,7 @@ def build_offline_html(bank: dict, groups: list[dict],
         "subtitle": subtitle or "离线测试题",
         "levels": levels,
         "pickUnit": bank.get("unit_mode") == "per-unit",
+        "wordTotal": total,
         "homeExtra": "",
         "meta": {
             "title": title,
