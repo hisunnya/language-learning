@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import io
+import http.client
 import json
 import os
 import sys
@@ -38,6 +39,18 @@ class TempDB(unittest.TestCase):
 
 
 # ---------------------------------------------------------------- 层级
+
+class TestFrontendMount(unittest.TestCase):
+    def test_pages_declare_word_puzzle_base_path(self):
+        for page in ("index.html", "bank.html", "stats.html", "play.html"):
+            source = (ROOT / "web" / page).read_text(encoding="utf-8")
+            self.assertIn('<meta name="wp-base" content="/word-puzzle">', source, page)
+
+    def test_api_helper_uses_base_for_requests_and_downloads(self):
+        source = (ROOT / "web" / "js" / "api.js").read_text(encoding="utf-8")
+        self.assertIn("base +", source)
+        self.assertIn("function download(path, filename)", source)
+        self.assertIn("return res.blob()", source)
 
 class TestHierarchy(unittest.TestCase):
     def test_levels_present(self):
@@ -437,8 +450,33 @@ class TestHTTP(unittest.TestCase):
         off = self.post(f"/api/banks/{bid}/offline")
         self.assertTrue(off["filename"].endswith(".html"))
         with urllib.request.urlopen(self.base + off["url"], timeout=10) as r:
+            disposition = r.headers.get("Content-Disposition", "")
+            self.assertIn('filename="lexica-offline-', disposition)
+            self.assertIn("filename*=UTF-8''", disposition)
             html = r.read().decode()
         self.assertIn("var WP_DATA", html)
+
+    def test_offline_post_body_does_not_corrupt_keep_alive_connection(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
+        try:
+            connection.request("GET", "/api/banks")
+            banks = json.loads(connection.getresponse().read())["banks"]
+            bank_id = banks[0]["id"]
+
+            connection.request("POST", f"/api/banks/{bank_id}/offline", body=b"{}",
+                               headers={"Content-Type": "application/json"})
+            generated = json.loads(connection.getresponse().read())
+
+            connection.request("GET", "/api/offline")
+            files = json.loads(connection.getresponse().read())["files"]
+            self.assertIn(generated["filename"], [item["name"] for item in files])
+
+            connection.request("GET", generated["url"])
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            self.assertIn(b"<!DOCTYPE html>", response.read()[:100])
+        finally:
+            connection.close()
 
     def test_scores(self):
         self.post("/api/scores", {

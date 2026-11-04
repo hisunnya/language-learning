@@ -2,11 +2,12 @@
 
 // ====== 状态 ======
 const STORAGE_KEYS = {
+  level: 'tp_level',
   usedIds: 'tp_used_ids',
   restoredIds: 'tp_restored_ids',
   history: 'tp_history',
   points: 'tp_points',
-  theme: 'tp_theme',
+  theme: 'lg_theme',
 };
 
 const POINTS = {
@@ -15,19 +16,14 @@ const POINTS = {
   startBonus: 30,
 };
 
-const THEMES = {
-  warm: '暖棕',
-  forest: '森绿',
-  mist: '雾蓝',
-};
-
 const state = {
   topics: [],
   categories: [],
+  level: 'middle',
   currentTopic: null,
   hintShown: false,
   currentCategory: '__all__',
-  theme: 'warm',
+  theme: 'indigo',
 };
 
 // ====== 存储 ======
@@ -65,9 +61,16 @@ function parseHint(hint) {
 // ====== 初始化 ======
 async function init() {
   // 加载数据
-  const mod = await import('./topics.js');
-  state.topics = mod.TOPICS;
-  state.categories = mod.CATEGORIES;
+  const [mod, supplemental] = await Promise.all([
+    import('./topics.js'),
+    import('./supplemental_topics.js'),
+  ]);
+  state.topics = [
+    ...mod.TOPICS.map(topic => ({ ...topic, level: topic.level || 'middle' })),
+    ...supplemental.SUPPLEMENTAL_TOPICS,
+  ];
+  const savedLevel = storage.get(STORAGE_KEYS.level, 'middle');
+  state.level = ['middle', 'high', 'university'].includes(savedLevel) ? savedLevel : 'middle';
 
   // 初始化积分
   if (storage.get(STORAGE_KEYS.points, null) === null) {
@@ -75,16 +78,41 @@ async function init() {
   }
 
   // 初始化主题
-  state.theme = storage.get(STORAGE_KEYS.theme, 'warm');
+  state.theme = localStorage.getItem(STORAGE_KEYS.theme) || 'indigo';
   applyTheme(state.theme);
 
   // 渲染
+  renderAudienceTabs();
   renderCategoryChips();
   renderPoints();
-  renderThemeOptions();
   bindEvents();
   renderHistory();
   showEmptyState();
+}
+
+function topicsForLevel() {
+  return state.topics.filter(topic => topic.level === state.level);
+}
+
+function renderAudienceTabs() {
+  document.querySelectorAll('[data-audience]').forEach(button => {
+    const active = button.dataset.audience === state.level;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+
+function selectAudience(level) {
+  if (!['middle', 'high', 'university'].includes(level) || state.level === level) return;
+  state.level = level;
+  storage.set(STORAGE_KEYS.level, level);
+  state.currentCategory = '__all__';
+  state.currentTopic = null;
+  state.hintShown = false;
+  showEmptyState();
+  renderAudienceTabs();
+  renderCategoryChips();
+  renderHistory();
 }
 
 function showEmptyState() {
@@ -96,25 +124,17 @@ function showEmptyState() {
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
   state.theme = theme;
-  storage.set(STORAGE_KEYS.theme, theme);
 }
 
-function renderThemeOptions() {
-  document.querySelectorAll('.theme-option').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === state.theme);
-  });
-}
-
-function toggleThemePicker(force) {
-  const picker = document.getElementById('themePicker');
-  const willShow = force ?? !picker.classList.contains('show');
-  picker.classList.toggle('show', willShow);
-}
+window.addEventListener('portal-theme-change', event => {
+  applyTheme(event.detail.theme);
+});
 
 // ====== 分类 chips ======
 function renderCategoryChips() {
   const wrap = document.getElementById('categoryChips');
-  const all = ['__all__', ...state.categories];
+  const categories = [...new Set(topicsForLevel().map(topic => topic.category))].sort();
+  const all = ['__all__', ...categories];
   wrap.innerHTML = '';
   all.forEach(cat => {
     const btn = document.createElement('button');
@@ -153,6 +173,7 @@ function pickTopic() {
   const restoredIds = new Set(storage.get(STORAGE_KEYS.restoredIds, []));
 
   const pool = state.topics.filter(t => {
+    if (t.level !== state.level) return false;
     if (state.currentCategory !== '__all__' && t.category !== state.currentCategory) return false;
     if (usedIds.has(t.id) && !restoredIds.has(t.id)) return false;
     return true;
@@ -243,6 +264,7 @@ function endDiscussion() {
   }
   history.unshift({
     id: state.currentTopic.id,
+    level: state.level,
     topic: state.currentTopic.topic,
     category: state.currentTopic.category,
     hint: state.currentTopic.hint,
@@ -258,22 +280,26 @@ function endDiscussion() {
 // ====== 历史页面 ======
 function renderHistory() {
   const history = storage.get(STORAGE_KEYS.history, []);
+  const visibleHistory = history.map((item, index) => ({ item, index }))
+    .filter(({ item }) => (item.level || 'middle') === state.level);
   const usedIds = storage.get(STORAGE_KEYS.usedIds, []);
+  const used = new Set(usedIds);
+  const remaining = topicsForLevel().filter(topic => !used.has(topic.id)).length;
   const list = document.getElementById('historyList');
   const empty = document.getElementById('historyEmpty');
 
-  document.getElementById('statTotal').textContent = history.length;
-  document.getElementById('statRemaining').textContent = state.topics.length - usedIds.length;
-  document.getElementById('statTotalPoints').textContent = history.reduce((s, h) => s + h.pointsEarned, 0);
+  document.getElementById('statTotal').textContent = visibleHistory.length;
+  document.getElementById('statRemaining').textContent = remaining;
+  document.getElementById('statTotalPoints').textContent = visibleHistory.reduce((s, row) => s + row.item.pointsEarned, 0);
 
-  if (history.length === 0) {
+  if (visibleHistory.length === 0) {
     list.innerHTML = '';
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
 
-  list.innerHTML = history.map((h, i) => {
+  list.innerHTML = visibleHistory.map(({ item: h, index: i }) => {
     const items = parseHint(h.hint);
     return `
     <div class="history-item" data-idx="${i}">
@@ -354,6 +380,9 @@ function showPointsModal(n) {
 
 // ====== 事件绑定 ======
 function bindEvents() {
+  document.querySelectorAll('[data-audience]').forEach(button => {
+    button.addEventListener('click', () => selectAudience(button.dataset.audience));
+  });
   document.getElementById('btnDraw').addEventListener('click', pickTopic);
   document.getElementById('btnViewHint').addEventListener('click', viewHint);
   document.getElementById('btnSkip').addEventListener('click', skipTopic);
@@ -368,22 +397,6 @@ function bindEvents() {
       document.getElementById('view' + capitalize(tab.dataset.view)).classList.add('active');
     });
   });
-
-  // 主题按钮
-  document.getElementById('themeBtn').addEventListener('click', e => {
-    e.stopPropagation();
-    toggleThemePicker();
-  });
-  document.querySelectorAll('.theme-option').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      applyTheme(btn.dataset.theme);
-      renderThemeOptions();
-      toggleThemePicker(false);
-    });
-  });
-  // 点别处关闭主题选择
-  document.addEventListener('click', () => toggleThemePicker(false));
 
   // 点击积分卡：弹出积分说明
   document.getElementById('pointsCard').addEventListener('click', () => {

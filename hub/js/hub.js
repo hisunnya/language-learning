@@ -19,17 +19,13 @@
   var I18N = {
     zh: {
       "brand.name": "语林",
-      "brand.sub": "语言学习工具集",
-
-      "hero.eyebrow": "语言学习工具集",
-      "hero.title": "三件工具，一个入口",
-      "hero.lead": "词汇游戏、日常话题讨论、业余无线电模拟考试 —— 各自独立，局域网内即开即用。",
+      "hero.title": "学习工具集",
 
       "stat.words": "4791",
       "stat.words.label": "个词条",
       "stat.units": "84",
       "stat.units.label": "个单元",
-      "stat.topics": "120+",
+      "stat.topics": "300+",
       "stat.topics.label": "个话题",
       "stat.questions": "1375",
       "stat.questions.label": "道真题",
@@ -38,8 +34,8 @@
 
       "lexica.name": "词境",
       "lexica.en": "Lexica",
-      "lexica.tagline": "人教版英语词汇闯关",
-      "lexica.desc": "按「学段 → 年级 → 册别 → 单元」四级挑题，点英文听发音、点中文配对，连击加分。可上传 Word / PDF 资料自建题库，还能导出单文件离线测试页。",
+      "lexica.tagline": "英语词汇练习",
+      "lexica.desc": "练习英语词汇，听发音并完成中英配对。可按学段、年级、册别和单元选题，也可上传自己的资料或导出离线练习页。",
       "lexica.f1": "四级题库",
       "lexica.f2": "美式女声发音",
       "lexica.f3": "Word / PDF 上传",
@@ -48,8 +44,8 @@
 
       "topics.name": "每日话题",
       "topics.en": "Daily Topics",
-      "topics.tagline": "适合初中生的家庭讨论",
-      "topics.desc": "按「个人与自我 / 学习与成长 / 家庭与朋友 / 社会与未来」等分类随机抽题，附参考讨论方向，记录已经聊过的话题，攒积分换取提示。",
+      "topics.tagline": "初中、高中与大学分龄话题",
+      "topics.desc": "选择初中、高中或大学话题集，按分类抽题并查看讨论方向；记录交流历史，积分可解锁提示。",
       "topics.f1": "随机抽题",
       "topics.f2": "参考方向",
       "topics.f3": "历史记录",
@@ -81,17 +77,13 @@
 
     en: {
       "brand.name": "Lingua Grove",
-      "brand.sub": "Language Learning Suite",
-
-      "hero.eyebrow": "Language Learning Suite",
-      "hero.title": "Three tools, one doorway",
-      "hero.lead": "A vocabulary game, a daily discussion board and a ham radio mock exam — each stands alone, each opens instantly on the LAN.",
+      "hero.title": "Learning Toolkit",
 
       "stat.words": "4791",
       "stat.words.label": "entries",
       "stat.units": "84",
       "stat.units.label": "units",
-      "stat.topics": "120+",
+      "stat.topics": "300+",
       "stat.topics.label": "topics",
       "stat.questions": "1375",
       "stat.questions.label": "questions",
@@ -100,8 +92,8 @@
 
       "lexica.name": "Lexica",
       "lexica.en": "词境",
-      "lexica.tagline": "A vocabulary quest through the PEP textbooks",
-      "lexica.desc": "Pick a bank across four levels — stage, grade, volume, unit — tap the English card to hear it, tap the Chinese card to match. Upload your own Word or PDF material, and export any bank as a single offline page.",
+      "lexica.tagline": "English vocabulary practice",
+      "lexica.desc": "Practice English vocabulary with pronunciation and word matching. Choose a stage, grade, volume and unit, upload your own material, or export an offline practice page.",
       "lexica.f1": "Four-level banks",
       "lexica.f2": "American female voice",
       "lexica.f3": "Word / PDF upload",
@@ -110,8 +102,8 @@
 
       "topics.name": "Daily Topics",
       "topics.en": "每日话题",
-      "topics.tagline": "Everyday conversation for middle schoolers",
-      "topics.desc": "Draw a prompt at random from themes like self, study, family and the future, with guidance directions attached. Keep a record of what you have covered and spend points on hints.",
+      "topics.tagline": "Topics for middle school, high school and university",
+      "topics.desc": "Choose an age group, draw a prompt by category and explore its discussion hints. Track past conversations and use points to reveal guidance.",
       "topics.f1": "Random prompt",
       "topics.f2": "Guidance hints",
       "topics.f3": "History",

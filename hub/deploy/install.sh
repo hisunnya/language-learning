@@ -24,14 +24,15 @@ bash "$REPO_DIR/word-puzzle/deploy/check-deps.sh"
 systemctl is-active --quiet word-puzzle || die "词境后端 word-puzzle 未运行，请先部署并启动它"
 
 say "部署三个前端项目"
-install -d "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT"
+install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT"
 cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$HUB_ROOT/"
+cp -a "$REPO_DIR/hub/shared/." "$HUB_ROOT/shared/"
 cp -a "$REPO_DIR/topic-app/topic-app/." "$TOPICS_ROOT/"
 cp -a "$REPO_DIR/ham-exam/index.html" "$REPO_DIR/ham-exam/css" \
   "$REPO_DIR/ham-exam/data" "$REPO_DIR/ham-exam/images" "$REPO_DIR/ham-exam/js" "$HAM_ROOT/"
 chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT"
 
-say "启用总主页并把词境移到 8082"
+say "启用总主页并将词境挂到 /word-puzzle/"
 sed "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" \
   "$REPO_DIR/hub/deploy/lingua-grove.conf" > "$AVAILABLE"
 ln -sfn "$AVAILABLE" "$ENABLED"
@@ -58,6 +59,6 @@ cat <<EOF
   总主页：http://$SERVER_NAME/
   每日话题：http://$SERVER_NAME/topics/
   无线电执照：http://$SERVER_NAME/ham/
-  词境 Lexica：http://$SERVER_NAME:8082/
+  词境 Lexica：http://$SERVER_NAME/word-puzzle/
 
 EOF

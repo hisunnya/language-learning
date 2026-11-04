@@ -1,6 +1,6 @@
 # word-puzzle · 词境 Lexica（网站版）
 
-一个**能部署到 Ubuntu + nginx** 的英语词汇游戏网站。
+一个**能部署到 Ubuntu + nginx** 的英语词汇练习网站。
 
 * 内置**人教版 PEP 初中（5 册）+ 高中（7 册）**共 **4791 个词条 / 84 个单元**
 * 四级层级选题：学段 → 年级 → 册别 → 单元，**每一级都能自定义名称**
@@ -253,7 +253,7 @@ sudo env WP_SERVER_NAME=10.211.55.5 ./deploy/install.sh
 
 `WP_SERVER_NAME` 用于指定 nginx 主机名；上例让首页通过 `http://10.211.55.5/` 访问。
 如果词境要作为语林总主页的子项目，完成后再运行 `sudo env LINGUA_SERVER_NAME=10.211.55.5 bash hub/deploy/install.sh`，
-由总主页接管 80 端口并把词境入口切到 8082。
+由总主页在 `/word-puzzle/` 提供词境前端并转发 API。
 
 可选工具装不上（离线机器）也不影响网站运行，只是：
 PDF 走内置解析器、扫描件读不了、发音走浏览器自带 TTS。
@@ -290,8 +290,8 @@ nginx 做的事：**静态文件直接托管**，`/api/` 反代给后端（默�
 | --- | --- | --- |
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/meta` | 层级元数据 + 内置词库统计 + 音标/OCR/语音能力自检 |
-| GET | `/api/terms?level1=&level2=` | 某年级的学期选项 |
-| GET | `/api/units?level1=&level2=&level3=` | 某学期的单元列表 |
+| GET | `/api/terms?level1=&level2=` | 某年级的册别选项 |
+| GET | `/api/units?level1=&level2=&level3=` | 某册别的单元列表 |
 | GET | `/api/materials` | 资料列表 |
 | POST | `/api/materials` | 上传资料（multipart，字段名 `file`） |
 | DELETE | `/api/materials/<id>` | 删除资料 |

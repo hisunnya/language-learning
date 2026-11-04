@@ -7,8 +7,8 @@
    三种常见部署方式，选一种，把对应的路径填上：
 
    A) 同一台服务器（默认）
-      hub 在 80 端口，词境在 8082 端口，话题和 Ham Exam
-      分别挂在 /topics/ 和 /ham/ 下。
+      hub 在 80 端口，三个项目分别挂在 /word-puzzle/、
+      /topics/ 和 /ham/ 下。
 
    B) 不同端口
       把 href 改成完整地址，例如 http://10.1.1.93:8765/
@@ -17,8 +17,8 @@
       把 href 改成完整地址，例如 http://lexica.lan/
    ============================================================= */
 window.LINGUA_PROJECTS = {
-   // 词境页面使用根路径资源，单独端口部署以免和 hub 冲突。
-   lexica: window.location.protocol + "//" + window.location.hostname + ":8082/",
+   // 词境静态资源和 API 都通过 nginx 的同域子路径提供。
+   lexica: "/word-puzzle/",
 
   // 每日话题 Daily Topics —— 纯前端
   topics: "/topics/",

@@ -46,7 +46,7 @@
         detail: report.detail
       };
       try {
-        fetch('/api/scores', {
+        fetch(API.path('/api/scores'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
@@ -56,7 +56,7 @@
     },
 
     history: function () {
-      return fetch('/api/scores?limit=50').then(function (r) { return r.json(); })
+      return fetch(API.path('/api/scores?limit=50')).then(function (r) { return r.json(); })
         .catch(function () { return []; });
     }
   };

@@ -310,11 +310,18 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("location ^~ /ham/", NGINX)
         self.assertIn("alias /var/www/ham-exam/;", NGINX)
 
-    def test_lexica_is_served_on_8082_with_api_proxy(self):
-        self.assertIn("listen 8082;", NGINX)
-        self.assertIn("root /srv/word-puzzle/web;", NGINX)
-        self.assertIn("location ^~ /api/", NGINX)
-        self.assertIn("proxy_pass http://lexica_api;", NGINX)
+    def test_shared_module_header_assets_have_a_common_url(self):
+        self.assertIn("location ^~ /shared/", NGINX)
+        self.assertTrue((HUB / "shared" / "module-header.css").exists())
+        self.assertTrue((HUB / "shared" / "module-header.js").exists())
+
+    def test_lexica_is_mounted_under_word_puzzle_with_api_proxy(self):
+        self.assertIn("location ^~ /word-puzzle/", NGINX)
+        self.assertIn("alias /srv/word-puzzle/web/;", NGINX)
+        self.assertIn("location ^~ /word-puzzle/api/", NGINX)
+        self.assertIn("proxy_pass http://lexica_api/api/;", NGINX)
+        self.assertIn("client_max_body_size 32m;", NGINX)
+        self.assertIn('lexica: "/word-puzzle/"', CONFIG)
 
     def test_installer_replaces_the_standalone_port_80_site(self):
         self.assertIn("sites-enabled/word-puzzle.conf", INSTALL_SCRIPT)

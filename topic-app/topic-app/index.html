@@ -1,61 +1,23 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-theme="warm">
+<html lang="zh-CN" data-theme="indigo">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>每日话题 · 亲子讨论</title>
+  <title>每日话题 · 分龄讨论</title>
   <meta name="theme-color" content="#8B5A3C">
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="stylesheet" href="./styles.css?v=20261104-header">
+  <link rel="stylesheet" href="/shared/module-header.css">
 </head>
 <body>
   <div class="app">
-    <header>
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">谈</div>
-        <div>
-          <h1>每日话题</h1>
-          <p>Daily Topics · 与孩子的一次深度对话</p>
-        </div>
-      </div>
-      <div class="header-right">
-        <!-- 主题切换 -->
-        <div class="theme-switcher">
-          <button class="theme-btn" id="themeBtn" title="切换主题" aria-label="切换主题">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="9"></circle>
-              <path d="M12 3a9 9 0 0 0 0 18 4.5 4.5 0 0 1 0-9 4.5 4.5 0 0 0 0-9z" fill="currentColor"></path>
-            </svg>
-          </button>
-          <div class="theme-picker" id="themePicker">
-            <button class="theme-option" data-theme="warm">
-              <div class="theme-swatch">
-                <span style="background:#8B5A3C"></span>
-                <span style="background:#D4A574"></span>
-                <span style="background:#FAF6F0"></span>
-              </div>
-              <span>暖棕</span>
-            </button>
-            <button class="theme-option" data-theme="forest">
-              <div class="theme-swatch">
-                <span style="background:#4A6B4A"></span>
-                <span style="background:#8FA68A"></span>
-                <span style="background:#F4F7F2"></span>
-              </div>
-              <span>森绿</span>
-            </button>
-            <button class="theme-option" data-theme="mist">
-              <div class="theme-swatch">
-                <span style="background:#4A5C7A"></span>
-                <span style="background:#8FA0BD"></span>
-                <span style="background:#F2F4F8"></span>
-              </div>
-              <span>雾蓝</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 积分卡 -->
+    <header class="portal-topbar">
+      <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
+        <span class="portal-brand-mark" aria-hidden="true">谈</span>
+          <span class="portal-brand-copy"><strong><span data-module-zh="每日话题" data-module-en="Daily Topics">每日话题</span></strong><small data-module-zh="初中、高中与大学话题" data-module-en="Topics across ages">初中、高中与大学话题</small></span>
+      </a>
+      <div class="portal-topbar-right">
+        <div class="portal-header-controls" id="portalHeaderControls"></div>
         <div class="points-card" id="pointsCard" title="点击查看积分说明">
           <div class="points-icon">★</div>
           <div class="points-info">
@@ -65,6 +27,12 @@
         </div>
       </div>
     </header>
+
+    <div class="audience-tabs" id="audienceTabs" role="group" aria-label="话题集">
+      <button type="button" class="audience-btn active" data-audience="middle" aria-pressed="true">初中生</button>
+      <button type="button" class="audience-btn" data-audience="high" aria-pressed="false">高中生</button>
+      <button type="button" class="audience-btn" data-audience="university" aria-pressed="false">大学生</button>
+    </div>
 
     <nav class="tabs">
       <button class="tab active" data-view="home">抽话题</button>
@@ -147,6 +115,7 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
+  <script src="/shared/module-header.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
