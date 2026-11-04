@@ -89,6 +89,7 @@
       return '<div class="item">' +
         '  <div class="main"><b>' + esc(b.title) + '</b>' +
         '    <small>' + b.word_count + ' 词 · ' + b.unit_count + ' 单元 · ' +
+        (b.pairs_per_level ? '每关 ' + b.pairs_per_level + ' 词 · ' : '') +
         esc(API.fmtTime(b.created_at)) + '</small></div>' +
         '  <div class="ops">' +
         '    <a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">开始游戏</a>' +
@@ -172,7 +173,16 @@
     if (p.source === 'material') {
       p.material_id = parseInt(document.getElementById('matSel').value, 10) || 0;
     }
+    p.pairs_per_level = pairsPerLevel();
     return p;
+  }
+
+  /* 「每关词数」：默认 15，输错了也按默认值来 */
+  function pairsPerLevel() {
+    var input = document.getElementById('pairsPerLevel');
+    var value = input ? parseInt(input.value, 10) : 15;
+    if (!value || value < 4 || value > 40) return 15;
+    return value;
   }
 
   function makeOffline(bankId) {
@@ -206,8 +216,10 @@
       box.textContent = '当前范围在内置词库里没有内容（小学 / 大学 / 自定义层级需要用自己的资料）。';
       return;
     }
+    var per = pairsPerLevel();
     box.textContent = '当前范围：' + s.path + ' · ' +
-      s.units + ' 个单元 · ' + s.words + ' 个词条';
+      s.units + ' 个单元 · ' + s.words + ' 个词条 · ' +
+      '每关最多 ' + per + ' 词（约 ' + Math.ceil(s.words / per) + ' 关）';
   }
 
   /* ---------------- 启动 ---------------- */

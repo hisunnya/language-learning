@@ -35,6 +35,9 @@ UNIT_MODE_LABELS = dict(hierarchy.UNIT_MODES)
 
 # 一关最多多少对词。单元词多时按这个上限切块。
 MAX_PAIRS_PER_LEVEL = 15
+# 允许的范围（太小一关只有几个词，太大牌面会挤）
+MIN_PAIRS_PER_LEVEL = 4
+MAX_PAIRS_PER_LEVEL_LIMIT = 40
 
 
 class BankError(Exception):
@@ -190,6 +193,17 @@ def chunk_groups(groups: list[dict],
     return parts
 
 
+def resolve_pairs_per_level(payload: dict) -> int:
+    """读取「每关词数」，超范围就用默认值。"""
+    try:
+        value = int(payload.get("pairs_per_level") or MAX_PAIRS_PER_LEVEL)
+    except (TypeError, ValueError):
+        return MAX_PAIRS_PER_LEVEL
+    if value < MIN_PAIRS_PER_LEVEL or value > MAX_PAIRS_PER_LEVEL_LIMIT:
+        return MAX_PAIRS_PER_LEVEL
+    return value
+
+
 def create_bank(db: Database, payload: dict) -> dict:
     """生成并落库一个题库，返回题库元信息。"""
     names = resolve_levels(payload)
@@ -221,6 +235,7 @@ def create_bank(db: Database, payload: dict) -> dict:
         "unit_mode": mode,
         "unit_from": int(payload.get("unit_from") or 0),
         "unit_to": int(payload.get("unit_to") or 0),
+        "pairs_per_level": resolve_pairs_per_level(payload),
     }
     bid = db.insert_bank(meta, words)
     bank = db.get_bank(bid)
@@ -251,8 +266,10 @@ def bank_payload(db: Database, bid: int) -> dict:
         "bank": {k: bank[k] for k in
                  ("id", "title", "level1", "level2", "level3", "level4",
                   "source", "unit_mode", "unit_from", "unit_to",
-                  "word_count", "unit_count", "created_at")},
-        "groups": chunk_groups([{"unit": u, "words": groups[u]} for u in order]),
+                  "pairs_per_level", "word_count", "unit_count", "created_at")},
+        "groups": chunk_groups([{"unit": u, "words": groups[u]} for u in order],
+                               max_pairs=int(bank.get("pairs_per_level")
+                                             or MAX_PAIRS_PER_LEVEL)),
     }
 
 

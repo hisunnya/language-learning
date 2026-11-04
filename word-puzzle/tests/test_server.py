@@ -12,6 +12,7 @@ import io
 import http.client
 import json
 import os
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -330,6 +331,29 @@ class TestBank(TempDB):
         self.assertEqual(len(chunks), 1)
         self.assertEqual(chunks[0]["unit"], "Unit 1")
 
+    def test_pairs_per_level_is_configurable(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+            "pairs_per_level": 6,
+        })
+        self.assertEqual(self.db.get_bank(b["id"])["pairs_per_level"], 6)
+        groups = bank_mod.bank_payload(self.db, b["id"])["groups"]
+        for group in groups:
+            self.assertLessEqual(len(group["words"]), 6)
+
+    def test_pairs_per_level_defaults_to_fifteen(self):
+        b = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "level4": "all", "unit_mode": "all",
+        })
+        self.assertEqual(self.db.get_bank(b["id"])["pairs_per_level"], 15)
+
+    def test_pairs_per_level_out_of_range_falls_back(self):
+        for value in (0, 999, "abc", None):
+            self.assertEqual(
+                bank_mod.resolve_pairs_per_level({"pairs_per_level": value}), 15)
+
     def test_seed_default_bank_idempotent(self):
         a = bank_mod.seed_default_bank(self.db)
         b = bank_mod.seed_default_bank(self.db)
@@ -554,6 +578,33 @@ class TestHTTP(unittest.TestCase):
         with urllib.request.urlopen(self.base + "/", timeout=10) as r:
             body = r.read().decode()
         self.assertIn("词境 Lexica", body)
+
+
+class TestDatabaseMigration(unittest.TestCase):
+    """老数据库（没有 pairs_per_level 列）应当被自动补列。"""
+
+    def test_old_database_gets_pairs_per_level_column(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "old.db"
+            conn = sqlite3.connect(str(path))
+            conn.execute(
+                "CREATE TABLE banks (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "title TEXT NOT NULL, level1 TEXT NOT NULL, level2 TEXT NOT NULL, "
+                "level3 TEXT NOT NULL, level4 TEXT NOT NULL, source TEXT NOT NULL, "
+                "material_id INTEGER, unit_mode TEXT NOT NULL DEFAULT 'all', "
+                "unit_from INTEGER DEFAULT 0, unit_to INTEGER DEFAULT 0, "
+                "word_count INTEGER DEFAULT 0, unit_count INTEGER DEFAULT 0, "
+                "created_at TEXT NOT NULL)")
+            conn.commit()
+            conn.close()
+
+            db = Database(path)
+            try:
+                columns = {row["name"]
+                           for row in db.query("PRAGMA table_info(banks)")}
+                self.assertIn("pairs_per_level", columns)
+            finally:
+                db.close()
 
 
 if __name__ == "__main__":

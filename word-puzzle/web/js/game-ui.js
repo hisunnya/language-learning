@@ -341,8 +341,8 @@
         '<p>' + esc(cfg.subtitle || '') + '<br>共 ' + total + ' 个词条 · ' +
         g.levels.length + ' 关</p>' +
         '<div class="rule">' +
-        '<div><b>① 点英文卡片</b>：听发音，卡片高亮选中</div>' +
-        '<div><b>② 点对应中文卡片</b>：配对成功，两个卡片一起消失</div>' +
+        '<div><b>① 点任意一张卡片</b>：听发音，卡片高亮选中</div>' +
+        '<div><b>② 点另一侧的对应卡片</b>：英文配中文（反过来也行），两张卡片一起消失</div>' +
         '<div><b>③ 计分</b>：配对 +100 分，连击额外加分；答错扣 3 秒</div>' +
         '<div><b>④ 时间</b>：每关 ' + g.levelTime + ' 秒，答错再扣 3 秒</div>' +
         '<div><b>⑤ 过关</b>：剩余时间全部折算成奖励分</div>' +
@@ -390,8 +390,9 @@
       showPanel('<h2>玩法说明</h2>' +
         '<div class="rule">' +
         '<div><b>目标</b>：把英文卡片和中文意思配成一对</div>' +
-        '<div><b>点英文</b>：朗读发音并选中该卡</div>' +
-        '<div><b>点中文</b>：配对成功 → 星星特效 + 两张卡消失</div>' +
+        '<div><b>点任意一侧</b>：朗读发音并选中该卡</div>' +
+        '<div><b>点另一侧</b>：配对成功 → 星星特效 + 两张卡消失</div>' +
+        '<div><b>连点同一侧</b>：只是换一张选，不算错，并有提示</div>' +
         '<div><b>答错</b>：卡片抖动，扣 3 秒、扣 20 分，连击清零</div>' +
         '<div><b>得分</b>：每对 +100，连击每级 +20（最高 +100）</div>' +
         '<div><b>过关</b>：剩余每秒折算 10 分奖励，下一关时间更长</div>' +
@@ -481,7 +482,7 @@
       var tip = $('s-tip');
       if (tip) {
         tip.textContent = this.cfg.tip ||
-          '点英文单词听发音，再点对应中文';
+          '点任意一张卡片，再点另一侧配对';
       }
     },
 
@@ -591,16 +592,28 @@
         }
         speak(evt.word.en);
         sfx.click();
+        /* 先点中文也是可以的，给个提示让人知道下一步 */
+        if (evt.side === 'cn') toast('先点中文也行，再点对应的英文配对');
         this.render();
-      } else if (evt.type === 'repeat') {
+      } else if (evt.type === 'switch') {
+        /* 连点同一侧：换了一个选中，提示该点另一侧了 */
+        if (evt.prevCard && evt.prevCard.el) {
+          evt.prevCard.el.classList.remove('sel');
+        }
+        if (evt.card && evt.card.el) evt.card.el.classList.add('sel');
         speak(evt.word.en);
         sfx.click();
-      } else if (evt.type === 'needEnglish') {
-        toast('先点一个英文单词，再点中文');
+        toast(evt.prevSide === 'en'
+          ? '刚选的是英文，再点中文配对'
+          : '刚选的是中文，再点英文配对');
         if (evt.card && evt.card.el) {
           evt.card.el.classList.add('hint');
           setTimeout(function () { evt.card.el.classList.remove('hint'); }, 1000);
         }
+        this.render();
+      } else if (evt.type === 'repeat') {
+        speak(evt.word.en);
+        sfx.click();
       } else if (evt.type === 'match') {
         var enEl = evt.enCard ? evt.enCard.el : null;
         var cnEl = evt.cnCard ? evt.cnCard.el : null;

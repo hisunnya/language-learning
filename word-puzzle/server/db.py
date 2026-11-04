@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS banks (
     unit_mode    TEXT NOT NULL DEFAULT 'all',   -- all | per-unit | range
     unit_from    INTEGER DEFAULT 0,
     unit_to      INTEGER DEFAULT 0,
+    pairs_per_level INTEGER DEFAULT 15,  -- 一关最多多少词
     word_count   INTEGER DEFAULT 0,
     unit_count   INTEGER DEFAULT 0,
     created_at   TEXT NOT NULL
@@ -119,6 +120,18 @@ class Database:
         with self._lock:
             self._conn.executescript(SCHEMA)
             self._conn.commit()
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """给老数据库补字段。
+
+        ``CREATE TABLE IF NOT EXISTS`` 不会给已存在的表加列，
+        所以新增字段必须在这里补。
+        """
+        columns = {row["name"] for row in self.query("PRAGMA table_info(banks)")}
+        if "pairs_per_level" not in columns:
+            self.execute("ALTER TABLE banks ADD COLUMN "
+                         "pairs_per_level INTEGER DEFAULT 15")
 
     # ---------------- 基础操作 ----------------
 
@@ -197,12 +210,14 @@ class Database:
         with self._lock:
             cur = self._conn.execute(
                 "INSERT INTO banks(title, level1, level2, level3, level4, source, "
-                "material_id, unit_mode, unit_from, unit_to, word_count, unit_count, "
-                "created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "material_id, unit_mode, unit_from, unit_to, pairs_per_level, "
+                "word_count, unit_count, created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (meta["title"], meta["level1"], meta["level2"], meta["level3"],
                  meta["level4"], meta["source"], meta.get("material_id"),
                  meta.get("unit_mode", "all"), meta.get("unit_from", 0),
-                 meta.get("unit_to", 0), len(words),
+                 meta.get("unit_to", 0),
+                 int(meta.get("pairs_per_level") or 15), len(words),
                  len({w["unit"] for w in words}), ts),
             )
             bid = cur.lastrowid

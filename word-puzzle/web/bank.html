@@ -64,6 +64,13 @@
     </div>
 
     <div id="levelBox"></div>
+    <div class="row" style="margin-top:12px">
+      <div class="field" style="flex:0 0 200px">
+        <label>每关词数</label>
+        <input type="number" id="pairsPerLevel" min="4" max="40" step="1" value="15">
+        <div class="hint">一关最多多少个词；词多的单元会拆成多关（默认 15）</div>
+      </div>
+    </div>
     <div class="msg info" id="selInfo"></div>
     <div class="actions">
       <button class="btn" id="btnMake">生成题库</button>
