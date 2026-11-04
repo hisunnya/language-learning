@@ -356,15 +356,12 @@ class Handler(BaseHTTPRequestHandler):
         bank = db.get_bank(bid)
         if not bank:
             raise HttpError(404, "题库不存在")
+        try:
+            # 和在线玩法用同一套分组（含「词多的单元拆成多关」）
+            payload = bank_mod.bank_payload(db, bid)["groups"]
+        except bank_mod.BankError as exc:
+            raise HttpError(404, str(exc)) from exc
         words = db.bank_words(bid)
-        groups: dict[str, list[dict]] = {}
-        order: list[str] = []
-        for w in words:
-            if w["unit"] not in groups:
-                groups[w["unit"]] = []
-                order.append(w["unit"])
-            groups[w["unit"]].append(w)
-        payload = [{"unit": u, "words": groups[u]} for u in order]
         try:
             filename, html = offline.build_offline_html(bank, payload)
         except ValueError as exc:

@@ -12,6 +12,13 @@
 * ``all``      全部单元：所有选中的单元都进来，游戏按单元逐关推进
 * ``per-unit`` 分单元：同样的词，但首页多一个「挑单元开始」的入口
 * ``range``    第 N 至第 M 单元：只保留该区间（按选中后的单元序号，1 起）
+
+一关放不下
+----------
+有些单元词很多（三十几个），一关全放进去卡片会挤成一团。
+所以词条按 :data:`MAX_PAIRS_PER_LEVEL` 切块：``Unit 1`` 会变成
+``Unit 1（1/3）``、``Unit 1（2/3）``、``Unit 1（3/3）``，
+每关最多 8 个词。词少的单元保持原样。
 """
 from __future__ import annotations
 
@@ -24,6 +31,9 @@ from .db import Database
 from .hierarchy import CURRICULUM_OBJ
 
 UNIT_MODE_LABELS = dict(hierarchy.UNIT_MODES)
+
+# 一关最多多少对词。单元词多时按这个上限切块。
+MAX_PAIRS_PER_LEVEL = 8
 
 
 class BankError(Exception):
@@ -117,6 +127,40 @@ def build_words(units: list[dict]) -> list[dict]:
     return out
 
 
+def chunk_groups(groups: list[dict],
+                 max_pairs: int = MAX_PAIRS_PER_LEVEL) -> list[dict]:
+    """把词量大的单元拆成多个小组（每组一关）。
+
+    词数不超过 max_pairs 的单元原样保留；超过的按顺序切块，
+    名字标成「单元名（i/n）」。词条顺序和数量都不变。
+
+    切块是**均分**的：41 个词、每关最多 8 个，会切成 7/7/7/7/7/6，
+    而不是 8/8/8/8/8/1 —— 不留只有一两个词的空关。
+    """
+    out: list[dict] = []
+    for group in groups:
+        words = list(group.get("words") or [])
+        if not words:
+            continue
+        unit = str(group.get("unit") or "")
+        if max_pairs <= 0 or len(words) <= max_pairs:
+            out.append({"unit": unit, "words": words})
+            continue
+        total_words = len(words)
+        parts_count = (total_words + max_pairs - 1) // max_pairs
+        size, extra = divmod(total_words, parts_count)
+        parts: list[list[dict]] = []
+        index = 0
+        for part in range(parts_count):
+            length = size + (1 if part < extra else 0)
+            parts.append(words[index:index + length])
+            index += length
+        for part_index, part in enumerate(parts, start=1):
+            out.append({"unit": f"{unit}（{part_index}/{parts_count}）",
+                        "words": part})
+    return out
+
+
 def create_bank(db: Database, payload: dict) -> dict:
     """生成并落库一个题库，返回题库元信息。"""
     names = resolve_levels(payload)
@@ -179,7 +223,7 @@ def bank_payload(db: Database, bid: int) -> dict:
                  ("id", "title", "level1", "level2", "level3", "level4",
                   "source", "unit_mode", "unit_from", "unit_to",
                   "word_count", "unit_count", "created_at")},
-        "groups": [{"unit": u, "words": groups[u]} for u in order],
+        "groups": chunk_groups([{"unit": u, "words": groups[u]} for u in order]),
     }
 
 

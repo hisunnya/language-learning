@@ -280,8 +280,30 @@ class TestBank(TempDB):
             "level3": "上册", "level4": "all", "unit_mode": "all",
         })
         payload = bank_mod.bank_payload(self.db, b["id"])
-        self.assertEqual(len(payload["groups"]), 7)
-        self.assertEqual(sum(len(g["words"]) for g in payload["groups"]), 239)
+        groups = payload["groups"]
+        self.assertEqual(sum(len(g["words"]) for g in groups), 239)
+        for group in groups:
+            self.assertLessEqual(len(group["words"]), bank_mod.MAX_PAIRS_PER_LEVEL)
+        # 九年级上册每个单元都有三十几个词，应该被拆成多关
+        self.assertGreater(len(groups), 7)
+        self.assertTrue(any("（1/" in g["unit"] for g in groups))
+
+    def test_chunk_groups_splits_large_units(self):
+        words = [{"en": "w%d" % i, "cn": "词", "ipa": ""} for i in range(20)]
+        chunks = bank_mod.chunk_groups([{"unit": "Unit 1", "words": words}],
+                                       max_pairs=8)
+        # 均分：20 个词分成 3 关，每关 7/7/6，不会剩一个只有 1 个词的空关
+        self.assertEqual([len(c["words"]) for c in chunks], [7, 7, 6])
+        self.assertEqual([c["unit"] for c in chunks],
+                         ["Unit 1（1/3）", "Unit 1（2/3）", "Unit 1（3/3）"])
+        self.assertEqual([w["en"] for c in chunks for w in c["words"]],
+                         [w["en"] for w in words])
+
+    def test_chunk_groups_keeps_small_units_untouched(self):
+        words = [{"en": "a", "cn": "甲", "ipa": ""}]
+        chunks = bank_mod.chunk_groups([{"unit": "Unit 1", "words": words}])
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0]["unit"], "Unit 1")
 
     def test_seed_default_bank_idempotent(self):
         a = bank_mod.seed_default_bank(self.db)
