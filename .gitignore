@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Windows / Office 临时文件
+Thumbs.db
+~$*
+.~lock.*
+
+# 备份文件
+*.bak
+*.orig
+*.rej
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
