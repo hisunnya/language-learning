@@ -238,12 +238,18 @@ SQLite（Python 标准库自带，**免费、开源、零运维**），默认在
 ## 九、部署到 Ubuntu + nginx
 
 ```bash
-sudo ./deploy/install.sh
+sudo bash ./deploy/check-deps.sh
+sudo env WP_SERVER_NAME=10.211.55.5 ./deploy/install.sh
 ```
 
-脚本会：装可选工具（poppler-utils / tesseract-ocr / espeak-ng）→ 建 `wordpuzzle` 系统用户
+依赖检查会逐个核对 Python、nginx、systemd、PDF/OCR 和语音组件；已安装的包会跳过，
+缺少的包才通过 apt 安装。部署脚本也会自动先跑同一个检查。
+
+部署脚本会：建 `wordpuzzle` 系统用户
 → 代码放到 `/srv/word-puzzle` → 数据目录 `/var/lib/word-puzzle` → 生成内置词库
 → 装并启动 systemd 服务 → 装 nginx 站点配置。
+
+`WP_SERVER_NAME` 用于指定 nginx 主机名；上例让首页通过 `http://10.211.55.5/` 访问。
 
 可选工具装不上（离线机器）也不影响网站运行，只是：
 PDF 走内置解析器、扫描件读不了、发音走浏览器自带 TTS。

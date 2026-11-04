@@ -11,11 +11,6 @@
 #   5. 装 systemd 服务并启动
 #   6. 装 nginx 站点配置并重载
 #
-# 可选的系统工具（装了就多两项能力，不装也能跑）：
-#   * poppler-utils  →  PDF 文本抽取（pdftotext），比内置解析器更准
-#   * tesseract-ocr  →  图片版 PDF 的 OCR（pdftoppm + tesseract）
-#   * espeak-ng      →  服务器端渲染**美式女声**发音（en-us+f3）
-#
 # 需要 sudo。不会覆盖已有数据库。
 set -euo pipefail
 
@@ -25,9 +20,7 @@ DATA_DIR=/var/lib/word-puzzle
 RUN_USER=wordpuzzle
 PORT="${WP_PORT:-8765}"
 SITE_NAME="${SITE_NAME:-word-puzzle}"
-
-# 可选工具：装了才装，没装就跳过（不影响主流程）
-OPTIONAL_PKGS=(poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim espeak-ng)
+SERVER_NAME="${WP_SERVER_NAME:-word-puzzle.example.com}"
 
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
@@ -35,28 +28,10 @@ die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "请用 sudo 运行"
 
-command -v python3 >/dev/null 2>&1 || die "缺少 python3"
-command -v nginx >/dev/null 2>&1 || die "缺少 nginx，请先 apt install nginx"
+[[ "$SERVER_NAME" =~ ^[A-Za-z0-9.-]+$ ]] || die "WP_SERVER_NAME 只能包含字母、数字、点和连字符"
 
-say "安装可选工具（PDF/OCR/语音）"
-if command -v apt-get >/dev/null 2>&1; then
-  missing=()
-  for pkg in "${OPTIONAL_PKGS[@]}"; do
-    if ! dpkg -s "$pkg" >/dev/null 2>&1; then
-      missing+=("$pkg")
-    fi
-  done
-  if [ "${#missing[@]}" -gt 0 ]; then
-    echo "    需要安装：${missing[*]}"
-    DEBIAN_FRONTEND=noninteractive apt-get update -qq || warn "apt-get update 失败，继续尝试安装"
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}" \
-      || warn "部分可选工具安装失败（离线机器？）——网站仍可正常运行"
-  else
-    echo "    都已安装，跳过"
-  fi
-else
-  warn "不是 Debian/Ubuntu，跳过可选工具安装"
-fi
+say "检查并安装系统依赖"
+bash "$SRC_DIR/deploy/check-deps.sh"
 
 say "创建系统用户 $RUN_USER"
 if ! id "$RUN_USER" >/dev/null 2>&1; then
@@ -102,6 +77,7 @@ if [ -f /etc/nginx/sites-available/$SITE_NAME.conf ]; then
 fi
 sed -e "s|/srv/word-puzzle|$INSTALL_DIR|g" \
     -e "s|127.0.0.1:8765|127.0.0.1:$PORT|g" \
+  -e "s|word-puzzle.example.com|$SERVER_NAME|g" \
     "$INSTALL_DIR/deploy/nginx/word-puzzle.conf" \
     > "/etc/nginx/sites-available/$SITE_NAME.conf"
 ln -sf "/etc/nginx/sites-available/$SITE_NAME.conf" "/etc/nginx/sites-enabled/$SITE_NAME.conf"
@@ -114,7 +90,7 @@ cat <<EOF
 
   * 后端：127.0.0.1:$PORT   （systemd: $SITE_NAME）
   * 数据库：$DATA_DIR/app.db
-  * 站点：http://<服务器地址>/
+  * 站点：http://$SERVER_NAME/
 
   能力自检：
     PDF 文本抽取 : $(command -v pdftotext >/dev/null 2>&1 && echo "已启用 (poppler)" || echo "未安装（用内置解析器）")
