@@ -27,7 +27,7 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
     __package__ = "server"
 
 from server import bank as bank_mod           # noqa: E402
-from server import hierarchy, materials, offline  # noqa: E402
+from server import hierarchy, ipa, materials, offline, pdf, tts  # noqa: E402
 from server.db import Database                 # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -200,7 +200,9 @@ class Handler(BaseHTTPRequestHandler):
 
         # ---- 层级元数据 ----
         if path == "/api/meta" and method == "GET":
-            self.send_json({"ok": True, **hierarchy.describe()})
+            self.send_json({"ok": True, **hierarchy.describe(),
+                            **tts.describe(), **pdf.describe(),
+                            "ipa_available": ipa.available()})
             return
 
         # ---- 某年级的学期选项 ----
@@ -282,6 +284,18 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"/api/offline/([^/]+)", path)
         if m and method == "GET":
             self._download_offline(m.group(1), query.get("inline") == "1")
+            return
+
+        # ---- 发音音频（espeak-ng 美式女声） ----
+        if path.startswith("/api/audio/") and method == "GET":
+            word = unquote(path[len("/api/audio/"):])
+            if not word or len(word) > 80:
+                raise HttpError(400, "单词不合法")
+            data = tts.synth(word)
+            if not data:
+                raise HttpError(404, "服务器没有装 espeak-ng，无法生成音频")
+            self._send(200, data, "audio/wav",
+                       {"Cache-Control": "public, max-age=604800"})
             return
 
         # ---- 成绩 ----

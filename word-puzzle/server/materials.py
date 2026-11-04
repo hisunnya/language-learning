@@ -20,6 +20,11 @@ import json
 import re
 from typing import Any
 
+from . import docx as docx_mod
+from . import pdf as pdf_mod
+from . import wordlist
+from .docx import doc_magic_check
+
 EN_KEYS = ("en", "eng", "english", "word", "term", "vocabulary", "单词", "英文")
 CN_KEYS = ("cn", "zh", "chinese", "meaning", "translation", "trans", "释义",
            "中文", "意思", "翻译")
@@ -179,9 +184,25 @@ def parse_txt(text: str) -> list[dict]:
 
 
 def parse_material(filename: str, raw: bytes) -> tuple[str, list[dict]]:
-    """返回 ``(格式, 词条列表)``。"""
+    """返回 ``(格式, 词条列表)``。
+
+    支持 ``.txt`` / ``.csv`` / ``.tsv`` / ``.json`` / ``.md`` / ``.docx`` / ``.pdf``。
+    """
     name = (filename or "").lower()
     ext = name.rsplit(".", 1)[-1] if "." in name else ""
+
+    # ---- Word / PDF：二进制，走各自的解析器 ----
+    if ext in ("docx", "docm", "dotx"):
+        return "docx", parse_docx(raw)
+    if ext == "doc":
+        try:
+            doc_magic_check(raw)  # 一定抛错，给出「另存为 docx」的提示
+        except docx_mod.DocxError as exc:
+            raise ParseError(str(exc)) from exc
+    if ext == "pdf":
+        return "pdf", parse_pdf(raw)
+
+    # ---- 文本类 ----
     try:
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -215,6 +236,50 @@ def parse_material(filename: str, raw: bytes) -> tuple[str, list[dict]]:
     if not words:
         raise ParseError("没有从文件里解析出任何词条")
     return fmt, words
+
+
+def parse_docx(raw: bytes) -> list[dict]:
+    """解析 Word（.docx）文件。
+
+    走 :mod:`server.wordlist` 的通用规则，所以 Word 里的
+    「单元标题 / 英文 / 音标 / 词性 / 中文」表格也能直接认出来。
+    """
+    try:
+        lines = docx_mod.docx_to_lines(raw)
+    except docx_mod.DocxError as exc:
+        raise ParseError(str(exc)) from exc
+    words = wordlist.parse_lines(lines)
+    if not words:
+        raise ParseError(
+            "Word 文件里没找到「英文 + 中文释义」的词条。"
+            "请确认表格里每一行都有英文单词和中文意思")
+    return words
+
+
+def parse_pdf(raw: bytes) -> list[dict]:
+    """解析 PDF。
+
+    文字版走 poppler / 内置解析器，扫描件走 OCR。
+    多个引擎都试一遍，挑**解析出的词条最多**的那个——
+    poppler 有时会因为字体元数据不全而漏字（``apple`` → ``aple``），
+    这时候内置解析器反而是全的。
+    """
+    try:
+        candidates = pdf_mod.pdf_candidates(raw)
+    except pdf_mod.PdfError as exc:
+        raise ParseError(str(exc)) from exc
+
+    best: list[dict] = []
+    for text, engine in candidates:
+        words = wordlist.parse_lines(text.splitlines())
+        if len(words) > len(best):
+            best = words
+    if not best:
+        engines = "/".join(e for _, e in candidates) or "无"
+        raise ParseError(
+            f"PDF 里没找到「英文 + 中文释义」的词条"
+            f"（文本提取方式：{engines}）")
+    return best
 
 
 def summary(words: list[dict]) -> dict[str, Any]:

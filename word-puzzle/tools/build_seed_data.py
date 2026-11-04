@@ -12,24 +12,30 @@
 
 可选：音标
 ----------
-脚本会尝试从 ECDICT（``skywind3000/ECDICT``）补齐音标。ECDICT 体积大、不随仓库分发，
-缺失时静默跳过，音标字段留空即可（游戏里不显示音标也能玩）。
+脚本会从 **美式音标表** ``data/raw/us_ipa.tsv`` 补齐音标。
+该表由 CMU Pronouncing Dictionary（美式发音）生成，见
+``tools/build_ipa_table.py``。
+
+> 注意：这里**不用** ECDICT 的 ``phonetic`` 字段——那个是英式音标
+> （``/ˈɒrɪndʒ/``、``/ˈdɔː/``），跟本项目要求的「美语」不符。
 
 用法::
 
     python3 tools/build_seed_data.py                # 生成 data/pep_curriculum.json
-    python3 tools/build_seed_data.py --ecdict PATH  # 指定本地 ecdict.csv 补音标
+    python3 tools/build_ipa_table.py --cmudict PATH # 重新生成美式音标表
 """
 from __future__ import annotations
 
 import argparse
-import csv
 import json
-import os
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from server import ipa as ipa_mod  # noqa: E402
+
 RAW = ROOT / "data" / "raw"
 OUT = ROOT / "data" / "pep_curriculum.json"
 
@@ -235,31 +241,35 @@ def norm_senior() -> list[dict]:
 # ---------------------------------------------------------------- 音标
 
 def load_ipa(path: Path) -> dict:
-    """从 ECDICT csv 抽取音标，形如 /ˈtrɪʌmf/ 。"""
-    ipa: dict = {}
+    """载入美式音标表，形如 ``/ˈtrɪʌmf/``。
+
+    表由 ``tools/build_ipa_table.py`` 从 CMUdict 生成。
+    """
     if not path.exists():
-        return ipa
-    with path.open(encoding="utf-8", errors="replace", newline="") as fh:
-        reader = csv.DictReader(fh)
-        for row in reader:
-            word = (row.get("word") or "").strip().lower()
-            ph = (row.get("phonetic") or "").strip()
-            if not word or not ph:
+        return {}
+    table: dict = {}
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line or "\t" not in line:
                 continue
-            if not ph.startswith("/"):
-                ph = "/" + ph + "/"
-            ipa[word] = ph
-    return ipa
+            word, ph = line.split("\t", 1)
+            word = word.strip().lower()
+            ph = ph.strip()
+            if word and ph:
+                table.setdefault(word, ph)
+    return table
 
 
 def apply_ipa(volumes: list[dict], ipa: dict) -> int:
+    """给词条补音标。查不到就留空（游戏里不显示音标也能玩）。"""
     hit = 0
     total = 0
     for vol in volumes:
         for unit in vol["units"]:
             for w in unit["words"]:
                 total += 1
-                ph = ipa.get(w["en"].lower())
+                ph = ipa_mod.lookup(w["en"], ipa)
                 if ph:
                     w["ipa"] = ph
                     hit += 1
@@ -270,7 +280,8 @@ def apply_ipa(volumes: list[dict], ipa: dict) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ecdict", default="", help="本地 ecdict.csv 路径（可选）")
+    ap.add_argument("--ipa", default="",
+                    help="美式音标表路径（默认 data/raw/us_ipa.tsv）")
     args = ap.parse_args()
 
     volumes = norm_junior() + norm_senior()
@@ -278,13 +289,8 @@ def main() -> int:
         sys.stderr.write("没有解析到任何词表\n")
         return 1
 
-    ipa = {}
-    if args.ecdict:
-        ipa = load_ipa(Path(args.ecdict))
-    else:
-        cached = ROOT / "data" / "raw" / "ecdict.csv"
-        if cached.exists():
-            ipa = load_ipa(cached)
+    table_path = Path(args.ipa) if args.ipa else (RAW / "us_ipa.tsv")
+    ipa = load_ipa(table_path)
     hit, total = apply_ipa(volumes, ipa)
 
     doc = {
@@ -310,11 +316,11 @@ def main() -> int:
                     "note": "必修一~三、选择性必修一~四",
                 },
                 {
-                    "name": "ECDICT（音标补充，可选）",
-                    "repo": "skywind3000/ECDICT",
-                    "path": "ecdict.csv",
-                    "license": "MIT / 见原仓库",
-                    "note": "仅用于补音标",
+                    "name": "CMU Pronouncing Dictionary（美式音标）",
+                    "repo": "cmusphinx/cmudict",
+                    "path": "data/raw/us_ipa.tsv",
+                    "license": "BSD 风格 / 见原仓库",
+                    "note": "ARPAbet 转国际音标；全部为美式发音",
                 },
             ],
             "copyright": "课本原始内容版权归人民教育出版社所有；本仓库仅用于个人学习。",

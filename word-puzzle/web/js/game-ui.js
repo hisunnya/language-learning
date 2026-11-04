@@ -53,11 +53,91 @@
   var audioCache = {};
   var AUDIO = {};   /* 可选：slug -> data URI；没有就走浏览器 TTS */
 
+  /* --- 美式女声优先 ---
+     浏览器的 speechSynthesis 音色由操作系统决定，默认可能落到
+     男声、英式（en-GB）甚至中文音色上。所以显式挑选：
+     1) 语言必须是 en-US；
+     2) 名字里带常见女声标识的优先（Female / Woman / Samantha / Zira ...）；
+     3) 都找不到就退回任意 en-US 音色。
+  */
+  var FEMALE_HINTS = [
+    'female', 'woman', 'samantha', 'zira', 'aria', 'jenny', 'victoria',
+    'allison', 'ava', 'serena', 'fiona', 'moira', 'karen', 'tessa',
+    'susan', 'zoe', 'catherine', 'carla', 'jessa', 'nicky', 'hazel',
+    'sonia', 'libby', 'natasha', 'michelle', 'heera', 'linda', 'mary',
+    'paulina', 'salli', 'shelley', 'kendra', 'joanna', 'sally', 'amy',
+    'emma', 'nicole', 'kate', 'bella', 'claire', 'camila'
+  ];
+
+  var voicesCache = null;
+  var serverAudio = {};   /* slug -> data URI（离线页内嵌的音频） */
+  var serverAudioBase = '';  /* 非空则改用后端 /api/audio 渲染 */
+
+  function loadVoices() {
+    if (voicesCache && voicesCache.length) return voicesCache;
+    try {
+      voicesCache = (window.speechSynthesis &&
+                     window.speechSynthesis.getVoices()) || [];
+    } catch (e) {
+      voicesCache = [];
+    }
+    return voicesCache;
+  }
+
+  /* Chrome / Edge 的音色是异步加载的，第一次 getVoices() 往往是空的。
+     监听 voiceschanged，拿到之后重新缓存。 */
+  function watchVoices() {
+    try {
+      if (!window.speechSynthesis ||
+          window.speechSynthesis.addEventListener) {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.addEventListener('voiceschanged', function () {
+            voicesCache = null;      /* 强制下次重新读 */
+            loadVoices();
+          });
+        }
+      }
+    } catch (e) { }
+  }
+  watchVoices();
+
+  function isFemaleName(name) {
+    var low = String(name || '').toLowerCase();
+    for (var i = 0; i < FEMALE_HINTS.length; i++) {
+      if (low.indexOf(FEMALE_HINTS[i]) >= 0) return true;
+    }
+    return false;
+  }
+
+  /** 挑一个 en-US 的女声音色。 */
+  function pickVoice() {
+    var all = loadVoices();
+    if (!all.length) return null;
+    var us = [], usFemale = [];
+    for (var i = 0; i < all.length; i++) {
+      var v = all[i];
+      var lang = String(v.lang || '').replace('_', '-').toLowerCase();
+      if (lang.indexOf('en-us') !== 0) continue;
+      us.push(v);
+      if (isFemaleName(v.name)) usFemale.push(v);
+    }
+    if (usFemale.length) {
+      // 优先本地音色（不用联网），其次原始顺序
+      for (var j = 0; j < usFemale.length; j++) {
+        if (usFemale[j].localService) return usFemale[j];
+      }
+      return usFemale[0];
+    }
+    return us.length ? us[0] : null;
+  }
+
   function fallbackSpeak(en) {
     try {
       if (window.speechSynthesis) {
         var u = new SpeechSynthesisUtterance(en);
         u.lang = 'en-US'; u.rate = 0.85;
+        var v = pickVoice();
+        if (v) { u.voice = v; u.lang = v.lang || 'en-US'; }
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(u);
         return true;
@@ -83,6 +163,27 @@
           au.pause(); au.currentTime = 0;
           var pr = au.play();
           if (pr && pr.catch) pr.catch(function () { fallbackSpeak(en); });
+          return true;
+        }
+      } catch (e) { }
+    }
+    /* 在线模式：优先用后端渲染的美式女声音频（espeak-ng en-us+f3），
+       这样所有学生听到的都一样，也不受客户端音色影响。 */
+    if (serverAudioBase) {
+      try {
+        if (!audioCache[key]) {
+          var sa = new Audio(serverAudioBase + encodeURIComponent(en));
+          sa.preload = 'auto';
+          sa.addEventListener('error', function () {
+            audioCache[key] = null; fallbackSpeak(en);
+          });
+          audioCache[key] = sa;
+        }
+        var sau = audioCache[key];
+        if (sau) {
+          sau.pause(); sau.currentTime = 0;
+          var spr = sau.play();
+          if (spr && spr.catch) spr.catch(function () { fallbackSpeak(en); });
           return true;
         }
       } catch (e) { }
@@ -161,6 +262,19 @@
       this.game = cfg.game;
       this.finished = false;
       fx = $('fx');
+
+      /* 音频来源：
+         - cfg.audio        内嵌的 slug -> data URI
+         - cfg.audioBase    后端渲染地址（在线版，形如 /api/audio/ ）
+         两者都没有就退回浏览器 TTS（挑 en-US 女声）。 */
+      if (cfg.audio) AUDIO = cfg.audio;
+      if (cfg.audioBase) serverAudioBase = cfg.audioBase;
+      if (cfg.voice) {
+        try {
+          var vv = pickVoice();
+          if (vv) { voicesCache = [vv]; }
+        } catch (e) { }
+      }
 
       var self = this;
       /* core 发的事件 → 界面动画 */

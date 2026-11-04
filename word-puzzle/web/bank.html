@@ -26,8 +26,15 @@
       <button class="btn lg gold" id="btnUpload">📁 上传题库</button>
       <button class="btn lg green" id="btnOffline">🧪 生成离线测试</button>
     </div>
-    <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json,.md" hidden>
+    <input type="file" id="fileInput"
+           accept=".txt,.csv,.tsv,.json,.md,.docx,.docm,.pdf" hidden>
     <div class="msg" id="upMsg"></div>
+    <p class="hint">
+      支持 <b>Word (.docx)</b>、<b>PDF</b>、TXT、CSV、JSON。
+      Word/PDF 里只要能看出「英文 + 中文释义」就能自动提取，
+      扫描件（图片版 PDF）会走 OCR 识别。
+      老式 <code>.doc</code> 请先在 Word 里另存为 <code>.docx</code>。
+    </p>
   </div>
 
   <!-- 层级选择 -->

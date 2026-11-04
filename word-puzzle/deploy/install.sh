@@ -11,6 +11,11 @@
 #   5. 装 systemd 服务并启动
 #   6. 装 nginx 站点配置并重载
 #
+# 可选的系统工具（装了就多两项能力，不装也能跑）：
+#   * poppler-utils  →  PDF 文本抽取（pdftotext），比内置解析器更准
+#   * tesseract-ocr  →  图片版 PDF 的 OCR（pdftoppm + tesseract）
+#   * espeak-ng      →  服务器端渲染**美式女声**发音（en-us+f3）
+#
 # 需要 sudo。不会覆盖已有数据库。
 set -euo pipefail
 
@@ -21,6 +26,9 @@ RUN_USER=wordpuzzle
 PORT="${WP_PORT:-8765}"
 SITE_NAME="${SITE_NAME:-word-puzzle}"
 
+# 可选工具：装了才装，没装就跳过（不影响主流程）
+OPTIONAL_PKGS=(poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim espeak-ng)
+
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -29,6 +37,26 @@ die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
 command -v python3 >/dev/null 2>&1 || die "缺少 python3"
 command -v nginx >/dev/null 2>&1 || die "缺少 nginx，请先 apt install nginx"
+
+say "安装可选工具（PDF/OCR/语音）"
+if command -v apt-get >/dev/null 2>&1; then
+  missing=()
+  for pkg in "${OPTIONAL_PKGS[@]}"; do
+    if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+      missing+=("$pkg")
+    fi
+  done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "    需要安装：${missing[*]}"
+    DEBIAN_FRONTEND=noninteractive apt-get update -qq || warn "apt-get update 失败，继续尝试安装"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}" \
+      || warn "部分可选工具安装失败（离线机器？）——网站仍可正常运行"
+  else
+    echo "    都已安装，跳过"
+  fi
+else
+  warn "不是 Debian/Ubuntu，跳过可选工具安装"
+fi
 
 say "创建系统用户 $RUN_USER"
 if ! id "$RUN_USER" >/dev/null 2>&1; then
@@ -47,7 +75,7 @@ else
 fi
 
 say "准备数据目录 $DATA_DIR"
-mkdir -p "$DATA_DIR" "$INSTALL_DIR/var/offline"
+mkdir -p "$DATA_DIR" "$INSTALL_DIR/var/offline" "$INSTALL_DIR/var/audio"
 chown -R "$RUN_USER:$RUN_USER" "$DATA_DIR" "$INSTALL_DIR/var"
 chmod 750 "$DATA_DIR"
 
@@ -87,6 +115,11 @@ cat <<EOF
   * 后端：127.0.0.1:$PORT   （systemd: $SITE_NAME）
   * 数据库：$DATA_DIR/app.db
   * 站点：http://<服务器地址>/
+
+  能力自检：
+    PDF 文本抽取 : $(command -v pdftotext >/dev/null 2>&1 && echo "已启用 (poppler)" || echo "未安装（用内置解析器）")
+    图片版 PDF   : $(command -v tesseract >/dev/null 2>&1 && echo "已启用 (OCR)" || echo "未安装（扫描件读不了）")
+    美式女声发音 : $(command -v espeak-ng >/dev/null 2>&1 && echo "已启用 (en-us+f3)" || echo "未安装（用浏览器自带发音）")
 
   常用命令：
     sudo systemctl status $SITE_NAME

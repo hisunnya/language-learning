@@ -41,6 +41,10 @@
         title: bank.title,
         subtitle: [bank.level1, bank.level2, bank.level3, bank.level4].join(' · '),
         pickUnit: bank.unit_mode === 'per-unit',
+        /* 在线版：发音走后端 espeak-ng 渲染的**美式女声**（en-us+f3），
+           保证所有学生听到的一样，也不受客户端音色影响。
+           后端没装 espeak-ng 时会自动退回浏览器 TTS（同样挑 en-US 女声）。 */
+        audioBase: '/api/audio/',
         onFinish: function (report) {
           WPAdapter.save(report, { bank_id: bank.id, title: bank.title });
           API.toast('成绩已保存');
