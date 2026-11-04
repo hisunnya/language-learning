@@ -29,6 +29,8 @@ HTML = (HUB / "index.html").read_text(encoding="utf-8")
 CSS = (HUB / "css" / "hub.css").read_text(encoding="utf-8")
 JS = (HUB / "js" / "hub.js").read_text(encoding="utf-8")
 CONFIG = (HUB / "js" / "config.js").read_text(encoding="utf-8")
+NGINX = (HUB / "deploy" / "lingua-grove.conf").read_text(encoding="utf-8")
+INSTALL_SCRIPT = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
 
 # i18n 表在 JS 里，形如  "key": "value",
 _I18N_ENTRY_RE = re.compile(r'"([A-Za-z0-9_.]+)"\s*:\s*"((?:[^"\\]|\\.)*)"')
@@ -292,6 +294,37 @@ class TestProjectLinks(unittest.TestCase):
         """地址写在 config.js 里，而不是写死在 HTML 里。"""
         self.assertIn("LINGUA_PROJECTS", CONFIG)
         self.assertIn("LINGUA_PROJECTS", JS)
+
+
+class TestDeployment(unittest.TestCase):
+    """The portal is the port-80 entry point for all three projects."""
+
+    def test_port_80_serves_the_hub_for_a_configured_host(self):
+        self.assertIn("listen 80;", NGINX)
+        self.assertIn("server_name __LINGUA_SERVER_NAME__;", NGINX)
+        self.assertIn("root /var/www/lingua-grove;", NGINX)
+
+    def test_two_static_apps_are_mounted_under_the_hub(self):
+        self.assertIn("location ^~ /topics/", NGINX)
+        self.assertIn("alias /var/www/topic-app/;", NGINX)
+        self.assertIn("location ^~ /ham/", NGINX)
+        self.assertIn("alias /var/www/ham-exam/;", NGINX)
+
+    def test_lexica_is_served_on_8082_with_api_proxy(self):
+        self.assertIn("listen 8082;", NGINX)
+        self.assertIn("root /srv/word-puzzle/web;", NGINX)
+        self.assertIn("location ^~ /api/", NGINX)
+        self.assertIn("proxy_pass http://lexica_api;", NGINX)
+
+    def test_installer_replaces_the_standalone_port_80_site(self):
+        self.assertIn("sites-enabled/word-puzzle.conf", INSTALL_SCRIPT)
+        self.assertIn("__LINGUA_SERVER_NAME__", INSTALL_SCRIPT)
+        self.assertIn("nginx -t", INSTALL_SCRIPT)
+
+    def test_lexica_copy_uses_volume_terminology_without_fixed_server_ip(self):
+        self.assertIn("册别", JS)
+        self.assertIn("volume", JS)
+        self.assertNotIn("10.1.1.93", JS)
 
 
 if __name__ == "__main__":

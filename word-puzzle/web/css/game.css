@@ -3,6 +3,10 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:-apple-syst
 background:linear-gradient(160deg,#eaf4ff 0%,#f7fbff 45%,#fff6ec 100%);color:#1f2d3d;-webkit-text-size-adjust:100%}
 body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 .app{display:flex;flex-direction:column;height:100%;max-width:980px;margin:0 auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
+.game-topbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:0 3px 7px;color:#123a6b;font-size:13px}
+.game-brand-mark{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;color:#fff;font-size:13px;font-weight:800;background:linear-gradient(140deg,#1f7ae0,#ffb703)}
+.game-topbar em{margin-left:3px;color:#1f7ae0;font-size:10px;font-style:normal;letter-spacing:1px}
+.game-topbar a{margin-left:auto;color:#5b6d85;font-size:12px;font-weight:700}
 
 /* ---------- HUD ---------- */
 .hud{background:#fff;border-radius:16px;box-shadow:0 6px 18px rgba(30,64,120,.10);padding:8px 12px;margin-bottom:8px;flex:0 0 auto}

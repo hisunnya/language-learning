@@ -1,4 +1,4 @@
-"""四级层级模型：学段 → 年级 → 学期 → 单元。
+"""四级层级模型：学段 → 年级 → 册别 → 单元。
 
 每一级都提供「自定义名称」选项，用户可以在任意一级填自己的名字。
 内置词库（人教版 PEP）只是「可选项」之一，题目来源也可以是用户上传的资料。
@@ -7,7 +7,7 @@
 ----
 1. 学段：小学 / 初中 / 高中 / 大学 / 自定义
 2. 年级：随学段变化（小学 一~六年级，初中 七~九年级，高中 高一~高三，大学 大一~大四）/ 自定义
-3. 学期：上册 / 下册 / 整学年（默认） / 自定义
+3. 册别：上册 / 下册 / 全年（上下册，默认） / 自定义
 4. 单元：全部单元 / 分单元 / 第 N 至第 M 单元 / 自定义
 """
 from __future__ import annotations
@@ -27,6 +27,7 @@ GRADES_BY_STAGE = {
     "大学": ["大一", "大二", "大三", "大四"],
 }
 TERMS = ["上册", "下册", "整学年"]
+TERM_LABELS = {"上册": "上册", "下册": "下册", "整学年": "全年（上下册）"}
 DEFAULT_TERM = "整学年"
 UNIT_MODES = [
     ("all", "全部单元"),
@@ -35,7 +36,7 @@ UNIT_MODES = [
 ]
 CUSTOM = "自定义"
 
-# 默认题库：人教版初中三年级上学期
+# 默认题库：人教版初中九年级上册
 DEFAULT_SELECTION = {
     "level1": "初中",
     "level2": "九年级",
@@ -74,7 +75,7 @@ class Curriculum:
         return have + [g for g in fallback if g not in have]
 
     def term_options(self, stage: str, grade: str) -> list[dict]:
-        """返回该年级的学期选项，以及每个学期包含的册。"""
+        """返回该年级的册别选项，以及每个选项包含的册。"""
         vols = [v for v in self.volumes
                 if v["stage"] == stage and v["grade"] == grade]
         out = []
@@ -82,7 +83,7 @@ class Curriculum:
             picked = vols if term == "整学年" else [v for v in vols if v["term"] == term]
             out.append({
                 "key": term,
-                "name": term,
+                "name": TERM_LABELS[term],
                 "volumes": [{"key": v["key"], "name": v["name"]} for v in picked],
                 "unit_count": sum(len(v["units"]) for v in picked),
                 "available": bool(picked),
@@ -90,7 +91,7 @@ class Curriculum:
         return out
 
     def select_units(self, stage: str, grade: str, term: str) -> list[dict]:
-        """按 学段/年级/学期 取出单元列表（整学年 = 上册 + 下册）。"""
+        """按学段/年级/册别取出单元列表（全年 = 上册 + 下册）。"""
         vols = [v for v in self.volumes
                 if v["stage"] == stage and v["grade"] == grade]
         if term != "整学年":
@@ -152,6 +153,7 @@ def describe() -> dict:
         "stages": level1_options(),
         "grades": GRADES_BY_STAGE,
         "terms": TERMS,
+        "term_labels": TERM_LABELS,
         "default_term": DEFAULT_TERM,
         "unit_modes": [{"key": k, "name": n} for k, n in UNIT_MODES],
         "custom": CUSTOM,

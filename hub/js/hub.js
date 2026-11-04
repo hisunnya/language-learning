@@ -39,7 +39,7 @@
       "lexica.name": "词境",
       "lexica.en": "Lexica",
       "lexica.tagline": "人教版英语词汇闯关",
-      "lexica.desc": "按「学段 → 年级 → 学期 → 单元」四级挑题，点英文听发音、点中文配对，连击加分。可上传 Word / PDF 资料自建题库，还能导出单文件离线测试页。",
+      "lexica.desc": "按「学段 → 年级 → 册别 → 单元」四级挑题，点英文听发音、点中文配对，连击加分。可上传 Word / PDF 资料自建题库，还能导出单文件离线测试页。",
       "lexica.f1": "四级题库",
       "lexica.f2": "美式女声发音",
       "lexica.f3": "Word / PDF 上传",
@@ -74,7 +74,7 @@
       "notes.c.body": "题库可以导出成单个 HTML 离线页，拷到任何电脑上双击就能继续做题。",
 
       "foot.left": "语林 Lingua Grove · 语言学习工具集",
-      "foot.right": "家庭服务器 10.1.1.93",
+      "foot.right": "家庭局域网 · 即开即用",
 
       "themePicker": "配色"
     },
@@ -101,7 +101,7 @@
       "lexica.name": "Lexica",
       "lexica.en": "词境",
       "lexica.tagline": "A vocabulary quest through the PEP textbooks",
-      "lexica.desc": "Pick a bank across four levels — stage, grade, term, unit — tap the English card to hear it, tap the Chinese card to match. Upload your own Word or PDF material, and export any bank as a single offline page.",
+      "lexica.desc": "Pick a bank across four levels — stage, grade, volume, unit — tap the English card to hear it, tap the Chinese card to match. Upload your own Word or PDF material, and export any bank as a single offline page.",
       "lexica.f1": "Four-level banks",
       "lexica.f2": "American female voice",
       "lexica.f3": "Word / PDF upload",
@@ -136,7 +136,7 @@
       "notes.c.body": "Any bank can be exported as one self-contained HTML page; copy it to any computer and keep playing by double-clicking.",
 
       "foot.left": "Lingua Grove · Language Learning Suite",
-      "foot.right": "Home server 10.1.1.93",
+      "foot.right": "Home network · Ready to use",
 
       "themePicker": "Palettes"
     }

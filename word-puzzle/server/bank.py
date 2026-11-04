@@ -44,6 +44,8 @@ def resolve_levels(payload: dict) -> dict[str, str]:
     for i, key in enumerate(("level1", "level2", "level3", "level4"), start=1):
         base = str(payload.get(key) or "").strip()
         over = str(custom.get(key) or "").strip()
+        if key == "level3" and base in hierarchy.TERM_LABELS:
+            base = hierarchy.TERM_LABELS[base]
         names[key] = over or base or f"第{i}级"
     # 第四级传上来的是单元模式 key，翻译成中文显示名
     if names["level4"] in UNIT_MODE_LABELS:
@@ -191,7 +193,7 @@ def _fingerprint(words: list[dict]) -> str:
 
 
 def seed_default_bank(db: Database) -> int:
-    """首次启动时生成默认题库：人教版初中三年级上学期。
+    """首次启动时生成默认题库：人教版初中九年级上册。
 
     如果内置词库更新过（比如补了音标），词条指纹会对不上，
     这时把旧的默认题库删掉重建，保证默认题库始终跟得上词库。
@@ -200,7 +202,7 @@ def seed_default_bank(db: Database) -> int:
     payload.update({
         "source": "seed",
         "unit_mode": "all",
-        "title": "人教版初中三年级上学期",
+        "title": "人教版初中九年级上册",
     })
 
     expected = build_words(
@@ -211,17 +213,41 @@ def seed_default_bank(db: Database) -> int:
         )
     )
     want = _fingerprint(expected)
+    default_titles = {
+        "人教版初中三年级上学期",
+        "人教版初中九年级上册",
+    }
+    default_banks = []
 
     for b in db.list_banks():
+        if b["source"] == "seed" and b["level3"] in hierarchy.TERM_LABELS:
+            generated_title = "-".join((b["level1"], b["level2"], b["level3"], b["level4"]))
+            if b["title"] == generated_title:
+                normalized = "-".join((b["level1"], b["level2"],
+                                        hierarchy.TERM_LABELS[b["level3"]], b["level4"]))
+                if normalized != b["title"]:
+                    db.execute("UPDATE banks SET title=? WHERE id=?",
+                               (normalized, b["id"]))
         if (b["source"] == "seed"
-                and b["title"] == "人教版初中三年级上学期"
+                and b["title"] in default_titles
                 and b["level1"] == hierarchy.DEFAULT_SELECTION["level1"]
                 and b["level2"] == hierarchy.DEFAULT_SELECTION["level2"]
                 and b["level3"] == hierarchy.DEFAULT_SELECTION["level3"]
                 and b["unit_mode"] == "all"):
             if _fingerprint(db.bank_words(b["id"])) == want:
-                return b["id"]
+                default_banks.append(b)
+                continue
             db.delete_bank(b["id"])          # 词库变了 → 重建
+
+    if default_banks:
+        primary = next((b for b in default_banks
+                        if b["title"] == payload["title"]), default_banks[0])
+        for b in default_banks:
+            title = (payload["title"] if b["id"] == primary["id"]
+                     else payload["title"] + "（历史副本）")
+            if b["title"] != title:
+                db.execute("UPDATE banks SET title=? WHERE id=?", (title, b["id"]))
+        return primary["id"]
 
     bank = create_bank(db, payload)
     return bank["id"]
