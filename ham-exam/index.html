@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>业余无线电操作证 · 模拟考试系统</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A1%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">📡</span>
+    <div class="brand-txt">
+      <h1>业余无线电操作证 · 模拟考试系统</h1>
+      <span class="sub" id="bankNote">题库载入中…</span>
+    </div>
+  </div>
+  <nav class="nav" id="nav">
+    <button class="nav-btn active" data-view="exam">模拟考试</button>
+    <button class="nav-btn" data-view="practice">练习</button>
+    <button class="nav-btn" data-view="browse">题库</button>
+    <button class="nav-btn" data-view="stats">统计</button>
+  </nav>
+  <div class="topright">
+    <div class="cls-switch" id="clsSwitch" title="考试类别"></div>
+    <button class="icon-btn" id="themeBtn" title="切换深色/浅色">🌙</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ============ 模拟考试 ============ -->
+  <section class="view" id="view-exam">
+    <!-- 考试设置 -->
+    <div class="panel" id="examSetup">
+      <h2 class="panel-title">模拟考试</h2>
+      <p class="panel-desc">按《业余无线电台操作技术能力验证题库（2025 年版）》随机抽题，规则与正式考试一致。</p>
+      <div class="rule-cards" id="ruleCards"></div>
+      <div class="row-btns">
+        <button class="btn btn-primary" id="startExamBtn">开始考试</button>
+        <button class="btn" id="resumeExamBtn" hidden>继续上次未完成的考试</button>
+      </div>
+      <p class="hint">⏱ 倒计时结束会自动交卷。多选题必须与标准答案完全一致才得分，少选、多选、错选均不得分。</p>
+    </div>
+
+    <!-- 答题中 -->
+    <div class="panel exam-panel" id="examRun" hidden>
+      <div class="exam-head">
+        <div class="eh-left">
+          <span class="tag" id="examClsTag">A 类</span>
+          <span class="eh-meta" id="examProgress">第 1 / 40 题</span>
+        </div>
+        <div class="eh-right">
+          <div class="timer" id="timer">40:00</div>
+          <button class="btn btn-sm" id="toggleCardBtn">答题卡</button>
+          <button class="btn btn-sm btn-danger" id="submitExamBtn">交卷</button>
+        </div>
+      </div>
+      <div class="exam-body">
+        <div class="q-area" id="examQ"></div>
+        <aside class="card-panel" id="answerCard" hidden></aside>
+      </div>
+    </div>
+
+    <!-- 成绩 -->
+    <div class="panel" id="examResult" hidden></div>
+  </section>
+
+  <!-- ============ 练习 ============ -->
+  <section class="view" id="view-practice" hidden>
+    <div class="panel" id="practiceSetup">
+      <h2 class="panel-title">练习模式</h2>
+      <p class="panel-desc">随机抽题、不限时，答完立即给答案与解析，随时可以结束或退出。</p>
+      <div class="form-grid">
+        <label>题量
+          <select id="prCount">
+            <option value="10">10 题</option>
+            <option value="20" selected>20 题</option>
+            <option value="30">30 题</option>
+            <option value="50">50 题</option>
+            <option value="0">不限（连续练习）</option>
+          </select>
+        </label>
+        <label>范围
+          <select id="prScope">
+            <option value="all">全部题目</option>
+            <option value="single">仅单选题</option>
+            <option value="multi">仅多选题</option>
+            <option value="image">仅附图题</option>
+            <option value="wrong">仅做错过的题</option>
+            <option value="undone">仅未做过的题</option>
+            <option value="fav">仅收藏的题</option>
+          </select>
+        </label>
+        <label>知识点（可选）
+          <select id="prPoint"><option value="">全部知识点</option></select>
+        </label>
+        <label class="chk"><input type="checkbox" id="prShuffle" checked> 打乱顺序</label>
+      </div>
+      <div class="row-btns">
+        <button class="btn btn-primary" id="startPracticeBtn">开始练习</button>
+        <button class="btn" id="resumePracticeBtn" hidden>继续上次练习</button>
+      </div>
+    </div>
+    <div class="panel" id="practiceRun" hidden>
+      <div class="exam-head">
+        <div class="eh-left">
+          <span class="tag" id="prClsTag">A 类</span>
+          <span class="eh-meta" id="prProgress">第 1 / 20 题</span>
+        </div>
+        <div class="eh-right">
+          <span class="eh-meta" id="prScore">正确 0 / 0</span>
+          <button class="btn btn-sm" id="prToggleCardBtn">答题卡</button>
+          <button class="btn btn-sm btn-danger" id="endPracticeBtn">结束练习</button>
+        </div>
+      </div>
+      <div class="exam-body">
+        <div class="q-area" id="practiceQ"></div>
+        <aside class="card-panel" id="practiceCard" hidden></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 题库 ============ -->
+  <section class="view" id="view-browse" hidden>
+    <div class="browse-wrap">
+      <aside class="tree-panel">
+        <input type="search" id="browseSearch" placeholder="搜索题干 / 选项…">
+        <div class="tree-filters" id="browseFilters">
+          <button class="chip active" data-f="all">全部</button>
+          <button class="chip" data-f="single">单选</button>
+          <button class="chip" data-f="multi">多选</button>
+          <button class="chip" data-f="image">附图</button>
+          <button class="chip" data-f="undone">未做过</button>
+          <button class="chip" data-f="wrong">做错过</button>
+          <button class="chip" data-f="fav">收藏</button>
+        </div>
+        <div class="tree-btns">
+          <button class="btn btn-sm" id="treeExpand">展开目录</button>
+          <button class="btn btn-sm" id="treeCollapse">收起目录</button>
+        </div>
+        <div class="tree" id="pointTree"></div>
+      </aside>
+      <div class="browse-main">
+        <div class="browse-bar">
+          <span id="browseCount">—</span>
+          <div class="row-btns">
+            <select id="browsePoint" class="mini-select"><option value="">按知识点快速定位…</option></select>
+            <button class="btn btn-sm" id="practiceFiltered">就这些题练一轮</button>
+            <button class="btn btn-sm" id="expandAll">全部展开</button>
+            <button class="btn btn-sm" id="collapseAll">全部收起</button>
+          </div>
+        </div>
+        <div class="browse-list" id="browseList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 统计 ============ -->
+  <section class="view" id="view-stats" hidden>
+    <div id="statsBody"></div>
+  </section>
+
+</main>
+
+<div class="modal-mask" id="modalMask" hidden>
+  <div class="modal" id="modalBox">
+    <div class="modal-head"><span id="modalTitle">确认</span><button class="icon-btn" id="modalClose">✕</button></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="data/bank.js"></script>
+<script src="js/store.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
