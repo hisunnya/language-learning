@@ -333,7 +333,7 @@
       var btns = '';
       g.levels.forEach(function (L, i) {
         btns += '<button data-l="' + i + '">第 ' + (i + 1) + ' 关 · ' +
-          esc(L.name) + '（' + L.words.length + '）</button>';
+          esc(L.name) + ' · ' + L.words.length + ' 词</button>';
       });
 
       var html = '<h1>' + esc(cfg.title || '词境 Lexica') + '</h1>' +
