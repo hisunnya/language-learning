@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>单词消消乐</title>
+<link rel="stylesheet" href="/css/game.css">
+</head>
+<body>
+<div class="app">
+  <div class="hud">
+    <div class="hud-row">
+      <div class="stat"><span class="k">关卡</span><span class="v" id="s-level">1/1</span></div>
+      <div class="stat time" id="s-timebox"><span class="k">剩余</span><span class="v" id="s-time">60</span></div>
+      <div class="stat"><span class="k">进度</span><span class="v" id="s-prog">0/8</span></div>
+      <div class="stat score"><span class="k">得分</span><span class="v" id="s-score">0</span></div>
+      <div class="stat"><span class="k">连击</span><span class="v" id="s-combo">0</span></div>
+    </div>
+    <div class="progress"><i id="s-bar"></i></div>
+    <div class="ptext"><span id="s-tip">点英文单词听发音，再点对应中文</span><span id="s-total">总分 0</span></div>
+  </div>
+  <div class="board" id="board"></div>
+  <div class="bar">
+    <button class="btn ghost sm" id="btn-help">玩法</button>
+    <button class="btn ghost sm" id="btn-full">全屏</button>
+    <button class="btn warn" id="btn-replay">重玩本关</button>
+    <button class="btn" id="btn-restart">从头开始</button>
+  </div>
+</div>
+<div id="fx"></div>
+<div class="toast" id="toast"></div>
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/game-core.js"></script>
+<script src="/js/game-ui.js"></script>
+<script src="/js/game-adapter-online.js"></script>
+<script src="/js/page-play.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+[Unit]
+Description=word-puzzle 后端（Python 标准库 + SQLite）
+Documentation=file:/srv/word-puzzle/README.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=wordpuzzle
+Group=wordpuzzle
+WorkingDirectory=/srv/word-puzzle
+Environment=WP_HOST=127.0.0.1
+Environment=WP_PORT=8765
+Environment=WP_DB=/var/lib/word-puzzle/app.db
+Environment=WP_QUIET=1
+ExecStart=/usr/bin/python3 -m server.app
+Restart=on-failure
+RestartSec=3
+
+# 安全加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/word-puzzle /srv/word-puzzle/var
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

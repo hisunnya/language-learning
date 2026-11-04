@@ -19,3 +19,9 @@ Thumbs.db
 # Python
 __pycache__/
 *.py[cod]
+
+# word-puzzle 运行期数据（数据库、生成的离线测试页、上传的资料）
+word-puzzle/var/
+
+# ECDICT 词典（体积大，需要时用 tools/build_seed_data.py --ecdict 临时下载）
+word-puzzle/data/raw/ecdict.csv
