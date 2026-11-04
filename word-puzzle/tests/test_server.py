@@ -246,6 +246,21 @@ class TestBank(TempDB):
         self.assertEqual(b["word_count"], 2)
         self.assertEqual(b["unit_count"], 2)
 
+    def test_material_bank_uses_only_the_selected_upload(self):
+        first = self.db.insert_material("上册", "up.txt", "txt", 1, "", [
+            {"unit": "Unit 1", "en": "apple", "cn": "苹果", "ipa": "", "pos": ""},
+        ])
+        self.db.insert_material("下册", "down.txt", "txt", 1, "", [
+            {"unit": "Unit 1", "en": "book", "cn": "书", "ipa": "", "pos": ""},
+        ])
+        bank = bank_mod.create_bank(self.db, {
+            "source": "material", "material_id": first,
+            "level1": "初中", "level2": "九年级", "level3": "上册",
+            "unit_mode": "all",
+        })
+        words = self.db.bank_words(bank["id"])
+        self.assertEqual([word["en"] for word in words], ["apple"])
+
     def test_bank_payload_groups(self):
         b = bank_mod.create_bank(self.db, {
             "source": "seed", "level1": "初中", "level2": "九年级",
@@ -260,8 +275,43 @@ class TestBank(TempDB):
         b = bank_mod.seed_default_bank(self.db)
         self.assertEqual(a, b)
         bank = self.db.get_bank(a)
-        self.assertEqual(bank["title"], "人教版初中三年级上学期")
+        self.assertEqual(bank["title"], "人教版初中九年级上册")
         self.assertEqual(bank["word_count"], 239)
+
+    def test_seed_default_bank_renames_legacy_title_in_place(self):
+        bid = bank_mod.seed_default_bank(self.db)
+        self.db.execute("UPDATE banks SET title=? WHERE id=?",
+                        ("人教版初中三年级上学期", bid))
+        self.assertEqual(bank_mod.seed_default_bank(self.db), bid)
+        self.assertEqual(self.db.get_bank(bid)["title"], "人教版初中九年级上册")
+
+    def test_seed_migrates_all_legacy_titles_and_keeps_duplicate_history(self):
+        default_id = bank_mod.seed_default_bank(self.db)
+        duplicate = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "上册", "unit_mode": "all", "title": "人教版初中三年级上学期",
+        })
+        full_year = bank_mod.create_bank(self.db, {
+            "source": "seed", "level1": "初中", "level2": "九年级",
+            "level3": "整学年", "level4": "all", "unit_mode": "all",
+        })
+        self.db.execute("UPDATE banks SET title=? WHERE id=?",
+                        ("初中-九年级-整学年-全部单元", full_year["id"]))
+        self.db.execute("UPDATE banks SET level3=? WHERE id=?",
+                ("整学年", full_year["id"]))
+
+        self.assertEqual(bank_mod.seed_default_bank(self.db), default_id)
+        self.assertEqual(self.db.get_bank(duplicate["id"])["title"],
+                         "人教版初中九年级上册（历史副本）")
+        self.assertEqual(self.db.get_bank(full_year["id"])["title"],
+                         "初中-九年级-全年（上下册）-全部单元")
+
+    def test_full_year_bank_uses_consistent_volume_label(self):
+        names = bank_mod.resolve_levels({
+            "level1": "初中", "level2": "九年级", "level3": "整学年",
+            "level4": "all", "unit_mode": "all",
+        })
+        self.assertEqual(names["level3"], "全年（上下册）")
 
 
 # ---------------------------------------------------------------- 离线产物
@@ -359,13 +409,15 @@ class TestHTTP(unittest.TestCase):
         terms = self.get("/api/terms?level1=初中&level2=九年级")
         keys = [o["key"] for o in terms["options"]]
         self.assertEqual(keys, ["上册", "下册", "整学年"])
+        labels = {o["key"]: o["name"] for o in terms["options"]}
+        self.assertEqual(labels["整学年"], "全年（上下册）")
         units = self.get("/api/units?level1=初中&level2=九年级&level3=上册")
         self.assertEqual(len(units["units"]), 7)
 
     def test_default_bank_seeded(self):
         banks = self.get("/api/banks")["banks"]
         titles = [b["title"] for b in banks]
-        self.assertIn("人教版初中三年级上学期", titles)
+        self.assertIn("人教版初中九年级上册", titles)
 
     def test_create_bank_and_play(self):
         res = self.post("/api/banks", {

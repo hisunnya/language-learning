@@ -4,13 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>题库工作台 · 词境 Lexica</title>
-<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/css/app.css?v=20261104-header">
 </head>
 <body>
 <div class="wrap">
 
   <div class="topbar">
-    <div class="brand">题库工作台<small>上传资料 · 生成题库 · 离线测试</small></div>
+    <a class="brand" href="/" aria-label="词境 Lexica 首页">
+      <span class="brand-mark" aria-hidden="true">词</span>
+      <span class="brand-txt"><strong>词境<em>LEXICA</em></strong><small>人教版英语词汇闯关</small></span>
+    </a>
     <nav class="nav">
       <a href="/">首页</a>
       <a href="/bank.html" class="on">题库工作台</a>
@@ -40,7 +43,7 @@
   <!-- 层级选择 -->
   <div class="card">
     <h2>题源与层级</h2>
-    <p class="sub">第一级 学段 → 第二级 年级 → 第三级 学期 → 第四级 单元；每一级都可以自定义名称</p>
+    <p class="sub">第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称</p>
 
     <div class="row" style="margin-bottom:12px">
       <div class="field">
@@ -53,6 +56,7 @@
       <div class="field" id="matField" style="display:none">
         <label>选择资料</label>
         <select id="matSel"></select>
+        <div class="hint">每次生成只使用一份资料并生成独立题库；不会自动合并已上传资料，也不会检查缺少的单元。需要合并时，请先把多册整理进同一份文件并标好单元。</div>
       </div>
     </div>
 
@@ -92,7 +96,7 @@
 
 <div class="toast" id="toast"></div>
 <script src="/js/api.js"></script>
-<script src="/js/selector.js"></script>
+<script src="/js/selector.js?v=20261104-volumes"></script>
 <script src="/js/page-bank.js"></script>
 </body>
 </html>

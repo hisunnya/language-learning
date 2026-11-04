@@ -44,7 +44,7 @@
     }
     this.el.innerHTML =
       '<div class="row">' + box(1, '学段', '自定义学段名称') + box(2, '年级', '自定义年级名称') + '</div>' +
-      '<div class="row" style="margin-top:12px">' + box(3, '学期', '自定义学期名称') + box(4, '单元', '自定义单元名称') + '</div>' +
+      '<div class="row" style="margin-top:12px">' + box(3, '册别', '自定义册别名称') + box(4, '单元', '自定义单元名称') + '</div>' +
       '<div class="row" id="' + id + '-range" style="margin-top:12px;display:none">' +
       '  <div class="field"><label>起始单元</label><select id="' + id + '-from"></select></div>' +
       '  <div class="field"><label>结束单元</label><select id="' + id + '-to"></select></div>' +
@@ -224,7 +224,8 @@
 
   Selector.prototype.summary = function () {
     var s = this.get();
-    var names = [s.level1, s.level2, s.level3,
+    var labels = (this.meta && this.meta.term_labels) || {};
+    var names = [s.level1, s.level2, labels[s.level3] || s.level3,
                  UNIT_MODE_NAMES[s.unit_mode] || s.level4];
     var keys = ['level1', 'level2', 'level3', 'level4'];
     for (var i = 0; i < 4; i++) {
