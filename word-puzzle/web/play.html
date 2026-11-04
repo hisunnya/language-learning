@@ -4,16 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="wp-base" content="/word-puzzle">
 <title>词境 Lexica</title>
-<link rel="stylesheet" href="/css/game.css?v=20261104-header">
+<link rel="stylesheet" href="/word-puzzle/css/game.css?v=20261104-header">
+<link rel="stylesheet" href="/shared/module-header.css">
 </head>
 <body>
 <div class="app">
-  <div class="game-topbar">
-    <span class="game-brand-mark" aria-hidden="true">词</span>
-    <strong>词境<em>LEXICA</em></strong>
-    <a href="/">退出游戏</a>
-  </div>
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
+      <span class="portal-brand-mark" aria-hidden="true">词</span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="English vocabulary practice">英语词汇练习</small></span>
+    </a>
+    <nav class="portal-nav"><a class="active" href="/word-puzzle/" data-module-zh="退出游戏" data-module-en="Exit game">退出游戏</a></nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
   <div class="hud">
     <div class="hud-row">
       <div class="stat"><span class="k">关卡</span><span class="v" id="s-level">1/1</span></div>
@@ -37,10 +42,11 @@
 <div class="toast" id="toast"></div>
 <div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
 
-<script src="/js/api.js"></script>
-<script src="/js/game-core.js"></script>
-<script src="/js/game-ui.js"></script>
-<script src="/js/game-adapter-online.js"></script>
-<script src="/js/page-play.js"></script>
+<script src="/word-puzzle/js/api.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/game-core.js"></script>
+<script src="/word-puzzle/js/game-ui.js"></script>
+<script src="/word-puzzle/js/game-adapter-online.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/page-play.js?v=20261104-base"></script>
+<script src="/shared/module-header.js"></script>
 </body>
 </html>

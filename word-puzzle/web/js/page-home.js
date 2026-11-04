@@ -32,7 +32,7 @@
       '    <small>' + b.word_count + ' 词 · ' + b.unit_count + ' 单元 · ' +
       esc(API.fmtTime(b.created_at)) + '</small></div>' +
       '  <div class="ops">' +
-      '    <a class="btn sm" href="/play.html?bank=' + b.id + '">开始游戏</a>' +
+      '    <a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">开始游戏</a>' +
       '    <button class="btn sm ghost" data-offline="' + b.id + '">生成离线测试</button>' +
       '  </div></div>';
 
@@ -54,7 +54,7 @@
         '    <small>' + b.word_count + ' 词 · ' + b.unit_count + ' 单元 · ' +
         esc(API.fmtTime(b.created_at)) + '</small></div>' +
         '  <div class="ops">' +
-        '    <a class="btn sm" href="/play.html?bank=' + b.id + '">开始游戏</a>' +
+        '    <a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">开始游戏</a>' +
         '    <button class="btn sm ghost" data-offline="' + b.id + '">生成离线测试</button>' +
         '    <button class="btn sm danger" data-del="' + b.id + '">删除</button>' +
         '  </div></div>';
@@ -85,12 +85,9 @@
     API.toast('正在生成离线测试页…', 8000);
     API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
       API.toast('已生成：' + res.filename);
-      var a = document.createElement('a');
-      a.href = res.url;
-      a.download = res.filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      API.download(res.url, res.filename).catch(function () {
+        API.toast('浏览器未允许下载，请到题库工作台打开离线页后另存。', 6000);
+      });
     }).catch(function (e) { API.toast(e.message); });
   }
 
@@ -117,7 +114,7 @@
       btn.disabled = true;
       btn.textContent = '生成中…';
       API.post('/api/banks', s).then(function (res) {
-        location.href = '/play.html?bank=' + res.bank.id;
+        location.href = API.path('/play.html?bank=' + res.bank.id);
       }).catch(function (e) {
         API.toast(e.message);
         btn.disabled = false;
@@ -126,7 +123,7 @@
     };
 
     document.getElementById('btnUpload').onclick = function () {
-      location.href = '/bank.html';
+      location.href = API.path('/bank.html');
     };
 
     document.getElementById('btnOffline').onclick = function () {
@@ -136,13 +133,11 @@
       API.post('/api/banks', s).then(function (res) {
         return API.post('/api/banks/' + res.bank.id + '/offline', {});
       }).then(function (res) {
-        var a = document.createElement('a');
-        a.href = res.url;
-        a.download = res.filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        API.toast('已生成：' + res.filename);
+        API.toast('已生成：' + res.filename + '。若下载被拦截，可在题库工作台打开。', 6000);
+        return API.download(res.url, res.filename).catch(function () {
+          API.toast('浏览器未允许下载，请到题库工作台打开离线页后另存。', 6000);
+        });
+      }).then(function () {
         btn.disabled = false;
         loadBanks();
       }).catch(function (e) {

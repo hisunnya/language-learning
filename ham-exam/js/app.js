@@ -131,12 +131,11 @@
   /* 主题 */
   function applyTheme(t) {
     document.documentElement.setAttribute('data-theme', t);
-    $('#themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+    Store.setSettings({ theme: t });
   }
-  $('#themeBtn').onclick = function () {
-    var t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    Store.setSettings({ theme: t }); applyTheme(t);
-  };
+  window.addEventListener('portal-theme-change', function (event) {
+    applyTheme(event.detail.theme);
+  });
 
   /* ============================================================
      题目渲染（共用）
@@ -1095,7 +1094,7 @@
      启动
      ============================================================ */
   function boot() {
-    applyTheme(Store.settings().theme || 'light');
+    applyTheme(localStorage.getItem('lg_theme') || 'indigo');
     buildClsSwitch();
     $('#bankNote').textContent = BANK.meta.bank + '　·　' + BANK.meta.note;
     renderExamSetup();

@@ -3,23 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
 <title>题库工作台 · 词境 Lexica</title>
-<link rel="stylesheet" href="/css/app.css?v=20261104-header">
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-header">
+<link rel="stylesheet" href="/shared/module-header.css">
 </head>
 <body>
 <div class="wrap">
 
-  <div class="topbar">
-    <a class="brand" href="/" aria-label="词境 Lexica 首页">
-      <span class="brand-mark" aria-hidden="true">词</span>
-      <span class="brand-txt"><strong>词境<em>LEXICA</em></strong><small>人教版英语词汇闯关</small></span>
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
+      <span class="portal-brand-mark" aria-hidden="true">词</span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="English vocabulary practice">英语词汇练习</small></span>
     </a>
-    <nav class="nav">
-      <a href="/">首页</a>
-      <a href="/bank.html" class="on">题库工作台</a>
-      <a href="/stats.html">成绩记录</a>
+    <nav class="portal-nav">
+      <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
+      <a href="/word-puzzle/bank.html" class="active" data-module-zh="题库工作台" data-module-en="Banks">题库工作台</a>
+      <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
     </nav>
-  </div>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
 
   <!-- 两个主按钮 -->
   <div class="card">
@@ -49,7 +52,7 @@
       <div class="field">
         <label>题源</label>
         <select id="sourceSel">
-          <option value="seed">内置词库（人教版）</option>
+          <option value="seed">内置课程词库</option>
           <option value="material">使用上传的资料</option>
         </select>
       </div>
@@ -95,8 +98,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/js/api.js"></script>
-<script src="/js/selector.js?v=20261104-volumes"></script>
-<script src="/js/page-bank.js"></script>
+<script src="/word-puzzle/js/api.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/selector.js?v=20261104-volumes"></script>
+<script src="/word-puzzle/js/page-bank.js?v=20261104-base"></script>
+<script src="/shared/module-header.js"></script>
 </body>
 </html>

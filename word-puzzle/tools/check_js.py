@@ -30,6 +30,7 @@ REPO = ROOT.parent
 JS_DIRS = [
     REPO / "word-puzzle" / "web" / "js",
     REPO / "hub" / "js",
+    REPO / "hub" / "shared",
     REPO / "topic-app" / "topic-app",
     REPO / "ham-exam" / "js",
     REPO / "ham-exam" / "data",

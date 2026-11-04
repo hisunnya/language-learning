@@ -67,6 +67,47 @@
   --primary-tint: rgba(74, 92, 122, 0.1);
 }
 
+[data-theme="indigo"] {
+  --bg:#F4F6FB; --bg-soft:#E9EDF7; --card:#FFFFFF; --ink:#172033; --ink-soft:#68758A;
+  --primary:#4F46E5; --primary-dark:#3730A3; --accent:#0EA5E9; --accent-soft:#BFDBFE;
+  --success:#059669; --success-dark:#047857; --border:#DCE3EF;
+  --shadow:0 10px 30px rgba(40,55,100,.08); --shadow-lg:0 20px 50px rgba(40,55,100,.12);
+  --bg-gradient-1:rgba(79,70,229,.10); --bg-gradient-2:rgba(14,165,233,.08);
+  --hint-bg:#EEF2FF; --hint-accent:#4F46E5; --primary-tint:rgba(79,70,229,.1);
+}
+[data-theme="ink"] {
+  --bg:#0C1210; --bg-soft:#17211B; --card:#141D19; --ink:#E8F4EE; --ink-soft:#9CB1A5;
+  --primary:#34D399; --primary-dark:#6EE7B7; --accent:#A3E635; --accent-soft:#24452F;
+  --success:#34D399; --success-dark:#6EE7B7; --border:#293A31;
+  --shadow:0 10px 30px rgba(0,0,0,.24); --shadow-lg:0 20px 50px rgba(0,0,0,.36);
+  --bg-gradient-1:rgba(52,211,153,.10); --bg-gradient-2:rgba(163,230,53,.07);
+  --hint-bg:#172A20; --hint-accent:#34D399; --primary-tint:rgba(52,211,153,.12);
+}
+[data-theme="amber"] {
+  --bg:#FBF6EC; --bg-soft:#F4EBDD; --card:#FFFFFF; --ink:#30251B; --ink-soft:#81705E;
+  --primary:#B45309; --primary-dark:#92400E; --accent:#D97706; --accent-soft:#FDE7C0;
+  --success:#15803D; --success-dark:#166534; --border:#E9DDC9;
+  --shadow:0 10px 30px rgba(90,60,20,.08); --shadow-lg:0 20px 50px rgba(90,60,20,.12);
+  --bg-gradient-1:rgba(217,119,6,.11); --bg-gradient-2:rgba(180,83,9,.06);
+  --hint-bg:#F8ECD9; --hint-accent:#D97706; --primary-tint:rgba(180,83,9,.10);
+}
+[data-theme="lotus"] {
+  --bg:#FDF4F6; --bg-soft:#F7E8EE; --card:#FFFFFF; --ink:#321D29; --ink-soft:#846C79;
+  --primary:#DB2777; --primary-dark:#9D174D; --accent:#7C3AED; --accent-soft:#F3D5E5;
+  --success:#0F766E; --success-dark:#115E59; --border:#EDD9E2;
+  --shadow:0 10px 30px rgba(110,40,75,.08); --shadow-lg:0 20px 50px rgba(110,40,75,.12);
+  --bg-gradient-1:rgba(219,39,119,.10); --bg-gradient-2:rgba(124,58,237,.07);
+  --hint-bg:#F8E7EF; --hint-accent:#DB2777; --primary-tint:rgba(219,39,119,.10);
+}
+[data-theme="obsidian"] {
+  --bg:#08080A; --bg-soft:#17171A; --card:#111114; --ink:#F3F0E5; --ink-soft:#AAA59A;
+  --primary:#D4AF37; --primary-dark:#E8CB68; --accent:#7DD3FC; --accent-soft:#292619;
+  --success:#5EE0A0; --success-dark:#86EAB6; --border:#302D24;
+  --shadow:0 10px 30px rgba(0,0,0,.28); --shadow-lg:0 20px 50px rgba(0,0,0,.42);
+  --bg-gradient-1:rgba(212,175,55,.10); --bg-gradient-2:rgba(125,211,252,.07);
+  --hint-bg:#211F18; --hint-accent:#D4AF37; --primary-tint:rgba(212,175,55,.12);
+}
+
 :root {
   --radius: 16px;
   --radius-sm: 10px;
@@ -272,6 +313,40 @@ header {
   font-weight: 700;
   color: var(--primary-dark);
   font-feature-settings: "tnum";
+}
+
+/* ====== 适龄话题集 ====== */
+.audience-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  margin-bottom: 16px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.audience-btn {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.audience-btn.active {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--primary-dark);
+  box-shadow: var(--shadow);
 }
 
 /* ====== Tabs ====== */

@@ -91,7 +91,7 @@
         '    <small>' + b.word_count + ' 词 · ' + b.unit_count + ' 单元 · ' +
         esc(API.fmtTime(b.created_at)) + '</small></div>' +
         '  <div class="ops">' +
-        '    <a class="btn sm" href="/play.html?bank=' + b.id + '">开始游戏</a>' +
+        '    <a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">开始游戏</a>' +
         '    <button class="btn sm ghost" data-offline="' + b.id + '">生成离线测试</button>' +
         '    <button class="btn sm danger" data-del="' + b.id + '">删除</button>' +
         '  </div></div>';
@@ -120,9 +120,18 @@
         '  <div class="main"><b>' + esc(f.name) + '</b>' +
         '    <small>' + f.size + ' 字节 · ' + esc(f.created_at) + '</small></div>' +
         '  <div class="ops">' +
-        '    <a class="btn sm" href="' + esc(f.url) + '" download>下载</a>' +
+        '    <button class="btn sm" data-download="' + esc(f.url) + '" data-name="' + esc(f.name) + '">下载</button>' +
+        '    <a class="btn sm ghost" href="' + esc(API.path(f.url + '?inline=1')) + '" target="_blank" rel="noopener">打开</a>' +
         '  </div></div>';
     }).join('');
+
+    box.querySelectorAll('[data-download]').forEach(function (b) {
+      b.onclick = function () {
+        API.download(b.dataset.download, b.dataset.name).catch(function () {
+          API.toast('下载被浏览器拦截了；请点“打开”后用浏览器另存。', 6000);
+        });
+      };
+    });
   }
 
   /* ---------------- 数据加载 ---------------- */
@@ -170,12 +179,9 @@
     API.toast('正在生成离线测试页…', 8000);
     return API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
       API.toast('已生成：' + res.filename);
-      var a = document.createElement('a');
-      a.href = res.url;
-      a.download = res.filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      API.download(res.url, res.filename).catch(function () {
+        API.toast('下载被浏览器拦截了；请在离线文件列表点“打开”后另存。', 6000);
+      });
       loadFiles();
       return res;
     });

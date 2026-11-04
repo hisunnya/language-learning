@@ -17,7 +17,7 @@
       '<div style="padding:40px;text-align:center;font-family:sans-serif">' +
       '<h2 style="color:#123a6b">无法开始游戏</h2>' +
       '<p style="color:#5b6d85">' + API.esc(msg) + '</p>' +
-      '<a href="/" style="display:inline-block;margin-top:12px;padding:10px 18px;' +
+      '<a href="' + API.path('/') + '" style="display:inline-block;margin-top:12px;padding:10px 18px;' +
       'background:#1f7ae0;color:#fff;border-radius:12px;font-weight:700">回到首页</a>' +
       '</div>';
   }
@@ -44,7 +44,7 @@
         /* 在线版：发音走后端 espeak-ng 渲染的**美式女声**（en-us+f3），
            保证所有学生听到的一样，也不受客户端音色影响。
            后端没装 espeak-ng 时会自动退回浏览器 TTS（同样挑 en-US 女声）。 */
-        audioBase: '/api/audio/',
+        audioBase: API.path('/api/audio/'),
         onFinish: function (report) {
           WPAdapter.save(report, { bank_id: bank.id, title: bank.title });
           API.toast('成绩已保存');

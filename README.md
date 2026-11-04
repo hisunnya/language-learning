@@ -113,8 +113,7 @@ language-learning/
 | 样式有测试 | `hub/tests/test_hub.py` 守住双语和配色的约定 |
 
 三个子站的地址写在 `hub/js/config.js` 里。默认 hub 在 80 端口，
-词境 Lexica 在同一主机的 8082 端口，每日话题和无线电执照分别在
-`/topics/`、`/ham/`。词境页面使用根路径资源，因此不能直接挂到 `/lexica/` 子路径。
+词境 Lexica、每日话题和无线电执照分别挂在 `/word-puzzle/`、`/topics/`、`/ham/`。
 
 部署说明见 [`hub/deploy/部署说明.md`](hub/deploy/部署说明.md)。
 
@@ -124,7 +123,7 @@ language-learning/
 
 ## 是什么
 
-一个能部署到 **Ubuntu + nginx** 的英语词汇游戏网站。
+一个能部署到 **Ubuntu + nginx** 的英语词汇练习网站。
 
 内置**人教版 PEP 初中（5 本教材，九年级拆分上下册）+ 高中（7 册）**，
 共 **4791 个词条 / 84 个单元**；四级选题为**学段 → 年级 → 册别 → 单元**。
@@ -172,8 +171,7 @@ game-adapter-*.js   存储适配：online 走后端 / offline 写 localStorage
 
 ## 是什么
 
-一个给初中生用的**家庭话题讨论**小程序：打开网页，随机抽一个话题，
-家长和孩子顺着「参考方向」聊下去。纯前端，数据在浏览器 localStorage 里。
+一个按**初中、高中、大学**分龄的话题讨论工具：选择适合的集合，随机抽题并沿「参考方向」展开交流。默认选中初中生话题集；纯前端，数据在浏览器 localStorage 里。
 
 | 特性 | 说明 |
 | --- | --- |
@@ -183,7 +181,7 @@ game-adapter-*.js   存储适配：online 走后端 / offline 写 localStorage
 | 积分 | 结束讨论加分，看提示扣分 |
 | 零依赖 | 没有后端，任意静态服务器都能跑 |
 
-原始话题库是 `初中生每日话题.xlsx`，`make_topics.py` 从它生成 `topics.js`。
+共 303 个话题：原有 213 条初中话题、补充 30 条初中话题，以及高中和大学各 30 条。原始初中话题库是 `初中生每日话题.xlsx`，补充分龄话题在 `topic-app/supplemental_topics.js`。
 部署说明见 [`topic-app/部署说明.md`](topic-app/部署说明.md)。
 
 ---

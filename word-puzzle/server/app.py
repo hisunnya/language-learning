@@ -274,6 +274,7 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 生成离线测试页 ----
         m = re.fullmatch(r"/api/banks/(\d+)/offline", path)
         if m and method == "POST":
+            self.read_json()
             self._make_offline(int(m.group(1)))
             return
 
@@ -405,9 +406,11 @@ class Handler(BaseHTTPRequestHandler):
         data = target.read_bytes()
         quoted = urllib_quote(name)
         disp = "inline" if inline else "attachment"
+        stamp = re.search(r"\d{8}-\d{6}", name)
+        fallback = "lexica-offline-" + (stamp.group(0) if stamp else "page") + ".html"
         self._send(200, data, "text/html; charset=utf-8", {
             "Content-Disposition":
-                f"{disp}; filename*=UTF-8''{quoted}",
+            f'{disp}; filename="{fallback}"; filename*=UTF-8\'\'{quoted}',
         })
 
 

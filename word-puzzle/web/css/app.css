@@ -22,6 +22,12 @@
   --card: #fff;
 }
 
+html[data-theme="indigo"] { --bg1:#f4f6fb; --bg2:#f8faff; --bg3:#eef4fc; --ink:#172033; --ink2:#68758a; --ink3:#8793a7; --blue:#4f46e5; --blue-d:#3730a3; --blue-l:#eef2ff; --orange:#d97706; --red:#dc4155; --green:#059669; --gold:#f3b61f; --line:#dce3ef; --card:#fff; }
+html[data-theme="ink"] { --bg1:#0c1210; --bg2:#101814; --bg3:#142019; --ink:#e8f4ee; --ink2:#9cb1a5; --ink3:#789184; --blue:#34d399; --blue-d:#15805b; --blue-l:#172a20; --orange:#a3e635; --red:#f0736a; --green:#5ee0a0; --gold:#d4af37; --line:#293a31; --card:#141d19; }
+html[data-theme="amber"] { --bg1:#fbf6ec; --bg2:#fffaf2; --bg3:#f7ecdb; --ink:#30251b; --ink2:#81705e; --ink3:#9b8a78; --blue:#b45309; --blue-d:#92400e; --blue-l:#f8ecd9; --orange:#d97706; --red:#c2413b; --green:#15803d; --gold:#e5a914; --line:#e9ddc9; --card:#fff; }
+html[data-theme="lotus"] { --bg1:#fdf4f6; --bg2:#fff9fb; --bg3:#f8e9ef; --ink:#321d29; --ink2:#846c79; --ink3:#a08b97; --blue:#db2777; --blue-d:#9d174d; --blue-l:#f8e7ef; --orange:#c2410c; --red:#c23d5f; --green:#0f766e; --gold:#d4a72c; --line:#edd9e2; --card:#fff; }
+html[data-theme="obsidian"] { --bg1:#08080a; --bg2:#0e0e11; --bg3:#141310; --ink:#f3f0e5; --ink2:#aaa59a; --ink3:#817c71; --blue:#d4af37; --blue-d:#9d7f22; --blue-l:#211f18; --orange:#7dd3fc; --red:#f0736a; --green:#5ee0a0; --gold:#d4af37; --line:#302d24; --card:#111114; }
+
 html, body {
   margin: 0; padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",

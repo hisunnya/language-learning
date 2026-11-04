@@ -11,6 +11,41 @@ html[data-theme="dark"]{
   --bad:#f0736a; --bad-bg:#2c1717; --warn:#e0a33e; --warn-bg:#2a2113;
   --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
 }
+html[data-theme="indigo"]{
+  --bg:#f4f6fb; --panel:#fff; --ink:#172033; --ink2:#68758a; --line:#dce3ef;
+  --brand:#4f46e5; --brand-ink:#fff; --ok:#059669; --ok-bg:#e7f7f1;
+  --bad:#d13b3b; --bad-bg:#fdeceb; --warn:#b45309; --warn-bg:#fff2df;
+  --shadow:0 1px 3px rgba(24,40,80,.06),0 8px 24px rgba(24,40,80,.08);
+  --radius:14px; --code:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+}
+html[data-theme="ink"]{
+  --bg:#0c1210; --panel:#141d19; --ink:#e8f4ee; --ink2:#9cb1a5; --line:#293a31;
+  --brand:#34d399; --brand-ink:#062317; --ok:#5ee0a0; --ok-bg:#12291f;
+  --bad:#f0736a; --bad-bg:#2c1717; --warn:#e0a33e; --warn-bg:#2a2113;
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.34);
+  --radius:14px; --code:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+}
+html[data-theme="amber"]{
+  --bg:#fbf6ec; --panel:#fff; --ink:#30251b; --ink2:#81705e; --line:#e9ddc9;
+  --brand:#b45309; --brand-ink:#fff; --ok:#15803d; --ok-bg:#e8f4e8;
+  --bad:#c2413b; --bad-bg:#fdeceb; --warn:#c77700; --warn-bg:#fff4e0;
+  --shadow:0 1px 3px rgba(80,50,20,.06),0 8px 24px rgba(80,50,20,.08);
+  --radius:14px; --code:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+}
+html[data-theme="lotus"]{
+  --bg:#fdf4f6; --panel:#fff; --ink:#321d29; --ink2:#846c79; --line:#edd9e2;
+  --brand:#db2777; --brand-ink:#fff; --ok:#0f766e; --ok-bg:#e6f5f2;
+  --bad:#c23d5f; --bad-bg:#fde8ee; --warn:#b45309; --warn-bg:#fff2df;
+  --shadow:0 1px 3px rgba(110,40,75,.06),0 8px 24px rgba(110,40,75,.08);
+  --radius:14px; --code:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+}
+html[data-theme="obsidian"]{
+  --bg:#08080a; --panel:#111114; --ink:#f3f0e5; --ink2:#aaa59a; --line:#302d24;
+  --brand:#d4af37; --brand-ink:#15120a; --ok:#5ee0a0; --ok-bg:#14231c;
+  --bad:#f0736a; --bad-bg:#2c1717; --warn:#e0a33e; --warn-bg:#2a2113;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.4);
+  --radius:14px; --code:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+}
 *{box-sizing:border-box}
 [hidden]{display:none !important}
 html,body{margin:0;padding:0}

@@ -4,8 +4,29 @@
 (function (global) {
   'use strict';
 
+  var base = (document.querySelector('meta[name="wp-base"]') || {}).content || '';
+  base = base.replace(/\/$/, '');
+
   function url(path) {
-    return path.charAt(0) === '/' ? path : '/' + path;
+    path = String(path || '');
+    if (/^(https?:|blob:|data:)/i.test(path)) return path;
+    return base + (path.charAt(0) === '/' ? path : '/' + path);
+  }
+
+  function download(path, filename) {
+    return fetch(url(path)).then(function (res) {
+      if (!res.ok) throw new Error('下载失败（HTTP ' + res.status + '）');
+      return res.blob();
+    }).then(function (blob) {
+      var objectUrl = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(objectUrl); }, 60000);
+    });
   }
 
   async function request(method, path, body, isForm) {
@@ -64,6 +85,8 @@
   }
 
   global.API = {
+    path: url,
+    download: download,
     get: function (p) { return request('GET', p); },
     post: function (p, body) { return request('POST', p, body); },
     del: function (p) { return request('DELETE', p); },

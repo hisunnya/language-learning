@@ -6,26 +6,24 @@
 <title>业余无线电操作证 · 模拟考试系统</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%A1%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css?v=20261104-header">
+<link rel="stylesheet" href="/shared/module-header.css">
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <span class="logo">📡</span>
-    <div class="brand-txt">
-      <h1>无线电执照 <span class="brand-en">HAM EXAM</span></h1>
-      <span class="sub" id="bankNote">业余无线电模拟考试 · 题库载入中…</span>
-    </div>
-  </div>
-  <nav class="nav" id="nav">
-    <button class="nav-btn active" data-view="exam">模拟考试</button>
-    <button class="nav-btn" data-view="practice">练习</button>
-    <button class="nav-btn" data-view="browse">题库</button>
-    <button class="nav-btn" data-view="stats">统计</button>
+<header class="portal-topbar">
+  <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
+    <span class="portal-brand-mark" aria-hidden="true">📡</span>
+      <span class="portal-brand-copy"><strong><span data-module-zh="无线电执照" data-module-en="Ham Exam">无线电执照</span><em>HAM EXAM</em></strong><small id="bankNote" data-module-zh="业余无线电模拟考试" data-module-en="Amateur radio mock exam">业余无线电模拟考试</small></span>
+  </a>
+  <nav class="portal-nav nav" id="nav">
+    <button class="nav-btn active" data-view="exam" data-module-zh="模拟考试" data-module-en="Exam">模拟考试</button>
+    <button class="nav-btn" data-view="practice" data-module-zh="练习" data-module-en="Practice">练习</button>
+    <button class="nav-btn" data-view="browse" data-module-zh="题库" data-module-en="Question bank">题库</button>
+    <button class="nav-btn" data-view="stats" data-module-zh="统计" data-module-en="Stats">统计</button>
   </nav>
-  <div class="topright">
+  <div class="portal-topbar-right topright">
     <div class="cls-switch" id="clsSwitch" title="考试类别"></div>
-    <button class="icon-btn" id="themeBtn" title="切换深色/浅色">🌙</button>
+    <div class="portal-header-controls" id="portalHeaderControls"></div>
   </div>
 </header>
 
@@ -177,6 +175,7 @@
 
 <script src="data/bank.js"></script>
 <script src="js/store.js"></script>
+<script src="/shared/module-header.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
