@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="indigo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>语林 · Lingua Grove</title>
+<meta name="description" content="语言学习工具集：词汇游戏、每日话题讨论、业余无线电模拟考试。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234F46E5'/%3E%3Cpath d='M28 70V30h11l11 20 11-20h11v40H61V50L50 70 39 50v20z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="./index.html">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/>
+        <path d="M8 7.5h7M8 11h5"/>
+        <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 1 4 20.5z"/>
+      </svg>
+    </span>
+    <span class="brand-txt">
+      <strong data-i18n="brand.name">语林</strong>
+      <small data-i18n="brand.sub">语言学习工具集</small>
+    </span>
+  </a>
+
+  <div class="topbar-right">
+    <!-- 语言切换 -->
+    <button type="button" class="lang-btn" id="langBtn"
+            data-tooltip-zh="切换到 English" data-tooltip-en="Switch to 中文"
+            aria-label="切换语言 / Switch language">
+      <span class="lang-btn-zh">中</span><span class="lang-sep">/</span><span class="lang-btn-en">EN</span>
+    </button>
+
+    <!-- 配色选择器：每个色块对角切成「主色 + 底色」两半 -->
+    <div class="theme-picker" id="themePicker" role="group" data-i18n-attr="aria-label:themePicker">
+      <button type="button" class="theme-chip" data-theme-val="indigo"
+              data-tooltip-zh="靛蓝 · 雪白" data-tooltip-en="Indigo · Snow"
+              aria-label="靛蓝雪白配色" aria-pressed="true">
+        <span class="swatch" style="--swatch-main:#4F46E5; --swatch-bg:#F4F6FB;"></span>
+      </button>
+      <button type="button" class="theme-chip" data-theme-val="ink"
+              data-tooltip-zh="墨绿 · 玄夜" data-tooltip-en="Ink · Obsidian"
+              aria-label="墨绿玄夜配色" aria-pressed="false">
+        <span class="swatch" style="--swatch-main:#34D399; --swatch-bg:#0C1210;"></span>
+      </button>
+      <button type="button" class="theme-chip" data-theme-val="amber"
+              data-tooltip-zh="琥珀 · 米白" data-tooltip-en="Amber · Cream"
+              aria-label="琥珀米白配色" aria-pressed="false">
+        <span class="swatch" style="--swatch-main:#B45309; --swatch-bg:#FBF6EC;"></span>
+      </button>
+      <button type="button" class="theme-chip" data-theme-val="lotus"
+              data-tooltip-zh="绯红 · 藕白" data-tooltip-en="Crimson · Lotus"
+              aria-label="绯红藕白配色" aria-pressed="false">
+        <span class="swatch" style="--swatch-main:#DB2777; --swatch-bg:#FDF4F6;"></span>
+      </button>
+      <button type="button" class="theme-chip" data-theme-val="obsidian"
+              data-tooltip-zh="鎏金 · 曜黑" data-tooltip-en="Gilded · Obsidian"
+              aria-label="鎏金曜黑配色" aria-pressed="false">
+        <span class="swatch" style="--swatch-main:#D4AF37; --swatch-bg:#08080A;"></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ==================== Hero ==================== -->
+  <section class="hero">
+    <p class="eyebrow" data-i18n="hero.eyebrow">语言学习工具集</p>
+    <h1 class="hero-title" data-i18n="hero.title">三件工具，一个入口</h1>
+    <p class="hero-lead" data-i18n="hero.lead">
+      词汇游戏、日常话题讨论、业余无线电模拟考试 —— 各自独立，局域网内即开即用。
+    </p>
+    <ul class="hero-stats">
+      <li><b data-i18n="stat.words">4791</b><span data-i18n="stat.words.label">个词条</span></li>
+      <li><b data-i18n="stat.units">84</b><span data-i18n="stat.units.label">个单元</span></li>
+      <li><b data-i18n="stat.topics">120+</b><span data-i18n="stat.topics.label">个话题</span></li>
+      <li><b data-i18n="stat.questions">1375</b><span data-i18n="stat.questions.label">道真题</span></li>
+    </ul>
+  </section>
+
+  <!-- ==================== 三个项目 ==================== -->
+  <section class="projects" aria-label="Projects">
+    <h2 class="section-title" data-i18n="projects.title">工具</h2>
+
+    <!-- ---- 词境 Lexica ---- -->
+    <article class="project" data-project="lexica">
+      <div class="project-head">
+        <span class="project-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/>
+            <rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>
+          </svg>
+        </span>
+        <div class="project-titles">
+          <h3><span data-i18n="lexica.name">词境</span><em data-i18n="lexica.en">Lexica</em></h3>
+          <p data-i18n="lexica.tagline">人教版英语词汇闯关</p>
+        </div>
+      </div>
+      <p class="project-desc" data-i18n="lexica.desc">
+        按「学段 → 年级 → 学期 → 单元」四级挑题，点英文听发音、点中文配对，连击加分。
+        可上传 Word / PDF 资料自建题库，还能导出单文件离线测试页。
+      </p>
+      <ul class="chips">
+        <li data-i18n="lexica.f1">四级题库</li>
+        <li data-i18n="lexica.f2">美式女声发音</li>
+        <li data-i18n="lexica.f3">Word / PDF 上传</li>
+        <li data-i18n="lexica.f4">离线单文件</li>
+      </ul>
+      <a class="btn btn-primary" data-project-link="lexica" href="/lexica/">
+        <span data-i18n="lexica.cta">进入词境</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h13M13 6l6 6-6 6"/>
+        </svg>
+      </a>
+    </article>
+
+    <!-- ---- 每日话题 Daily Topics ---- -->
+    <article class="project" data-project="topics">
+      <div class="project-head">
+        <span class="project-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/>
+            <path d="M8.5 11h7M8.5 14.5h4.5"/>
+          </svg>
+        </span>
+        <div class="project-titles">
+          <h3><span data-i18n="topics.name">每日话题</span><em data-i18n="topics.en">Daily Topics</em></h3>
+          <p data-i18n="topics.tagline">适合初中生的家庭讨论</p>
+        </div>
+      </div>
+      <p class="project-desc" data-i18n="topics.desc">
+        按「个人与自我 / 学习与成长 / 家庭与朋友 / 社会与未来」等分类随机抽题，
+        附参考讨论方向，记录已经聊过的话题，攒积分换取提示。
+      </p>
+      <ul class="chips">
+        <li data-i18n="topics.f1">随机抽题</li>
+        <li data-i18n="topics.f2">参考方向</li>
+        <li data-i18n="topics.f3">历史记录</li>
+        <li data-i18n="topics.f4">纯前端离线</li>
+      </ul>
+      <a class="btn btn-primary" data-project-link="topics" href="/topics/">
+        <span data-i18n="topics.cta">开始讨论</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h13M13 6l6 6-6 6"/>
+        </svg>
+      </a>
+    </article>
+
+    <!-- ---- 无线电执照 Ham Exam ---- -->
+    <article class="project" data-project="ham">
+      <div class="project-head">
+        <span class="project-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20a8 8 0 0 0-5.7-13.7L4 8.5V4h4.5l2.3 2.3A8 8 0 0 0 12 20z"/>
+            <circle cx="12" cy="12" r="2.6"/><path d="M7.8 7.8 5.5 5.5M16.2 7.8l2.3-2.3"/>
+          </svg>
+        </span>
+        <div class="project-titles">
+          <h3><span data-i18n="ham.name">无线电执照</span><em data-i18n="ham.en">Ham Exam</em></h3>
+          <p data-i18n="ham.tagline">业余无线电台操作证模拟考试</p>
+        </div>
+      </div>
+      <p class="project-desc" data-i18n="ham.desc">
+        依据《业余无线电台操作技术能力验证题库（2025 年版）》的 1375 道真题，
+        A / B / C 三类分别组卷，倒计时、交卷、答题卡、错题统计全部照正式考试来。
+      </p>
+      <ul class="chips">
+        <li data-i18n="ham.f1">1375 道真题</li>
+        <li data-i18n="ham.f2">A/B/C 分类</li>
+        <li data-i18n="ham.f3">计时与答题卡</li>
+        <li data-i18n="ham.f4">53 张电路附图</li>
+      </ul>
+      <a class="btn btn-primary" data-project-link="ham" href="/ham/">
+        <span data-i18n="ham.cta">进入模拟考试</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h13M13 6l6 6-6 6"/>
+        </svg>
+      </a>
+    </article>
+  </section>
+
+  <!-- ==================== 说明 ==================== -->
+  <section class="notes">
+    <div class="note">
+      <h3 data-i18n="notes.a.title">全部本地运行</h3>
+      <p data-i18n="notes.a.body">
+        词汇游戏用 Python 标准库加 SQLite，话题和考试是纯前端，
+        不依赖任何云服务，也不需要大模型。
+      </p>
+    </div>
+    <div class="note">
+      <h3 data-i18n="notes.b.title">局域网内直连</h3>
+      <p data-i18n="notes.b.body">
+        家庭网络 10.0.0.0/20 内直接用浏览器打开，不需要 VPN。
+        部署细节见仓库 README。
+      </p>
+    </div>
+    <div class="note">
+      <h3 data-i18n="notes.c.title">随时能带走</h3>
+      <p data-i18n="notes.c.body">
+        题库可以导出成单个 HTML 离线页，拷到任何电脑上双击就能继续做题。
+      </p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>
+      <span data-i18n="foot.left">语林 Lingua Grove · 语言学习工具集</span>
+      <span class="dot">·</span>
+      <span data-i18n="foot.right">家庭服务器 10.1.1.93</span>
+    </p>
+  </footer>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/hub.js"></script>
+</body>
+</html>

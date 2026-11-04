@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-"""对 web/js 下的 JavaScript 做语法体检。
+"""对仓库里的 JavaScript 做语法体检。
 
 服务器上没有 node，所以用一个小词法扫描器检查：
 括号配对、字符串/模板串闭合、正则字面量、注释闭合。
 
 这不是完整的 JS 解析器，但足以抓住「多一个右括号」这类手写事故
 （2026-11-04 就因为 ``d.getMinutes())`` 少了个 ``p(`` 踩过一次）。
+
+覆盖范围：
+
+* ``word-puzzle/web/js/``  —— 词境 Lexica 的前端
+* ``hub/js/``                —— 总主页
+* ``topic-app/topic-app/``   —— 每日话题
+* ``ham-exam/js/`` 和 ``ham-exam/data/`` —— 无线电执照
 
 用法::
 
@@ -17,7 +24,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-JS_DIR = ROOT / "web" / "js"
+REPO = ROOT.parent
+
+# 要体检的 JS 目录（相对仓库根）
+JS_DIRS = [
+    REPO / "word-puzzle" / "web" / "js",
+    REPO / "hub" / "js",
+    REPO / "topic-app" / "topic-app",
+    REPO / "ham-exam" / "js",
+    REPO / "ham-exam" / "data",
+]
 
 PAIRS = {")": "(", "]": "[", "}": "{"}
 OPEN = set("([{")
@@ -171,7 +187,10 @@ def _prev_significant(source: str, i: int) -> str | None:
 
 
 def main() -> int:
-    files = sorted(JS_DIR.glob("*.js"))
+    files: list[Path] = []
+    for d in JS_DIRS:
+        if d.is_dir():
+            files.extend(sorted(d.glob("*.js")))
     if not files:
         print("没有找到 JS 文件")
         return 1
@@ -180,10 +199,10 @@ def main() -> int:
         src = f.read_text(encoding="utf-8")
         try:
             check(src)
-            print(f"  OK   {f.relative_to(ROOT)}")
+            print(f"  OK   {f.relative_to(REPO)}")
         except JsError as exc:
             failed += 1
-            print(f"  FAIL {f.relative_to(ROOT)}  →  {exc}")
+            print(f"  FAIL {f.relative_to(REPO)}  →  {exc}")
     print(f"\n{len(files) - failed}/{len(files)} 个文件通过")
     return 1 if failed else 0
 

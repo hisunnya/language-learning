@@ -1,0 +1,456 @@
+/* =============================================================
+   hub.css —— 语林 / Lingua Grove 总主页
+
+   配色规则见仓库根目录 AGENTS.md §3：
+   * 每套配色是一组 CSS 自定义属性，挂在 [data-theme="…"] 上，
+     样式表里不出现散落的硬编码颜色；
+   * 至少三套（本页五套），每套都要有自己的完整变量集；
+   * 色块选择器是「对角切两半」的小方块 —— 右上角是主色，
+     左下角是底色，用硬边 linear-gradient 实现。
+   ============================================================= */
+
+/* ---------- 靛蓝 · 雪白 / Indigo · Snow ---------- */
+[data-theme="indigo"] {
+  --bg: #f4f6fb;
+  --bg-soft: #e9edf7;
+  --card: #ffffff;
+  --ink: #111827;
+  --ink-soft: #5a6478;
+  --ink-faint: #8e97a8;
+  --accent: #4f46e5;
+  --accent-ink: #ffffff;
+  --accent-soft: #e0e7ff;
+  --accent-2: #0ea5e9;
+  --line: #dde3ef;
+  --line-soft: #eaeff7;
+  --shadow: 0 10px 30px rgba(30, 41, 59, 0.08);
+  --shadow-lg: 0 22px 56px rgba(30, 41, 59, 0.14);
+  --glow-1: rgba(79, 70, 229, 0.14);
+  --glow-2: rgba(14, 165, 233, 0.12);
+}
+
+/* ---------- 墨绿 · 玄夜 / Ink · Obsidian ---------- */
+[data-theme="ink"] {
+  --bg: #0c1210;
+  --bg-soft: #121a17;
+  --card: #151f1b;
+  --ink: #e8f0eb;
+  --ink-soft: #9daea6;
+  --ink-faint: #6b7c74;
+  --accent: #34d399;
+  --accent-ink: #06231a;
+  --accent-soft: #12352a;
+  --accent-2: #a3e635;
+  --line: #22302a;
+  --line-soft: #1a2622;
+  --shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 26px 64px rgba(0, 0, 0, 0.6);
+  --glow-1: rgba(52, 211, 153, 0.14);
+  --glow-2: rgba(163, 230, 53, 0.08);
+}
+
+/* ---------- 琥珀 · 米白 / Amber · Cream ---------- */
+[data-theme="amber"] {
+  --bg: #fbf6ec;
+  --bg-soft: #f4eada;
+  --card: #ffffff;
+  --ink: #1f1a12;
+  --ink-soft: #6b5f4c;
+  --ink-faint: #9a8c77;
+  --accent: #b45309;
+  --accent-ink: #ffffff;
+  --accent-soft: #fbebd2;
+  --accent-2: #d97706;
+  --line: #eadfcb;
+  --line-soft: #f2e9da;
+  --shadow: 0 10px 30px rgba(87, 58, 20, 0.09);
+  --shadow-lg: 0 22px 56px rgba(87, 58, 20, 0.16);
+  --glow-1: rgba(180, 83, 9, 0.12);
+  --glow-2: rgba(217, 119, 6, 0.1);
+}
+
+/* ---------- 绯红 · 藕白 / Crimson · Lotus ---------- */
+[data-theme="lotus"] {
+  --bg: #fdf4f6;
+  --bg-soft: #f8e7ec;
+  --card: #ffffff;
+  --ink: #221018;
+  --ink-soft: #6b4a56;
+  --ink-faint: #9c8189;
+  --accent: #db2777;
+  --accent-ink: #ffffff;
+  --accent-soft: #fce7f3;
+  --accent-2: #7c3aed;
+  --line: #f2dce3;
+  --line-soft: #f8e9ee;
+  --shadow: 0 10px 30px rgba(120, 20, 60, 0.08);
+  --shadow-lg: 0 22px 56px rgba(120, 20, 60, 0.15);
+  --glow-1: rgba(219, 39, 119, 0.13);
+  --glow-2: rgba(124, 58, 237, 0.1);
+}
+
+/* ---------- 鎏金 · 曜黑 / Gilded · Obsidian ---------- */
+[data-theme="obsidian"] {
+  --bg: #08080a;
+  --bg-soft: #101014;
+  --card: #14141a;
+  --ink: #f5f5f7;
+  --ink-soft: #a0a0ac;
+  --ink-faint: #6e6e7a;
+  --accent: #d4af37;
+  --accent-ink: #14140a;
+  --accent-soft: #2a2410;
+  --accent-2: #7dd3fc;
+  --line: #24242e;
+  --line-soft: #1c1c24;
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, 0.7);
+  --glow-1: rgba(212, 175, 55, 0.14);
+  --glow-2: rgba(125, 211, 252, 0.08);
+}
+
+/* ---------- 通用令牌 ---------- */
+:root {
+  --radius: 18px;
+  --radius-sm: 11px;
+  --radius-xs: 8px;
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+               "Microsoft YaHei", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 900px 620px at 8% -8%, var(--glow-1), transparent 62%),
+    radial-gradient(ellipse 760px 560px at 102% 104%, var(--glow-2), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+/* ================= 顶栏 ================= */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 24px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--accent-ink);
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+  box-shadow: 0 6px 16px var(--glow-1);
+}
+.brand-mark svg { width: 22px; height: 22px; }
+
+.brand-txt { display: flex; flex-direction: column; line-height: 1.25; }
+.brand-txt strong { font-size: 17px; font-weight: 800; letter-spacing: 0.4px; }
+.brand-txt small { font-size: 11.5px; color: var(--ink-faint); font-weight: 500; }
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- 语言切换 ---------- */
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+.lang-btn:hover { color: var(--accent); border-color: var(--accent); }
+.lang-sep { color: var(--ink-faint); font-weight: 400; }
+.lang-btn-en { opacity: 0.55; }
+.lang-btn.is-en .lang-btn-zh { opacity: 0.55; }
+.lang-btn.is-en .lang-btn-en { opacity: 1; }
+
+/* ---------- 配色选择器（对角切半的小方块） ---------- */
+.theme-picker { display: flex; align-items: center; gap: 7px; }
+
+.theme-chip {
+  position: relative;
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  transition: transform var(--transition);
+}
+.theme-chip:hover { transform: translateY(-1px); }
+.theme-chip[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  /* 左下 = 底色，右上 = 主色；硬边对角切 */
+  background: linear-gradient(to top right,
+    var(--swatch-bg) 0 50%,
+    var(--swatch-main) 50% 100%);
+}
+
+/* 悬停提示：当前语言下的配色名 */
+.theme-chip::after {
+  content: attr(data-tooltip-zh);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-3px);
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 7px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition), transform var(--transition);
+  z-index: 30;
+}
+.theme-chip:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ================= 主体 ================= */
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px 24px 72px;
+}
+
+/* ---------- Hero ---------- */
+.hero { max-width: 760px; margin-bottom: 52px; }
+
+.eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+.hero-title {
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.18;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+  background: linear-gradient(120deg, var(--ink) 30%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-lead {
+  font-size: 16px;
+  line-height: 1.85;
+  color: var(--ink-soft);
+  margin-bottom: 28px;
+}
+
+.hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+}
+.hero-stats li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 15px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.hero-stats b { font-size: 15px; font-weight: 800; color: var(--accent); }
+
+/* ---------- 分区标题 ---------- */
+.section-title {
+  /* 标题也在 grid 里，要占满整行，不能挤在第一格里 */
+  grid-column: 1 / -1;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0;
+}
+
+/* ---------- 项目卡片 ---------- */
+.projects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 52px;
+}
+
+.project {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 24px 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+.project:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+}
+
+.project-head { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 14px; }
+
+.project-icon {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.project-icon svg { width: 21px; height: 21px; }
+
+.project-titles h3 {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.project-titles h3 em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.project-titles p { font-size: 12.5px; color: var(--ink-faint); margin-top: 3px; }
+
+.project-desc {
+  font-size: 13.5px;
+  line-height: 1.85;
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+  flex: 1;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  list-style: none;
+  margin-bottom: 20px;
+}
+.chips li {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-soft);
+}
+
+/* ---------- 按钮 ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+.btn svg { width: 16px; height: 16px; }
+.btn:hover { transform: translateX(2px); text-decoration: none; }
+
+.btn-primary { color: var(--accent-ink); background: var(--accent); }
+.btn-primary:hover { background: var(--accent-2); }
+
+/* ---------- 说明块 ---------- */
+.notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 48px;
+}
+.note {
+  padding: 20px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+.note h3 { font-size: 14.5px; font-weight: 800; margin-bottom: 7px; }
+.note p { font-size: 13px; line-height: 1.8; color: var(--ink-soft); }
+
+/* ---------- 页脚 ---------- */
+.foot {
+  padding-top: 22px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  text-align: center;
+}
+.foot .dot { margin: 0 8px; opacity: 0.5; }
+
+/* ---------- 窄屏 ---------- */
+@media (max-width: 640px) {
+  .topbar { padding: 12px 16px; }
+  .wrap { padding: 36px 16px 56px; }
+  .brand-txt small { display: none; }
+  .project { padding: 22px 18px 20px; }
+}

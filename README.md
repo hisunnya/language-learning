@@ -1,22 +1,34 @@
-# language-learning
+# language-learning · 语林 Lingua Grove
 
-个人学习工具集。两个项目互相独立，各自都能单独跑起来。
+家庭语言学习工具集。三个项目互相独立，各自都能单独跑起来，另有一个总主页把它们串起来。
 
 | 项目 | 内容 | 技术栈 |
 | --- | --- | --- |
-| [`word-puzzle/`](word-puzzle/) | **单词消消乐**（网站版）：人教版 PEP 初中 + 高中英语词汇题库、四级层级选题、上传资料、导出单文件离线测试页、成绩入库 | Python 标准库 + SQLite + 原生 JS，nginx 部署 |
-| [`ham-exam/`](ham-exam/) | 业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
+| [`hub/`](hub/) | **语林 Lingua Grove** 总主页：三个工具的入口，中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
+| [`word-puzzle/`](word-puzzle/) | **词境 Lexica**（网站版）：人教版 PEP 初中 + 高中英语词汇题库、四级层级选题、上传资料、导出单文件离线测试页、成绩入库 | Python 标准库 + SQLite + 原生 JS，nginx 部署 |
+| [`topic-app/`](topic-app/) | **每日话题 Daily Topics**：适合初中水平的家庭话题讨论，随机抽题 + 参考方向 + 历史记录 | 纯前端，零依赖，localStorage |
+| [`ham-exam/`](ham-exam/) | **无线电执照 Ham Exam**：业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
+
+> 「消消乐」是词境 Lexica 还在单文件阶段时的临时叫法，不是产品名。
+> 产品现在叫**词境 Lexica**，目录名 `word-puzzle/` 保持不变（改了会打断服务器上
+> 已经部署好的 systemd、nginx 和路径）。
 
 ---
 
 ## 快速开始
 
 ```bash
-# word-puzzle（网站版）
-cd word-puzzle && ./run.sh        # → http://127.0.0.1:8000
+# hub（总主页，纯静态）
+cd hub && python3 -m http.server 8080     # → http://127.0.0.1:8080
+
+# word-puzzle · 词境 Lexica（网站版）
+cd word-puzzle && ./run.sh                # → http://127.0.0.1:8000
+
+# topic-app · 每日话题（纯前端）
+cd topic-app/topic-app && python3 -m http.server 8081
 
 # ham-exam（纯前端）
-cd ham-exam && ./start.sh         # → http://127.0.0.1:8080
+cd ham-exam && ./start.sh                 # → http://127.0.0.1:8080
 ```
 
 ---
@@ -26,9 +38,17 @@ cd ham-exam && ./start.sh         # → http://127.0.0.1:8080
 ```
 language-learning/
 ├── README.md
+├── AGENTS.md                               # 仓库级约定（给人和给 AI 看的）
 ├── .gitignore
-├── word-puzzle/                            # 单词消消乐（网站版）
-│   ├── README.md                           # 详细文档
+├── hub/                                   # 总主页「语林 Lingua Grove」
+│   ├── index.html                         # 三件工具的入口
+│   ├── css/hub.css                        # 五套配色（[data-theme]）
+│   ├── js/hub.js                          # 中英切换 + 配色切换
+│   ├── js/config.js                       # 三个子站的地址（部署时改这里）
+│   ├── deploy/                            # nginx 配置 + 部署说明
+│   └── tests/test_hub.py                  # 样式规范测试
+├── word-puzzle/                           # 词境 Lexica（网站版）
+│   ├── README.md                          # 详细文档
 │   ├── run.sh                              # 一键起本地服务
 │   ├── deploy/                             # Ubuntu 部署
 │   │   ├── install.sh
@@ -40,20 +60,31 @@ language-learning/
 │   │   ├── hierarchy.py                    # 四级层级模型
 │   │   ├── materials.py                    # 上传资料解析
 │   │   ├── bank.py                         # 题库生成
-│   │   └── offline.py                      # 单文件离线页生成
+│   │   ├── offline.py                      # 单文件离线页生成
+│   │   ├── ipa.py                          # 美式音标（CMUdict ARPAbet → IPA）
+│   │   ├── tts.py                          # 美式女声发音（espeak-ng en-us+f3）
+│   │   ├── docx.py                         # Word 解析
+│   │   ├── pdf.py                          # PDF 解析（文字版 + OCR）
+│   │   └── wordlist.py                     # 通用词表解析
 │   ├── web/                                # 前端（静态，nginx 直接托管）
 │   │   ├── index.html  bank.html  play.html  stats.html
 │   │   ├── css/{app,game}.css
 │   │   └── js/*.js
 │   ├── data/
 │   │   ├── pep_curriculum.json             # 内置词库（4791 词 / 84 单元）
-│   │   └── raw/                            # 原始词表（脚本输入）
-│   ├── tools/{build_seed_data.py,check_js.py}
-│   ├── tests/test_server.py                # 后端测试（38 个用例）
+│   │   └── raw/                            # 原始词表 + us_ipa.tsv 美式音标表
+│   ├── tools/{build_seed_data.py,build_ipa_table.py,check_js.py}
+│   ├── tests/                              # 后端测试
 │   ├── var/                                # 运行期数据（gitignore）
-│   ├── Unit1单词消消乐.html                # 原始单文件版（保留）
+│   ├── Unit1单词消消乐.html                # 原始单文件版（保留，老文件名）
 │   ├── Unit1单词消消乐-课堂投屏版 .pptx
 │   └── Unit1单词消消乐-使用说明.pdf
+├── topic-app/                              # 每日话题 Daily Topics
+│   ├── topic-app/                          # 站点根目录
+│   │   ├── index.html  app.js  styles.css  topics.js  favicon.svg
+│   ├── 初中生每日话题.xlsx                  # 原始话题库
+│   ├── make_topics.py                      # 从 Excel 生成 topics.js
+│   └── 部署说明.md                          # nginx 配置
 └── ham-exam/
     ├── README.md
     ├── index.html                          # 入口
@@ -67,11 +98,33 @@ language-learning/
 
 ---
 
-# 一、word-puzzle · 单词消消乐（网站版）
+# 一、hub · 语林 Lingua Grove（总主页）
 
 ## 是什么
 
-一个能部署到 **Ubuntu + nginx** 的英语单词消消乐网站。
+三个工具的入口页。纯静态，没有任何后端依赖，扔进 nginx 就能用。
+
+| 特性 | 说明 |
+| --- | --- |
+| 三件工具的入口 | 词境 Lexica / 每日话题 / 无线电执照 |
+| 中英双语 | 右上角一键切换，选择记在 `localStorage` 里 |
+| 五套配色 | 靛蓝·雪白 / 墨绿·玄夜 / 琥珀·米白 / 绯红·藕白 / 鎏金·曜黑 |
+| 对角切半色块 | 配色选择器是小方块，右上主色、左下底色，硬边 `linear-gradient` |
+| 样式有测试 | `hub/tests/test_hub.py` 守住双语和配色的约定 |
+
+三个子站的地址写在 `hub/js/config.js` 里。默认 hub 在 80 端口，
+词境 Lexica 在同一主机的 8082 端口，每日话题和无线电执照分别在
+`/topics/`、`/ham/`。词境页面使用根路径资源，因此不能直接挂到 `/lexica/` 子路径。
+
+部署说明见 [`hub/deploy/部署说明.md`](hub/deploy/部署说明.md)。
+
+---
+
+# 二、word-puzzle · 词境 Lexica（网站版）
+
+## 是什么
+
+一个能部署到 **Ubuntu + nginx** 的英语词汇游戏网站。
 
 内置**人教版 PEP 初中（5 册）+ 高中（7 册）**共 **4791 个词条 / 84 个单元**，
 用四级层级选题：**学段 → 年级 → 学期 → 单元**，每一级都能自定义名称。
@@ -80,7 +133,8 @@ language-learning/
 | --- | --- |
 | 四级层级 | 学段（小学/初中/高中/大学）→ 年级 → 学期（默认「整学年」）→ 单元（全部单元 / 分单元 / 第 N 至第 M 单元） |
 | 自定义命名 | 每一级都能填自己的名字，自定义名会进题库标题和离线文件名 |
-| 上传资料 | TXT / CSV / TSV / JSON，自动识别表头、单元列、中英文列 |
+| 上传资料 | TXT / CSV / TSV / JSON / **Word (.docx)** / **PDF（含扫描件 OCR）**，自动识别表头、单元列、中英文列 |
+| 美式女声发音 | 音标来自 CMUdict（美式），朗读用 espeak-ng `en-us+f3`（女声） |
 | 默认题库 | **人教版初中三年级上学期**（239 词 / 7 单元），启动时自动建好 |
 | 离线测试页 | 任意题库一键导出成**单个自包含 HTML**，文件名 `层级+日期+时间.html` |
 | 分数入库 | 在线成绩写 SQLite；离线页成绩写浏览器 localStorage |
@@ -105,7 +159,7 @@ language-learning/
 ```
 game-core.js        纯运算（关卡/计分/计时/连击），不碰 DOM、不碰网络
 game-ui.js          纯界面，只把 core 的状态画出来
-game-adapter-*.js   存储适配：online 走后端 / offline 走 localStorage
+game-adapter-*.js   存储适配：online 走后端 / offline 写 localStorage
 ```
 
 在线页面用 `<script src>` 引用这两个文件，离线页由 `server/offline.py` 把它们**内联进单个 HTML**，
@@ -113,7 +167,27 @@ game-adapter-*.js   存储适配：online 走后端 / offline 走 localStorage
 
 ---
 
-# 二、ham-exam · 业余无线电操作证模拟考试
+# 三、topic-app · 每日话题 Daily Topics
+
+## 是什么
+
+一个给初中生用的**家庭话题讨论**小程序：打开网页，随机抽一个话题，
+家长和孩子顺着「参考方向」聊下去。纯前端，数据在浏览器 localStorage 里。
+
+| 特性 | 说明 |
+| --- | --- |
+| 分类抽题 | 个人与自我 / 学习与成长 / 家庭与朋友 / 社会与未来 等分类 |
+| 参考方向 | 每个话题附带几个追问方向，攒积分可以看 |
+| 历史记录 | 已经聊过哪些话题一目了然，不会重复 |
+| 积分 | 结束讨论加分，看提示扣分 |
+| 零依赖 | 没有后端，任意静态服务器都能跑 |
+
+原始话题库是 `初中生每日话题.xlsx`，`make_topics.py` 从它生成 `topics.js`。
+部署说明见 [`topic-app/部署说明.md`](topic-app/部署说明.md)。
+
+---
+
+# 四、ham-exam · 无线电执照 Ham Exam
 
 ## 是什么
 
@@ -144,11 +218,19 @@ game-adapter-*.js   存储适配：online 走后端 / offline 走 localStorage
 
 ## 维护记录
 
+### 2026-11-04 — 加了总主页，改了名字
+
+* 新增 `hub/`：语林 Lingua Grove 总主页，中英双语 + 五套配色 + 对角切半色块，
+  配 `hub/tests/test_hub.py` 守住样式约定
+* 「单词消消乐」正式改名为「**词境 Lexica**」（目录名 `word-puzzle/` 不动）
+* `AGENTS.md` 重写：删掉原来的网络/服务器章节，换成家庭网络 10.0.0.0/20
+  和生产机 10.1.1.93（PVE + nginx）
+
 ### 2026-11-04 — word-puzzle 改造成网站
 
 * 新增 `word-puzzle/server/`（Python 标准库 HTTP 服务 + SQLite）、`word-puzzle/web/`（四个页面）、
   `word-puzzle/deploy/`（nginx + systemd + 一键安装脚本）、`word-puzzle/tools/`、`word-puzzle/tests/`
-* 内置人教版 PEP 初中 5 册 + 高中 7 册，共 4791 词条 / 84 单元，附带 3984 条 ECDICT 音标
+* 内置人教版 PEP 初中 5 册 + 高中 7 册，共 4791 词条 / 84 单元
 * 原单文件版拆成 `game-core.js`（运算）/ `game-ui.js`（界面）/ `game-adapter-*.js`（存储），
   在线页和离线页共用同一份代码
 * 保留 `Unit1单词消消乐.html`、课堂投屏版 PPTX、使用说明 PDF 原样不动

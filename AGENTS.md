@@ -19,7 +19,7 @@ the repository — see §2 for everything else.
 - **Subject**: imperative mood, ≤ 72 characters, prefixed with a scope when it
   helps identify the area.
   - `fix(webapp): label the three unlabelled refresh buttons`
-  - `chore(open-webui): bump image to 0.12.4`
+  - `feat(hub): add the obsidian palette`
   - `docs: explain that the deploy directory is separate from the repo`
 - **Body**: state the root cause first, then the change, then how it was
   verified. A reviewer should not have to re-derive why the change was needed.
@@ -70,16 +70,19 @@ between them at runtime.
 - The choice is remembered across reloads (`localStorage`).
 - The current language is reflected on the element (`<html lang="…">`).
 
-Two mechanisms are already in use; follow the one that fits the page:
+Two mechanisms are in use; follow the one that fits the page:
 
 | Mechanism | Where | How it works |
 |---|---|---|
-| i18n table | `gemma/webapp/frontend/index.html` | A `i18n = { zh: {...}, en: {...} }` object; `applyLang()` walks a list of element ids and writes `textContent`. |
-| `data-i18n` attributes | `gemma/datatransfer/static/` | `<tag data-i18n="key">`; a single `applyLang()` swaps every marked node. |
-| `data-lang` blocks | `gemma/lora/material-guide.html` | Two parallel blocks, one per language, shown or hidden by a body class. |
+| `data-i18n` attributes | `hub/index.html` | `<tag data-i18n="key">`; a single `applyLang()` swaps every marked node. |
+| i18n table | (available for new pages that prefer it) | An `i18n = { zh: {...}, en: {...} }` object; `applyLang()` walks a list of element ids and writes `textContent`. |
 
 Whichever mechanism is used, **the language toggle belongs in the header**,
 next to the palette picker.
+
+The hub's i18n table lives in `hub/js/hub.js` as `I18N = { zh: {...}, en: {...} }`.
+**Both dictionaries must carry exactly the same keys** — a key present in one
+language and missing in the other is a bug, and the hub test enforces it.
 
 ### 3.2 Multiple colour palettes
 
@@ -88,7 +91,10 @@ next to the palette picker.
 - The palette is remembered across reloads (`localStorage`).
 - The active palette is marked in the picker (`aria-pressed` / `.active`).
 - Every palette needs a name in both languages, and the name should read as
-  the two colours it combines (e.g. `翡翠 / 云白` — `Jade / Cloud`).
+  the two colours it combines (e.g. `靛蓝 · 雪白` — `Indigo · Snow`).
+- **Every palette defines the complete same set of variables.** A palette that
+  is missing `--accent-soft` or `--line` is not a palette, it is a broken page.
+  The hub test compares the variable sets and fails on a difference.
 
 ### 3.3 The palette picker
 
@@ -127,22 +133,34 @@ picker must show what each palette looks like, not what the current one looks
 like:
 
 ````html
-<button type="button" class="theme-chip" data-theme-val="sage"
-        data-tooltip-zh="松柏绿" data-tooltip-en="Sage"
-        aria-label="松柏绿配色">
-  <span class="swatch" style="--swatch-main: #186851; --swatch-bg: #f9fbfa;"></span>
+<button type="button" class="theme-chip" data-theme-val="indigo"
+        data-tooltip-zh="靛蓝 · 雪白" data-tooltip-en="Indigo · Snow"
+        aria-label="靛蓝雪白配色" aria-pressed="true">
+  <span class="swatch" style="--swatch-main:#4F46E5; --swatch-bg:#F4F6FB;"></span>
 </button>
 ````
 
 ### 3.4 Reference implementations
 
-| Page | Bilingual | Palettes | Picker |
-|---|---|---|---|
-| `gemma/webapp/frontend/index.html` | i18n table | 3 | top-right, square swatches |
-| `gemma/datatransfer/static/index.html` | `data-i18n` | 5 | top-right, square swatches |
-| `gemma/lora/material-guide.html` | `data-lang` blocks | 3 | top-right, square swatches |
+`hub/index.html` is the **canonical reference implementation** — it is the only
+page in the repository that implements all of §3 today, and the hub test
+(`hub/tests/test_hub.py`) is what keeps it that way.
 
-`gemma/datatransfer/static/` is the most complete example of the picker style.
+| Page | Bilingual | Palettes | Picker | Status |
+|---|---|---|---|---|
+| `hub/index.html` | `data-i18n` | 5 | top-right, square swatches | ✅ reference |
+| `word-puzzle/web/*.html` | — | — | — | ⚠️ to be brought up to §3 |
+| `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
+| `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
+
+The three ⚠️ pages predate this convention. When you touch one of them, bring
+it along: the target style is `hub/`, not the reverse. Do not "fix" the hub to
+match the older pages.
+
+Note that `topic-app` already has three colour themes, but its picker is a
+row of three stacked colour bars with a text label — that is **not** the house
+style. Converting it means replacing the picker with diagonal-split squares
+and moving the theme variables onto `[data-theme="…"]`.
 
 ### 3.5 Adding a new page
 
@@ -152,8 +170,8 @@ list in order:
 1. **Pick the bilingual mechanism** (§3.1) and put the strings in both
    languages. No hard-coded user-visible text in the markup.
 2. **Define at least three palettes** on `[data-theme="…"]` (§3.2), each with
-   its own `--bg` / `--accent` / `--line` / … set. Move every hard-coded
-   colour out of the stylesheet and into a variable.
+   its own complete `--bg` / `--accent` / `--line` / … set. Move every
+   hard-coded colour out of the stylesheet and into a variable.
 3. **Build the picker** (§3.3): small squares in the top-right of the header,
    each split diagonally into that palette's own two colours, each with a
    bilingual tooltip.
@@ -163,21 +181,26 @@ list in order:
 
 ### 3.6 Tests
 
-The frontend test (`gemma/webapp/frontend/test_frontend.cjs`) must fail when a
-button ends up without visible text — a button with no id is never filled in
-by `applyLang()` and renders as an empty box. Keep that check, and extend the
-same idea to new pages: every control either carries an id with a non-empty
-label or has static text.
+`hub/tests/test_hub.py` is the style guard for the whole repository. Run it
+after touching any page's markup, styles or scripts:
 
-The same applies to the palette style. Each page's test asserts that:
+```bash
+cd hub && python3 -m unittest discover -s tests -v
+```
 
-- every palette swatch carries **both** of its colours (`--swatch-main` and
+It fails when:
+
+- a button ends up without visible text — a button with no id is never filled
+  in by `applyLang()` and renders as an empty box;
+- a visible string is not covered by a `data-i18n` key, or a key exists in one
+  language but not the other;
+- a palette swatch carries only one of its two colours (`--swatch-main` and
   `--swatch-bg`), so no swatch is indistinguishable from another;
-- the split is a hard-stop diagonal gradient (`0 50%` → `50% 100%`);
-- the swatch is a **square** (`border-radius: 4px`), not a circle;
-- every palette defines its own variable set, so the palettes are really
-  different;
-- the choice is persisted in `localStorage`.
+- the split is not a hard-stop diagonal gradient (`0 50%` → `50% 100%`);
+- the swatch is not a square (`border-radius: 4px`);
+- a palette does not define the complete variable set, so the palettes are not
+  really different;
+- the choice is not persisted in `localStorage`.
 
 A regression here must fail the suite rather than ship.
 
@@ -186,93 +209,130 @@ A regression here must fail the suite rather than ship.
 ## 4. Tests
 
 - Every behaviour change comes with a test. The suites are plain
-  `unittest` (Python) and `node:test`/`assert` (JavaScript) — no new
-  frameworks without a reason.
+  `unittest` (Python) — no new frameworks without a reason. There is **no
+  Node.js on the target host**, so JavaScript is checked with
+  `word-puzzle/tools/check_js.py`, not `node --check`.
 - Run the suite before committing. A change that cannot be verified on this
   machine must say so explicitly instead of claiming success.
 - Verification means the real path, not only unit tests: a unit test with mock
   data cannot catch a changed upstream dataset or an unreachable registry.
 
+```bash
+cd word-puzzle && python3 -m unittest discover -s tests -v   # 后端用例
+cd hub        && python3 -m unittest discover -s tests -v   # 样式规范用例
+cd word-puzzle && python3 tools/check_js.py                  # JS 语法体检
+```
+
 ---
 
 ## 5. Repository layout
 
+```
+language-learning/
+├── AGENTS.md               # 本文件
+├── README.md               # 仓库总说明（中文）
+├── hub/                    # 总主页「语林 Lingua Grove」—— 三个工具的入口
+├── word-puzzle/            # 词境 Lexica —— 英语词汇游戏（网站版）
+├── topic-app/              # 每日话题 Daily Topics —— 初中生家庭讨论
+└── ham-exam/               # 无线电执照 Ham Exam —— 业余无线电模拟考试
+```
+
 - **The deployment directory is not the git working tree.** A `git pull` does
-  not change what the running service serves; the code must be copied to
-  `/opt/prelude-forge/gemma` and the service restarted. See
-  `gemma/webapp/DEPLOYMENT.md`.
+  not change what the running service serves; the code has to be copied to the
+  server and the service restarted.
 - Directory names are lowercase, because production is Ubuntu and paths are
-  case-sensitive there. `Gemma/` became `gemma/` for this reason.
-- Model and product names keep their own capitalisation (`Gemma 4 31B`,
-  `Gemma4Config`) — those are names, not paths.
+  case-sensitive there.
+- **Product names are names, not paths.** The product is 「词境 Lexica」; the
+  directory is still `word-puzzle/` because renaming it would break the
+  systemd unit, the nginx site and the paths already deployed on the server.
+  Do not "helpfully" rename the directory.
+
+### 5.1 Product names
+
+| Product | 中文名 | English | Directory |
+|---|---|---|---|
+| Vocabulary game | 词境 | Lexica | `word-puzzle/` |
+| Daily discussion | 每日话题 | Daily Topics | `topic-app/` |
+| Radio exam | 无线电执照 | Ham Exam | `ham-exam/` |
+| Portal (hub) | 语林 | Lingua Grove | `hub/` |
+
+The vocabulary game was called 「单词消消乐」 while it was a single file. That
+was a working name, not a product name — the product covers word and language
+games generally, so it is 「词境 Lexica」 now. Use the product names above in
+titles, headers, README and the hub.
+
+### 5.2 Deployment layout on the server
+
+| Path | Holds |
+|---|---|
+| `/srv/word-puzzle` | 词境 Lexica 的后端代码（`word-puzzle/deploy/install.sh` 装的） |
+| `/var/lib/word-puzzle` | 词境的 SQLite 数据库和离线页 |
+| `/var/www/topic-app` | 每日话题（纯静态） |
+| `/var/www/ham-exam` | 无线电执照（纯静态） |
+| `/var/www/lingua-grove` | 总主页（纯静态） |
+
+`word-puzzle/deploy/install.sh` is the only installer in the repository. The
+other three are static trees copied into `/var/www/`; `hub/deploy/` and
+`topic-app/部署说明.md` describe their nginx blocks.
 
 ---
 
 ## 6. Servers and network
 
-### 6.1 The three GPU servers
+### 6.1 The home network
 
-| Host | GPU | Role | Network |
-|---|---|---|---|
-| `aiinfraservice-dev-k8s-worker-3` (RTX 4090 x8, `10.200.200.74`) | 8×RTX 4090 24GB | GPU 0-3: Gemma production inference; GPU 4-7: training / benchmark / CosyVoice | **光环新网托管机房** — direct access to domestic (China-compliant) internet, **no corporate proxy** |
-| `s133m0000022` (V100 DGX-1) | 8×V100 32GB, NVLink | GPU 0-3: Qwen-Turbo; GPU 4-7: M.O.G.-SEC-27B | **公司内网** — internet only through the `s133m0000025` proxy |
-| `s133m0000023` (V100 x8) | 8×V100 32GB | WeMM-Embedding, Qwen3-VL embedding | **公司内网** — internet only through the `s133m0000025` proxy |
+The household LAN is **10.0.0.0/20**.
 
-The development host `c133vl000001` (aarch64, no GPU) also reaches the internet
-through the `s133m0000025` proxy.
+- **Both domestic and foreign sites are reachable directly.** There is no
+  corporate proxy and no whitelist to work around — do not set `HTTP_PROXY`,
+  `HTTPS_PROXY` or `NO_PROXY` here, and do not try to reach things "through"
+  a gateway.
+- A script that downloads from the internet therefore just works. Bind an
+  explicit timeout to every outbound call anyway, and make big downloads
+  resumable so a dropped connection does not cost the whole file.
+- When a download fails, report **which URL failed and how** ("GitHub reset
+  after 90 s" is an answer; "it timed out" is not).
 
-### 6.2 The corporate proxy
+### 6.2 The production server
 
-```bash
-export HTTP_PROXY=http://s133it4ada025.cn133.corpintra.net:3128
-export HTTPS_PROXY=http://s133it4ada025.cn133.corpintra.net:3128
-export NO_PROXY=localhost,127.0.0.1,::1,.cn133.corpintra.net,.corpintra.net
-```
+**10.1.1.93** — PVE (Proxmox VE) host.
 
-- `s133it4ada025.cn133.corpintra.net:3128` — the proxy host (resolves to
-  `53.89.34.206`). It is named after the machine `s133m0000025`.
-- It is the **only** way out to the internet for the company-internal V100
-  machines and for the development host.
-- It reaches **domestic** sites directly and **foreign** sites through a
-  **whitelist** (see §6.3).
+- nginx is **already installed and configured**. Add sites as
+  `/etc/nginx/sites-available/<name>` plus a symlink into
+  `sites-enabled/`, then `nginx -t && systemctl reload nginx`.
+- PVE means the machine also runs a few **virtual machines**. When something
+  on the host misbehaves, check whether it is actually a guest VM before
+  blaming the host.
+- Apart from the VMs, treat it as an ordinary **Ubuntu server**: systemd
+  units, `apt`, the standard directory layout, `nginx` for static sites.
+- Deploy by copying files in and reloading — `git pull` on the server is not
+  part of the flow.
 
-`NO_PROXY` matters: Python's `httpx`/`aiohttp` do not understand CIDR
-notation, so container names and internal domains must be listed by name.
-`platform/open-webui/README.md` carries a worked example of a `NO_PROXY` that
-also has to include `.corpdir.net` (the LDAP server is not under
-`.corpintra.net`).
+### 6.3 Where the work happens
 
-### 6.3 Foreign sites are whitelist-gated — ask, do not work around it
+Development happens on a workstation inside the home network; deployment is a
+copy to 10.1.1.93 plus a service reload. A change that has only been verified
+on the workstation has **not** been verified in production — say so.
 
-On the proxy, foreign sites are reachable **only if they are on the
-whitelist**. A site that is not on it fails to connect.
+---
 
-**When something foreign cannot be reached from `s133m0000022`,
-`s133m0000023` or the development host, tell the user which host or URL is
-blocked and ask them to add it to the whitelist.** Do not:
+## 7. Vocabulary and pronunciation
 
-- retry in a loop hoping it is a transient failure;
-- silently switch to a mirror and present the result as if the original
-  source had worked;
-- claim the data was fetched when it came from somewhere else — record the
-  actual source instead.
+The vocabulary game teaches **American English**, read by a **female** voice.
+This is a product requirement, not a preference.
 
-The 4090 machine is the exception: it reaches domestic internet directly, so
-Hugging Face and similar are reachable there only when the site is
-domestic-accessible or mirrored. Use the ModelScope (魔搭) path in
-`infra/benchmark/` for datasets, and mirror endpoints such as
-`https://hf-mirror.com` where the official host is not.
+- **Phonemes**: `word-puzzle/server/ipa.py` is the single source of truth.
+  The table is generated from the CMU Pronouncing Dictionary (US
+  pronunciations) and converted from ARPAbet to IPA. **Never use ECDICT's
+  `phonetic` column** — it holds British transcriptions.
+- **Spoken audio**: espeak-ng `-v en-us+f3`. `en-us` is American English and
+  `+f3` is the female variant of that voice. `+fN` is female, `+mN` is male —
+  verified by measuring the fundamental frequency (`en-us+f3` ≈ 208 Hz,
+  `en-us` ≈ 101 Hz).
+- The voice whitelist accepts only `en-us` and `en-us+f1..f9`. A misconfigured
+  value falls back to `en-us+f3`, so the site **cannot** read in British or
+  Chinese.
+- The browser TTS fallback must pick an `en-US` locale and prefer a
+  female-named local voice.
 
-### 6.4 Consequences for tooling
-
-- Any script that downloads from the internet must work on **both** network
-  models. Prefer a source that is reachable from the 4090 machine (domestic
-  mirror) as the primary path, and the proxy as the fallback, not the other
-  way round.
-- Bind an explicit timeout to every outbound call. The proxy resets
-  long-running transfers (image pulls over 1 GB were reset mid-transfer), so
-  a download must be resumable or retryable.
-- When a download fails, report **which** of the two paths failed and why.
-  "It timed out" is not an answer; "HF via the proxy resets after 90 s while
-  ModelScope returns 200" is.
-
+See `/memories/repo/word-puzzle-website.md` for the implementation details.
