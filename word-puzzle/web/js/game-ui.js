@@ -328,7 +328,8 @@
       var cfg = this.cfg;
       var g = this.game;
       g.state.gen++;
-      var total = g.levels.reduce(function (n, l) { return n + l.words.length; }, 0);
+      /* 词条数按题库里的真实词数算（关卡里的「复习」词不重复计入） */
+      var total = cfg.wordTotal || g.levels.reduce(function (n, l) { return n + l.words.length; }, 0);
 
       var btns = '';
       g.levels.forEach(function (L, i) {

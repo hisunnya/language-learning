@@ -281,23 +281,48 @@ class TestBank(TempDB):
         })
         payload = bank_mod.bank_payload(self.db, b["id"])
         groups = payload["groups"]
-        self.assertEqual(sum(len(g["words"]) for g in groups), 239)
         for group in groups:
             self.assertLessEqual(len(group["words"]), bank_mod.MAX_PAIRS_PER_LEVEL)
+            english = [w["en"] for w in group["words"]]
+            self.assertEqual(len(english), len(set(english)))
         # 九年级上册每个单元都有三十几个词，应该被拆成多关
         self.assertGreater(len(groups), 7)
         self.assertTrue(any("（1/" in g["unit"] for g in groups))
 
     def test_chunk_groups_splits_large_units(self):
-        words = [{"en": "w%d" % i, "cn": "词", "ipa": ""} for i in range(20)]
+        words = [{"en": "w%d" % i, "cn": "词%d" % i, "ipa": ""} for i in range(20)]
         chunks = bank_mod.chunk_groups([{"unit": "Unit 1", "words": words}],
                                        max_pairs=8)
-        # 均分：20 个词分成 3 关，每关 7/7/6，不会剩一个只有 1 个词的空关
-        self.assertEqual([len(c["words"]) for c in chunks], [7, 7, 6])
+        # 切块：8 + 8 + 4；最后一关从前面出现过的词里补齐到 8
+        self.assertEqual([len(c["words"]) for c in chunks], [8, 8, 8])
         self.assertEqual([c["unit"] for c in chunks],
-                         ["Unit 1（1/3）", "Unit 1（2/3）", "Unit 1（3/3）"])
-        self.assertEqual([w["en"] for c in chunks for w in c["words"]],
-                         [w["en"] for w in words])
+                         ["Unit 1（1/3）", "Unit 1（2/3）", "Unit 1（3/3） · 含复习"])
+        # 原来的 20 个词一个不少，顺序不变
+        originals = [w["en"] for c in chunks for w in c["words"]
+                     if w["en"] in {x["en"] for x in words}][:20]
+        self.assertEqual(originals, [w["en"] for w in words])
+
+    def test_chunk_groups_tops_up_short_level_with_earlier_words(self):
+        words = [{"en": "w%d" % i, "cn": "词%d" % i, "ipa": ""} for i in range(37)]
+        chunks = bank_mod.chunk_groups([{"unit": "Unit 1", "words": words}],
+                                       max_pairs=15)
+        self.assertEqual([len(c["words"]) for c in chunks], [15, 15, 15])
+        # 最后一关的前 7 个是原词，后面 8 个是复习（来自前面的关卡）
+        last = chunks[2]["words"]
+        self.assertEqual([w["en"] for w in last[:7]],
+                         ["w%d" % i for i in range(30, 37)])
+        self.assertEqual([w["en"] for w in last[7:]],
+                         ["w%d" % i for i in range(8)])
+
+    def test_chunk_groups_never_repeats_a_card_in_one_level(self):
+        words = [{"en": "w%d" % i, "cn": "词%d" % i, "ipa": ""} for i in range(37)]
+        chunks = bank_mod.chunk_groups([{"unit": "Unit 1", "words": words}],
+                                       max_pairs=15)
+        for chunk in chunks:
+            english = [w["en"] for w in chunk["words"]]
+            chinese = [w["cn"] for w in chunk["words"]]
+            self.assertEqual(len(english), len(set(english)))
+            self.assertEqual(len(chinese), len(set(chinese)))
 
     def test_chunk_groups_keeps_small_units_untouched(self):
         words = [{"en": "a", "cn": "甲", "ipa": ""}]
@@ -461,7 +486,16 @@ class TestHTTP(unittest.TestCase):
         })
         bid = res["bank"]["id"]
         payload = self.get(f"/api/banks/{bid}")
-        self.assertEqual(sum(len(g["words"]) for g in payload["groups"]), 239)
+        groups = payload["groups"]
+        # 库里的词一个不少；关卡里可能多出「复习」用的重复词
+        from server.app import Handler
+        bank_pairs = {(w["en"], w["cn"]) for w in Handler.db.bank_words(bid)}
+        group_pairs = {(w["en"], w["cn"]) for g in groups for w in g["words"]}
+        self.assertEqual(group_pairs, bank_pairs)
+        for group in groups:
+            self.assertLessEqual(len(group["words"]), bank_mod.MAX_PAIRS_PER_LEVEL)
+            english = [w["en"] for w in group["words"]]
+            self.assertEqual(len(english), len(set(english)))
 
     def test_offline_generation_and_download(self):
         res = self.post("/api/banks", {
