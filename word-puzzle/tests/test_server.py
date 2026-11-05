@@ -12,6 +12,7 @@ import io
 import http.client
 import json
 import os
+import re
 import sqlite3
 import sys
 import tempfile
@@ -52,6 +53,46 @@ class TestFrontendMount(unittest.TestCase):
         self.assertIn("base +", source)
         self.assertIn("function download(path, filename)", source)
         self.assertIn("return res.blob()", source)
+
+
+class TestGameplayCopy(unittest.TestCase):
+    """玩法介绍要短，而且只写一份。
+
+    之前首页速览一套、「玩法」面板另一套，共十几行；学生点开才发现
+    读不完。现在两处共用 ``rulesHtml()``，改一处就够。
+    """
+
+    def _ui(self) -> str:
+        return (ROOT / "web" / "js" / "game-ui.js").read_text(encoding="utf-8")
+
+    def _rules_body(self) -> str:
+        source = self._ui()
+        m = re.search(r"rulesHtml: function \(\) \{(.*?)\n    \},", source, re.S)
+        self.assertIsNotNone(m, "game-ui.js 里找不到 rulesHtml()")
+        return m.group(1)
+
+    def test_rules_are_defined_exactly_once(self):
+        """只有一份文案，别又写第二套。"""
+        self.assertEqual(self._ui().count("rulesHtml: function"), 1)
+
+    def test_home_and_help_share_the_same_rules(self):
+        """首页速览和「玩法」面板都走 rulesHtml()。"""
+        source = self._ui()
+        self.assertEqual(source.count("this.rulesHtml()"), 2)
+
+    def test_rules_stay_short(self):
+        """四行以内，多了学生就不看了。"""
+        body = self._rules_body()
+        lines = re.findall(r"'<div><b>", body)
+        self.assertLessEqual(len(lines), 4, "玩法说明有 %d 行，太长了" % len(lines))
+        self.assertGreaterEqual(len(lines), 3, "玩法说明太短，说不清怎么玩")
+
+    def test_rules_mention_the_four_essentials(self):
+        """目标、怎么点、怎么算分、时间 —— 缺一个都会有人问。"""
+        body = self._rules_body()
+        for key in ("目标", "怎么点", "怎么算分", "时间"):
+            self.assertIn(key, body, "玩法说明少了「%s」" % key)
+
 
 class TestHierarchy(unittest.TestCase):
     def test_levels_present(self):
