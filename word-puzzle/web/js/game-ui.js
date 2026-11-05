@@ -340,13 +340,7 @@
       var html = '<h1>' + esc(cfg.title || '词境 Lexica') + '</h1>' +
         '<p>' + esc(cfg.subtitle || '') + '<br>共 ' + total + ' 个词条 · ' +
         g.levels.length + ' 关</p>' +
-        '<div class="rule">' +
-        '<div><b>① 点任意一张卡片</b>：听发音，卡片高亮选中</div>' +
-        '<div><b>② 点另一侧的对应卡片</b>：英文配中文（反过来也行），两张卡片一起消失</div>' +
-        '<div><b>③ 计分</b>：配对 +100 分，连击额外加分；答错扣 3 秒</div>' +
-        '<div><b>④ 时间</b>：每关 ' + g.levelTime + ' 秒，答错再扣 3 秒</div>' +
-        '<div><b>⑤ 过关</b>：剩余时间全部折算成奖励分</div>' +
-        '</div>' +
+        this.rulesHtml() +
         '<div class="lvhead" style="text-align:center">' +
         (cfg.pickUnit ? '选择单元开始' : '选择关卡') + '</div>' +
         '<div class="lvbtn" id="lvpick">' + btns + '</div>' +
@@ -384,20 +378,22 @@
     },
 
     /* ---- 玩法 / 词表 ---- */
+
+    /* 玩法说明只留学生真正要问的四件事：配什么、怎么点、怎么算分、时间怎么算。
+       首页速览和「玩法」面板共用这一份文案，改一处就够了。 */
+    rulesHtml: function () {
+      return '<div class="rule">' +
+        '<div><b>目标</b>：把英文卡片和中文意思配成一对</div>' +
+        '<div><b>怎么点</b>：点任意一侧听发音，再点另一侧的对应卡片（中文先点也行）</div>' +
+        '<div><b>怎么算分</b>：配对 +100，连击额外加分；答错扣 3 秒、扣 20 分</div>' +
+        '<div><b>时间</b>：每关 ' + this.game.levelTime + ' 秒，剩余时间折算成分数，下一关时间更长</div>' +
+        '</div>';
+    },
+
     showHelp: function () {
       var self = this;
-      var g = this.game;
       showPanel('<h2>玩法说明</h2>' +
-        '<div class="rule">' +
-        '<div><b>目标</b>：把英文卡片和中文意思配成一对</div>' +
-        '<div><b>点任意一侧</b>：朗读发音并选中该卡</div>' +
-        '<div><b>点另一侧</b>：配对成功 → 星星特效 + 两张卡消失</div>' +
-        '<div><b>连点同一侧</b>：只是换一张选，不算错，并有提示</div>' +
-        '<div><b>答错</b>：卡片抖动，扣 3 秒、扣 20 分，连击清零</div>' +
-        '<div><b>得分</b>：每对 +100，连击每级 +20（最高 +100）</div>' +
-        '<div><b>过关</b>：剩余每秒折算 10 分奖励，下一关时间更长</div>' +
-        '<div><b>时间</b>：每关 ' + g.levelTime + ' 秒，答错扣 3 秒</div>' +
-        '</div>' +
+        this.rulesHtml() +
         '<div style="display:flex;gap:8px;margin-top:12px">' +
         '<button class="btn ghost" id="ov-close">知道了</button>' +
         '<button class="btn" id="ov-list">查看全部词表</button></div>');
