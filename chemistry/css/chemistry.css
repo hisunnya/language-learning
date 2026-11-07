@@ -60,3 +60,22 @@ button{font:inherit;color:inherit}
 .chem-footer{display:flex;justify-content:space-between;gap:16px;padding:16px 0;border-top:1px solid var(--chem-line);color:var(--chem-muted);font-size:11px}
 @media(max-width:820px){.practice-controls{grid-template-columns:1fr;gap:10px}.workspace{grid-template-columns:1fr}.reference-panel{order:2}.element-list{grid-template-columns:repeat(5,minmax(0,1fr));max-height:220px}}
 @media(max-width:560px){.chem-page{padding:10px 12px 24px}.intro-band{align-items:flex-start;flex-direction:column;gap:14px}.score-strip{width:100%}.score-strip div{flex:1}.control-row{align-items:flex-start;flex-direction:column;gap:7px}.segmented,.mode-tabs{width:100%}.segmented button,.mode-tabs button{flex:1;padding:7px 8px}.workspace{padding-top:17px}.answer-options{gap:8px}.answer-option{min-height:50px;padding:10px;font-size:14px}.element-list{grid-template-columns:repeat(4,minmax(0,1fr))}.chem-footer{flex-direction:column;gap:5px}}
+
+.answer-explain{min-height:22px;margin:-4px 0 14px;color:var(--chem-muted);font-size:13px;line-height:1.6}
+.formula-stage.steps{place-items:center start;padding:18px 24px;font-size:clamp(16px,2.2vw,22px);font-weight:700;letter-spacing:0;line-height:1.9;text-align:left;white-space:pre-line}
+.answer-options.is-numeric{display:flex;align-items:center;gap:10px}
+.numeric-input{flex:1;min-width:0;min-height:54px;padding:10px 14px;border:1px solid var(--chem-line);border-radius:10px;background:var(--chem-surface);color:var(--chem-ink);font:inherit;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.numeric-input:focus{outline:2px solid var(--chem-accent);outline-offset:1px}
+.numeric-input.correct{border-color:var(--chem-good)}
+.numeric-input.wrong{border-color:var(--chem-bad)}
+.numeric-unit{flex:none;color:var(--chem-muted);font-size:16px;font-weight:700}
+.numeric-submit{flex:none;min-height:54px;padding:10px 20px;border:0;border-radius:10px;background:var(--chem-accent);color:var(--chem-accent-ink);font-weight:800;cursor:pointer;touch-action:manipulation}
+.numeric-submit:disabled{opacity:.42;cursor:not-allowed}
+.answer-options.is-match{align-items:start}
+.match-col{display:grid;gap:10px}
+.answer-option.is-selected{border-color:var(--chem-accent);background:var(--chem-accent-soft)}
+.answer-options.is-order{grid-template-columns:1fr}
+.order-pool{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.order-sequence{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.order-slot .answer-option{width:100%;background:var(--chem-surface-2)}
+@media(max-width:560px){.answer-options.is-numeric{flex-wrap:wrap}.numeric-input{flex-basis:100%}.numeric-submit{flex:1}.order-pool{grid-template-columns:1fr}}

@@ -57,7 +57,11 @@
     {"prompt":"H2 + O2 → H2O","answer":"2, 1, 2","choices":["2, 1, 2","1, 1, 1","2, 2, 2","1, 2, 1"]},
     {"prompt":"N2 + H2 → NH3","answer":"1, 3, 2","choices":["1, 3, 2","1, 2, 1","2, 3, 2","1, 1, 3"]},
     {"prompt":"Fe + O2 → Fe2O3","answer":"4, 3, 2","choices":["4, 3, 2","2, 1, 1","2, 3, 2","3, 2, 1"]},
-    {"prompt":"CH4 + O2 → CO2 + H2O","answer":"1, 2, 1, 2","choices":["1, 2, 1, 2","1, 1, 1, 1","2, 3, 2, 2","1, 3, 1, 1"]}
+    {"prompt":"CH4 + O2 → CO2 + H2O","answer":"1, 2, 1, 2","choices":["1, 2, 1, 2","1, 1, 1, 1","2, 3, 2, 2","1, 3, 1, 1"]},
+    {"prompt":"Mg + O2 → MgO","answer":"2, 1, 2","choices":["2, 1, 2","1, 1, 1","2, 2, 1","1, 2, 2"]},
+    {"prompt":"Al + O2 → Al2O3","answer":"4, 3, 2","choices":["4, 3, 2","2, 3, 1","4, 2, 3","2, 1, 1"]},
+    {"prompt":"C3H8 + O2 → CO2 + H2O","answer":"1, 5, 3, 4","choices":["1, 5, 3, 4","1, 3, 3, 4","2, 5, 3, 4","1, 5, 4, 3"]},
+    {"prompt":"Fe2O3 + CO → Fe + CO2","answer":"1, 3, 2, 3","choices":["1, 3, 2, 3","1, 1, 2, 1","2, 3, 4, 3","1, 3, 1, 3"]}
   ],
   "phQuestions": [
     {"zh":"0.1 mol/L 盐酸","en":"0.1 mol/L hydrochloric acid","kind":"acid","molarity":0.1,"answer":1},
@@ -67,6 +71,26 @@
     {"zh":"0.1 mol/L 氢氧化钠溶液","en":"0.1 mol/L sodium hydroxide solution","kind":"base","molarity":0.1,"answer":13},
     {"zh":"0.01 mol/L 氢氧化钠溶液","en":"0.01 mol/L sodium hydroxide solution","kind":"base","molarity":0.01,"answer":12},
     {"zh":"0.001 mol/L 氢氧化钠溶液","en":"0.001 mol/L sodium hydroxide solution","kind":"base","molarity":0.001,"answer":11}
+  ],
+  "wrongFormulas": [
+    {"zh":"氯化钠","en":"Sodium chloride","wrong":"NaCl2","right":"NaCl","whyZh":"钠显 +1 价、氯显 −1 价，按 1∶1 结合，应写作 NaCl。","whyEn":"Na is +1 and Cl is −1, so they combine 1:1: NaCl."},
+    {"zh":"氯化钙","en":"Calcium chloride","wrong":"CaCl","right":"CaCl2","whyZh":"钙显 +2 价、氯显 −1 价，按 1∶2 结合，应写作 CaCl2。","whyEn":"Ca is +2 and Cl is −1, so they combine 1:2: CaCl2."},
+    {"zh":"氯化镁","en":"Magnesium chloride","wrong":"MgCl","right":"MgCl2","whyZh":"镁显 +2 价、氯显 −1 价，按 1∶2 结合，应写作 MgCl2。","whyEn":"Mg is +2 and Cl is −1, so they combine 1:2: MgCl2."},
+    {"zh":"氧化钠","en":"Sodium oxide","wrong":"NaO","right":"Na2O","whyZh":"钠显 +1 价、氧显 −2 价，按 2∶1 结合，应写作 Na2O。","whyEn":"Na is +1 and O is −2, so they combine 2:1: Na2O."},
+    {"zh":"氧化铝","en":"Aluminium oxide","wrong":"Al3O2","right":"Al2O3","whyZh":"铝显 +3 价、氧显 −2 价，按 2∶3 结合，应写作 Al2O3。","whyEn":"Al is +3 and O is −2, so they combine 2:3: Al2O3."},
+    {"zh":"氧化铁","en":"Iron(III) oxide","wrong":"FeO3","right":"Fe2O3","whyZh":"铁显 +3 价、氧显 −2 价，按 2∶3 结合，应写作 Fe2O3。","whyEn":"Fe is +3 and O is −2, so they combine 2:3: Fe2O3."},
+    {"zh":"碳酸钙","en":"Calcium carbonate","wrong":"CaCO2","right":"CaCO3","whyZh":"碳酸根是 CO3（−2 价），与 +2 价的钙按 1∶1 结合，应写作 CaCO3。","whyEn":"Carbonate is CO3 (−2), which pairs 1:1 with Ca (+2): CaCO3."},
+    {"zh":"氧化镁","en":"Magnesium oxide","wrong":"Mg2O","right":"MgO","whyZh":"镁显 +2 价、氧显 −2 价，按 1∶1 结合，应写作 MgO。","whyEn":"Mg is +2 and O is −2, so they combine 1:1: MgO."}
+  ],
+  "phScale": [
+    {"zh":"胃液","en":"Gastric juice","ph":1.5},
+    {"zh":"柠檬汁","en":"Lemon juice","ph":2.4},
+    {"zh":"酸雨","en":"Acid rain","ph":4.5},
+    {"zh":"纯水","en":"Pure water","ph":7},
+    {"zh":"小苏打溶液","en":"Baking-soda solution","ph":8.3},
+    {"zh":"肥皂水","en":"Soapy water","ph":10},
+    {"zh":"家用氨水","en":"Household ammonia","ph":11.5},
+    {"zh":"家用漂白水","en":"Household bleach","ph":12.5}
   ],
   "sources": [
     {"name":"IUPAC Periodic Table of Elements (2022)","url":"https://iupac.org/what-we-do/periodic-table-of-elements/","note":"元素符号、原子序数及标准原子量；练习题为本项目原创。"}

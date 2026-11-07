@@ -5,7 +5,11 @@
     zh: {
       stage: { junior: '初中', high: '高中', university: '大学' },
       mode: { elements: '元素速配', formulas: '化学式', reactions: '反应推理' },
-      marks: { elements: 'ELEMENT LAB', formulas: 'FORMULA LAB', reactions: 'REACTION LAB' },
+      marks: { elements: 'ELEMENT LAB', formulas: 'FORMULA LAB', reactions: 'REACTION LAB', input: 'INPUT LAB', match: 'MATCH LAB', order: 'ORDER LAB', mistake: 'DEBUG LAB' },
+      matchWrong: '配错了 {n} 次，全部一次配对正确才得分。',
+      orderWrong: '正确顺序：{answer}',
+      submit: '提交',
+      yourAnswer: '你的答案',
       chooseSymbol: '选择「{name}」的元素符号。',
       chooseNumber: '「{symbol} · {name}」的原子序数是多少？',
       chooseMass: '「{symbol} · {name}」的标准原子量约是多少？',
@@ -29,7 +33,11 @@
     en: {
       stage: { junior: 'Middle school', high: 'High school', university: 'University' },
       mode: { elements: 'Elements', formulas: 'Formulas', reactions: 'Reactions' },
-      marks: { elements: 'ELEMENT LAB', formulas: 'FORMULA LAB', reactions: 'REACTION LAB' },
+      marks: { elements: 'ELEMENT LAB', formulas: 'FORMULA LAB', reactions: 'REACTION LAB', input: 'INPUT LAB', match: 'MATCH LAB', order: 'ORDER LAB', mistake: 'DEBUG LAB' },
+      matchWrong: '{n} wrong pairing(s). You score only when every pair is right first time.',
+      orderWrong: 'Correct order: {answer}',
+      submit: 'Submit',
+      yourAnswer: 'Your answer',
       chooseSymbol: 'Choose the symbol for {name}.',
       chooseNumber: 'What is the atomic number of {symbol} · {name}?',
       chooseMass: 'What is the standard atomic weight of {symbol} · {name}?',
@@ -59,6 +67,8 @@
   };
   var state = { stage: 'junior', mode: 'elements', round: 1, score: 0, streak: 0, answered: false, focus: null };
   var data = null;
+  var Core = window.ChemistryCore;
+  var CORE_MODES = { input: true, match: true, order: true, mistake: true };
 
   function $(id) { return document.getElementById(id); }
   function language() { return document.documentElement.lang.indexOf('en') === 0 ? 'en' : 'zh'; }
@@ -217,6 +227,10 @@
   function renderQuestion() {
     if (!data) return;
     state.answered = false;
+    $('answerExplain').textContent = '';
+    $('formulaStage').classList.remove('steps');
+    $('answerOptions').className = 'answer-options';
+    if (CORE_MODES[state.mode]) { renderCoreQuestion(); return; }
     var question = makeQuestion();
     state.question = question;
     $('modeMark').textContent = COPY[language()].marks[state.mode];
@@ -239,6 +253,203 @@
       $('answerOptions').appendChild(button);
     });
     updateStats();
+  }
+
+
+  /* ================= 新题型：数值填空 / 配对 / 排序 / 找错 ================= */
+  function make(tag, className, text) {
+    var el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+
+  function makeCoreQuestion() {
+    if (state.mode === 'input') return Core.numericQuestion(data, state.stage);
+    if (state.mode === 'match') return Core.matchQuestion(data, state.stage);
+    if (state.mode === 'order') return Core.orderQuestion(data, state.stage);
+    return Core.mistakeQuestion(data, state.stage);
+  }
+
+  function renderCoreQuestion() {
+    var q = makeCoreQuestion();
+    var lang = language();
+    state.question = q;
+    $('modeMark').textContent = COPY[lang].marks[state.mode];
+    $('roundValue').textContent = state.round;
+    $('questionKicker').textContent = q.kicker[lang];
+    $('questionTitle').textContent = q[lang];
+    $('formulaStage').textContent = q.visual;
+    $('formulaStage').classList.toggle('steps', !!q.steps);
+    $('formulaStage').classList.toggle('empty', !q.steps && q.visual.length < 3);
+    $('answerFeedback').textContent = '';
+    $('answerFeedback').className = 'answer-feedback';
+    $('nextQuestion').disabled = true;
+    var box = $('answerOptions');
+    box.replaceChildren();
+    box.className = 'answer-options' + (q.type ? ' is-' + q.type : '');
+    if (q.type === 'numeric') renderNumeric(q);
+    else if (q.type === 'match') renderMatch(q, lang);
+    else if (q.type === 'order') renderOrder(q, lang);
+    else renderKeyedChoices(q, lang);
+    updateStats();
+  }
+
+  // 统一的收尾：加分/清零连击、显示反馈与解释、解锁「继续」
+  function finishCore(correct, answerLabel, wrongText) {
+    state.answered = true;
+    var feedback = $('answerFeedback');
+    if (correct) {
+      state.score += 10;
+      state.streak += 1;
+      feedback.textContent = text('correct') + ' ' + text('feedbackRight');
+      feedback.classList.add('correct');
+    } else {
+      state.streak = 0;
+      feedback.textContent = wrongText || text('wrong', { answer: answerLabel });
+      feedback.classList.add('wrong');
+    }
+    var q = state.question;
+    $('answerExplain').textContent = language() === 'en' && q.explainEn ? q.explainEn : q.explain;
+    state.round += 1;
+    updateStats();
+    $('nextQuestion').disabled = false;
+  }
+
+  function renderKeyedChoices(q, lang) {
+    q.choices.forEach(function (choice) {
+      var button = make('button', 'answer-option', choice[lang]);
+      button.type = 'button';
+      button.dataset.key = choice.key;
+      button.addEventListener('click', function () {
+        if (state.answered) return;
+        var label = '';
+        document.querySelectorAll('.answer-option').forEach(function (option) {
+          option.disabled = true;
+          if (option.dataset.key === q.answer) { option.classList.add('correct'); label = option.textContent; }
+        });
+        if (choice.key !== q.answer) button.classList.add('wrong');
+        finishCore(choice.key === q.answer, label);
+      });
+      $('answerOptions').appendChild(button);
+    });
+  }
+
+  function renderNumeric(q) {
+    var input = make('input', 'numeric-input');
+    input.type = 'text';
+    input.id = 'numericInput';
+    input.setAttribute('inputmode', 'decimal');
+    input.setAttribute('autocomplete', 'off');
+    input.setAttribute('aria-label', text('yourAnswer'));
+    var unit = make('span', 'numeric-unit', q.unit);
+    var submit = make('button', 'numeric-submit', text('submit'));
+    submit.type = 'button';
+    function send() {
+      if (state.answered || !String(input.value).trim()) return;
+      var correct = Core.checkNumeric(q, input.value);
+      input.disabled = true;
+      submit.disabled = true;
+      input.classList.add(correct ? 'correct' : 'wrong');
+      finishCore(correct, q.answerText);
+    }
+    submit.addEventListener('click', send);
+    input.addEventListener('keydown', function (event) { if (event.key === 'Enter') send(); });
+    $('answerOptions').append(input, unit, submit);
+  }
+
+  function renderMatch(q, lang) {
+    var left = make('div', 'match-col');
+    var right = make('div', 'match-col');
+    var progress = { selected: null, matched: 0, mistakes: 0 };
+    q.pairs.forEach(function (pair) {
+      var button = make('button', 'answer-option match-left', pair.left[lang]);
+      button.type = 'button';
+      button.dataset.key = pair.key;
+      button.addEventListener('click', function () {
+        if (state.answered || button.disabled) return;
+        if (progress.selected) progress.selected.classList.remove('is-selected');
+        progress.selected = button;
+        button.classList.add('is-selected');
+      });
+      left.appendChild(button);
+    });
+    shuffle(q.pairs).forEach(function (pair) {
+      var button = make('button', 'answer-option match-right', pair.right[lang]);
+      button.type = 'button';
+      button.dataset.key = pair.key;
+      button.addEventListener('click', function () {
+        if (state.answered || button.disabled || !progress.selected) return;
+        var mine = progress.selected;
+        progress.selected = null;
+        mine.classList.remove('is-selected');
+        if (mine.dataset.key === button.dataset.key) {
+          mine.classList.add('correct'); button.classList.add('correct');
+          mine.disabled = true; button.disabled = true;
+          progress.matched += 1;
+          if (progress.matched === q.pairs.length) {
+            finishCore(progress.mistakes === 0, '', text('matchWrong', { n: progress.mistakes }));
+          }
+        } else {
+          progress.mistakes += 1;
+          button.classList.add('wrong');
+          setTimeout(function () { button.classList.remove('wrong'); }, 450);
+        }
+      });
+      right.appendChild(button);
+    });
+    $('answerOptions').append(left, right);
+  }
+
+  function renderOrder(q, lang) {
+    var pool = make('div', 'order-pool');
+    var sequence = make('ol', 'order-sequence');
+    var placed = [];
+    var slots = [];
+    var items = shuffle(q.items);
+    function redraw() {
+      pool.replaceChildren();
+      sequence.replaceChildren();
+      slots = [];
+      items.forEach(function (item) {
+        if (placed.indexOf(item) >= 0) return;
+        var button = make('button', 'answer-option order-item', item[lang]);
+        button.type = 'button';
+        button.dataset.key = item.key;
+        button.addEventListener('click', function () {
+          if (state.answered) return;
+          placed.push(item);
+          redraw();
+          if (placed.length === q.items.length) check();
+        });
+        pool.appendChild(button);
+      });
+      placed.forEach(function (item, index) {
+        var row = make('li', 'order-slot');
+        var button = make('button', 'answer-option order-placed', (index + 1) + '. ' + item[lang]);
+        button.type = 'button';
+        button.dataset.key = item.key;
+        button.addEventListener('click', function () {
+          if (state.answered) return;
+          placed.splice(index, 1);
+          redraw();
+        });
+        row.appendChild(button);
+        sequence.appendChild(row);
+        slots.push(button);
+      });
+    }
+    function check() {
+      var correct = placed.every(function (item, i) { return item.key === q.items[i].key; });
+      slots.forEach(function (button, i) {
+        button.disabled = true;
+        button.classList.add(placed[i].key === q.items[i].key ? 'correct' : 'wrong');
+      });
+      var label = q.items.map(function (item) { return item[lang]; }).join(' → ');
+      finishCore(correct, label, text('orderWrong', { answer: label }));
+    }
+    redraw();
+    $('answerOptions').append(pool, sequence);
   }
 
   function chooseAnswer(button, choice) {
@@ -324,6 +535,9 @@
     renderElements();
     if (!state.answered) renderQuestion();
   }
+
+  // 给测试用：读出当前题目，界面逻辑本身不依赖它
+  window.ChemQuiz = { current: function () { return state.question; } };
 
   fetch('data/chemistry.json').then(function (response) {
     if (!response.ok) throw new Error('Chemistry data failed to load');
