@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="indigo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>化学探秘 · Chem Quest</title>
+<meta name="description" content="按学段练习元素、化学式、反应配平和溶液计算。">
+<link rel="stylesheet" href="/shared/module-header.css">
+<link rel="stylesheet" href="/chemistry/css/chemistry.css">
+</head>
+<body>
+<main class="chem-page">
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/" aria-label="Lingua Grove website home">
+      <span class="portal-brand-mark" aria-hidden="true">化</span>
+      <span class="portal-brand-copy">
+        <strong><span data-module-zh="化学探秘" data-module-en="Chem Quest">化学探秘</span><em>CHEM QUEST</em></strong>
+        <small data-module-zh="把化学变成探索" data-module-en="Chemistry through discovery">把化学变成探索</small>
+      </span>
+    </a>
+    <nav class="portal-nav portal-nav--compact">
+      <a class="active" href="/" data-module-zh="返回语林" data-module-en="Lingua Grove home">返回语林</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <section class="intro-band">
+    <div>
+      <p class="eyebrow" data-module-zh="化学 · 探索 · 挑战" data-module-en="CHEMISTRY · DISCOVERY · CHALLENGE">化学 · 探索 · 挑战</p>
+      <h1 data-module-zh="每个符号，都是一个线索。" data-module-en="Every symbol is a clue.">每个符号，都是一个线索。</h1>
+      <p class="intro-copy" data-module-zh="从元素卡片到反应推理，选一个学段开始挑战。" data-module-en="From element cards to reaction puzzles, choose a level and start exploring.">从元素卡片到反应推理，选一个学段开始挑战。</p>
+    </div>
+    <div class="score-strip" aria-live="polite">
+      <div><span data-module-zh="本次得分" data-module-en="SCORE">本次得分</span><strong id="scoreValue">0</strong></div>
+      <div><span data-module-zh="连续答对" data-module-en="STREAK">连续答对</span><strong id="streakValue">0</strong></div>
+    </div>
+  </section>
+
+  <section class="practice-controls" aria-label="Practice controls">
+    <div class="control-row">
+      <span class="control-label" data-module-zh="学习阶段" data-module-en="LEVEL">学习阶段</span>
+      <div class="segmented" id="stageControls" role="group" aria-label="学习阶段">
+        <button type="button" data-stage="junior" data-module-zh="初中" data-module-en="Middle school" aria-pressed="true">初中</button>
+        <button type="button" data-stage="high" data-module-zh="高中" data-module-en="High school" aria-pressed="false">高中</button>
+        <button type="button" data-stage="university" data-module-zh="大学" data-module-en="University" aria-pressed="false">大学</button>
+      </div>
+    </div>
+    <div class="control-row">
+      <span class="control-label" data-module-zh="挑战类型" data-module-en="PRACTICE">挑战类型</span>
+      <div class="mode-tabs" id="modeControls" role="tablist" aria-label="挑战类型">
+        <button type="button" role="tab" data-mode="elements" data-module-zh="元素速配" data-module-en="Elements" aria-selected="true">元素速配</button>
+        <button type="button" role="tab" data-mode="formulas" data-module-zh="化学式" data-module-en="Formulas" aria-selected="false">化学式</button>
+        <button type="button" role="tab" data-mode="reactions" data-module-zh="反应推理" data-module-en="Reactions" aria-selected="false">反应推理</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="workspace" aria-labelledby="questionTitle">
+    <div class="challenge-area">
+      <div class="challenge-meta">
+        <span class="mode-mark" id="modeMark">ELEMENT LAB</span>
+        <span><span data-module-zh="第" data-module-en="ROUND">第</span> <b id="roundValue">1</b><span data-module-zh="题" data-module-en="">题</span></span>
+      </div>
+      <p class="question-kicker" id="questionKicker"></p>
+      <h2 id="questionTitle" aria-live="polite"></h2>
+      <div class="formula-stage" id="formulaStage" aria-hidden="true"></div>
+      <div class="answer-options" id="answerOptions" role="group" aria-label="答案选项"></div>
+      <div class="answer-feedback" id="answerFeedback" aria-live="polite"></div>
+      <button class="next-button" id="nextQuestion" type="button" disabled>
+        <span data-module-zh="继续挑战" data-module-en="Next challenge">继续挑战</span>
+        <span aria-hidden="true">→</span>
+      </button>
+    </div>
+
+    <aside class="reference-panel">
+      <div class="reference-heading">
+        <div>
+          <p class="eyebrow" data-module-zh="随手查" data-module-en="QUICK REFERENCE">随手查</p>
+          <h2 data-module-zh="元素速查" data-module-en="Element guide">元素速查</h2>
+        </div>
+        <span class="element-count" id="elementCount">20</span>
+      </div>
+      <p class="reference-hint" data-module-zh="点选元素卡，直接练符号、序数和原子量。" data-module-en="Tap an element to practice its symbol, atomic number and mass.">点选元素卡，直接练符号、序数和原子量。</p>
+      <div class="element-list" id="elementList"></div>
+      <p class="source-note">
+        <span data-module-zh="原子量参考" data-module-en="Atomic weights:">原子量参考</span>
+        <a href="https://iupac.org/what-we-do/periodic-table-of-elements/" target="_blank" rel="noopener">IUPAC</a>
+      </p>
+    </aside>
+  </section>
+
+  <footer class="chem-footer">
+    <span data-module-zh="化学探秘 · 用好奇心做实验" data-module-en="Chem Quest · Stay curious">化学探秘 · 用好奇心做实验</span>
+    <span data-module-zh="安全练习 · 不涉及真实实验操作" data-module-en="Safe practice · No real-world procedures">安全练习 · 不涉及真实实验操作</span>
+  </footer>
+</main>
+<script src="/shared/module-header.js"></script>
+<script src="/chemistry/js/chemistry.js"></script>
+</body>
+</html>

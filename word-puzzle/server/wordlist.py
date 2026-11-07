@@ -242,6 +242,88 @@ _MID_UNIT_CN_RE = re.compile(
     r"(第\s*[0-9一二三四五六七八九十]+\s*(?:单元|课|部分|章))"
     r"(?=\s|$)")
 
+_GLOSSARY_BULLET_RE = re.compile(r"^\s*[▲▴△▶•▪*]\s*(.*?)\s*$")
+_GLOSSARY_IPA_RE = re.compile(r"\s+(/[^/\n]{1,60}/|\[[^\]\n]{1,60}\])")
+_GLOSSARY_POS_RE = re.compile(
+    r"\s+(n|v|vt|vi|adj|adv|prep|conj|pron|num|art|int|aux|abbr|"
+    r"interj|det|modal|a|ad)\.\s", re.I)
+
+
+def _glossary_head(cell: str) -> tuple[str, str, str] | None:
+    """提取词典扫描页中项目符号后的词头、音标与词性。"""
+    marker = _GLOSSARY_BULLET_RE.match(cell)
+    body = marker.group(1).strip() if marker else cell.strip()
+    ipa = _GLOSSARY_IPA_RE.search(body)
+    if not marker and not ipa:
+        return None
+    pos = _GLOSSARY_POS_RE.search(body)
+    cuts = [m.start() for m in (ipa, pos) if m]
+    if cuts:
+        head = body[:min(cuts)].strip()
+    else:
+        head = re.split(r"\s{2,}", body, maxsplit=1)[0].strip()
+        if head == body:
+            head = " ".join(body.split()[:3])
+    head = head.strip(" \t.,;:!?'\"()[]{}、，。；：！？")
+    if not head or not re.search(r"[A-Za-z]", head):
+        return None
+    return head, (ipa.group(1) if ipa else ""), (pos.group(1).lower() + "." if pos else "")
+
+
+def parse_glossary_text(text: str) -> list[dict]:
+    """抽取教材词典版式：带 ▲ 词头、英英解释、中文释义和跨行续文。
+
+    OCR 文本用制表符标记左右栏；各栏独立扫描，避免同一行交错时串词。
+    """
+    rows = [re.split(r"\t+| {4,}", line.strip()) for line in text.splitlines()]
+    columns = max((len(row) for row in rows), default=0)
+    out: list[dict] = []
+
+    for column in range(columns):
+        current: dict | None = None
+        unit = "Unit 1"
+
+        def finish() -> None:
+            if not current:
+                return
+            meaning = " ".join(part for part in current["cn"] if part).strip()
+            if meaning:
+                out.append({
+                    "unit": unit,
+                    "en": current["en"],
+                    "cn": re.sub(r"\s+", " ", meaning),
+                    "ipa": current["ipa"],
+                    "pos": current["pos"],
+                })
+
+        for row in rows:
+            if column >= len(row):
+                continue
+            cell = row[column].strip()
+            if not cell:
+                continue
+            unit_match = UNIT_RE.match(cell)
+            if unit_match:
+                unit = f"{unit_match.group(1).title()} {unit_match.group(2)}"
+                continue
+            header = _glossary_head(cell)
+            if header:
+                finish()
+                en, ipa, pos = header
+                current = {"en": en, "ipa": ipa, "pos": pos, "cn": []}
+            if current:
+                current["cn"].extend(CN_RUN_RE.findall(cell))
+        finish()
+
+    unique = []
+    seen = set()
+    for entry in out:
+        key = (entry["en"].lower(), entry["cn"])
+        if key not in seen:
+            seen.add(key)
+            unique.append(entry)
+    return unique
+
 
 def _split_by_units(text: str) -> list[tuple[str, str]]:
     """把一行按「单元标记」切成若干段。

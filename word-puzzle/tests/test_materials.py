@@ -21,7 +21,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from server import docx, ipa, pdf, tts, wordlist   # noqa: E402
+from server import docx, ipa, materials, pdf, tts, wordlist   # noqa: E402
 
 
 # ---------------------------------------------------------------- 音标
@@ -262,6 +262,34 @@ class TestWordlist(unittest.TestCase):
         self.assertEqual(wordlist.parse_lines([]), [])
         self.assertEqual(wordlist.parse_lines(["", "   "]), [])
 
+    def test_scanned_glossary_headwords_and_multiline_chinese(self):
+        text = (
+            "▲ triumph /traɪəmf/ n. [C] an important victory\t"
+            "▲ comprehensive /kəmprɪˈhensɪv/ a. complete and necessary\n"
+            "or success after a difficult struggle（尤指苦战后\t"
+            "全面的；综合的；包罗万象的\n"
+            "获得的）胜利，成功，成就\t"
+        )
+        words = wordlist.parse_glossary_text(text)
+        self.assertEqual([word["en"] for word in words],
+                         ["triumph", "comprehensive"])
+        self.assertIn("胜利", words[0]["cn"])
+        self.assertIn("全面的", words[1]["cn"])
+
+    def test_scanned_glossary_handles_missing_bullet_and_poppler_columns(self):
+        text = (
+            "triumph /traɪəmf/ n. [C] important victory    "
+            "comprehensive /kəmprɪˈhensɪv/ a. complete\n"
+            "（尤指苦战后获得的）胜利    全面的；综合的"
+        )
+        words = wordlist.parse_glossary_text(text)
+        self.assertEqual([word["en"] for word in words],
+                         ["triumph", "comprehensive"])
+        self.assertIn("苦战后获得的", words[0]["cn"])
+        self.assertIn("胜利", words[0]["cn"])
+        self.assertIn("全面的", words[1]["cn"])
+        self.assertIn("综合的", words[1]["cn"])
+
 
 # ---------------------------------------------------------------- Word
 
@@ -355,6 +383,29 @@ class TestPDF(unittest.TestCase):
     def test_too_large_rejected(self):
         with self.assertRaises(Exception):
             pdf.pdf_to_text(b"%PDF-1.7\n" + b"0" * (pdf.MAX_BYTES + 1))
+
+    def test_scanned_pdf_retries_ocr_when_text_has_no_entries(self):
+        raw = b"%PDF-1.4 fake scan"
+        with (mock.patch.object(pdf, "pdf_candidates", side_effect=[
+                  [("page heading only", "builtin")],
+                  [("dignity 尊严", "ocr-psm6")],
+              ]) as candidates,
+              mock.patch.object(pdf, "has_ocr", return_value=True)):
+            words = materials.parse_pdf(raw)
+        self.assertEqual(words[0]["en"], "dignity")
+        self.assertEqual(words[0]["cn"], "尊严")
+        self.assertTrue(candidates.call_args_list[1].kwargs["force_ocr"])
+
+    def test_force_ocr_tries_dense_and_sparse_layout_modes(self):
+        with mock.patch.object(pdf, "_ocr",
+                               return_value=[(6, "dignity 尊严"),
+                                             (11, "dignity 尊严")]) as ocr:
+            candidates = pdf.pdf_candidates(b"%PDF-1.4 fake scan", force_ocr=True)
+        self.assertEqual(candidates, [
+            ("dignity 尊严", "ocr-psm6"),
+            ("dignity 尊严", "ocr-psm11"),
+        ])
+        self.assertEqual(ocr.call_args.args[1], (6, 11))
 
     def test_garbage_does_not_hang(self):
         """坏文件不能把解析线程卡死（以前正则回溯是平方级）。"""

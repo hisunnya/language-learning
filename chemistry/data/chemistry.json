@@ -1,0 +1,65 @@
+{
+  "elements": [
+    {"symbol":"H","zh":"氢","en":"Hydrogen","number":1,"mass":1.008},
+    {"symbol":"He","zh":"氦","en":"Helium","number":2,"mass":4.0026},
+    {"symbol":"Li","zh":"锂","en":"Lithium","number":3,"mass":6.94},
+    {"symbol":"Be","zh":"铍","en":"Beryllium","number":4,"mass":9.0122},
+    {"symbol":"B","zh":"硼","en":"Boron","number":5,"mass":10.81},
+    {"symbol":"C","zh":"碳","en":"Carbon","number":6,"mass":12.011},
+    {"symbol":"N","zh":"氮","en":"Nitrogen","number":7,"mass":14.007},
+    {"symbol":"O","zh":"氧","en":"Oxygen","number":8,"mass":15.999},
+    {"symbol":"F","zh":"氟","en":"Fluorine","number":9,"mass":18.998},
+    {"symbol":"Ne","zh":"氖","en":"Neon","number":10,"mass":20.180},
+    {"symbol":"Na","zh":"钠","en":"Sodium","number":11,"mass":22.990},
+    {"symbol":"Mg","zh":"镁","en":"Magnesium","number":12,"mass":24.305},
+    {"symbol":"Al","zh":"铝","en":"Aluminium","number":13,"mass":26.982},
+    {"symbol":"Si","zh":"硅","en":"Silicon","number":14,"mass":28.085},
+    {"symbol":"P","zh":"磷","en":"Phosphorus","number":15,"mass":30.974},
+    {"symbol":"S","zh":"硫","en":"Sulfur","number":16,"mass":32.06},
+    {"symbol":"Cl","zh":"氯","en":"Chlorine","number":17,"mass":35.45},
+    {"symbol":"Ar","zh":"氩","en":"Argon","number":18,"mass":39.948},
+    {"symbol":"K","zh":"钾","en":"Potassium","number":19,"mass":39.098},
+    {"symbol":"Ca","zh":"钙","en":"Calcium","number":20,"mass":40.078},
+    {"symbol":"Sc","zh":"钪","en":"Scandium","number":21,"mass":44.956},
+    {"symbol":"Ti","zh":"钛","en":"Titanium","number":22,"mass":47.867},
+    {"symbol":"V","zh":"钒","en":"Vanadium","number":23,"mass":50.942},
+    {"symbol":"Cr","zh":"铬","en":"Chromium","number":24,"mass":51.996},
+    {"symbol":"Mn","zh":"锰","en":"Manganese","number":25,"mass":54.938},
+    {"symbol":"Fe","zh":"铁","en":"Iron","number":26,"mass":55.845},
+    {"symbol":"Co","zh":"钴","en":"Cobalt","number":27,"mass":58.933},
+    {"symbol":"Ni","zh":"镍","en":"Nickel","number":28,"mass":58.693},
+    {"symbol":"Cu","zh":"铜","en":"Copper","number":29,"mass":63.546},
+    {"symbol":"Zn","zh":"锌","en":"Zinc","number":30,"mass":65.38}
+  ],
+  "formulas": [
+    {"formula":"H2O","zh":"水","en":"water","atoms":{"H":2,"O":1}},
+    {"formula":"CO2","zh":"二氧化碳","en":"carbon dioxide","atoms":{"C":1,"O":2}},
+    {"formula":"O2","zh":"氧气","en":"oxygen","atoms":{"O":2}},
+    {"formula":"H2","zh":"氢气","en":"hydrogen","atoms":{"H":2}},
+    {"formula":"NaCl","zh":"氯化钠","en":"sodium chloride","atoms":{"Na":1,"Cl":1}},
+    {"formula":"CaCO3","zh":"碳酸钙","en":"calcium carbonate","atoms":{"Ca":1,"C":1,"O":3}},
+    {"formula":"HCl","zh":"氯化氢","en":"hydrogen chloride","atoms":{"H":1,"Cl":1}},
+    {"formula":"H2SO4","zh":"硫酸","en":"sulfuric acid","atoms":{"H":2,"S":1,"O":4}},
+    {"formula":"NH3","zh":"氨","en":"ammonia","atoms":{"N":1,"H":3}},
+    {"formula":"NaOH","zh":"氢氧化钠","en":"sodium hydroxide","atoms":{"Na":1,"O":1,"H":1}},
+    {"formula":"CH4","zh":"甲烷","en":"methane","atoms":{"C":1,"H":4}},
+    {"formula":"C6H12O6","zh":"葡萄糖","en":"glucose","atoms":{"C":6,"H":12,"O":6}}
+  ],
+  "changes": [
+    {"zh":"冰块融化","en":"Ice melting","type":"physical"},
+    {"zh":"铁钉生锈","en":"Iron rusting","type":"chemical"},
+    {"zh":"玻璃破碎","en":"Glass breaking","type":"physical"},
+    {"zh":"蜡烛燃烧","en":"A candle burning","type":"chemical"},
+    {"zh":"水沸腾","en":"Water boiling","type":"physical"},
+    {"zh":"苹果切开后变褐","en":"A cut apple turning brown","type":"chemical"}
+  ],
+  "balancedReactions": [
+    {"prompt":"H2 + O2 → H2O","answer":"2, 1, 2","choices":["2, 1, 2","1, 1, 1","2, 2, 2","1, 2, 1"]},
+    {"prompt":"N2 + H2 → NH3","answer":"1, 3, 2","choices":["1, 3, 2","1, 2, 1","2, 3, 2","1, 1, 3"]},
+    {"prompt":"Fe + O2 → Fe2O3","answer":"4, 3, 2","choices":["4, 3, 2","2, 1, 1","2, 3, 2","3, 2, 1"]},
+    {"prompt":"CH4 + O2 → CO2 + H2O","answer":"1, 2, 1, 2","choices":["1, 2, 1, 2","1, 1, 1, 1","2, 3, 2, 2","1, 3, 1, 1"]}
+  ],
+  "sources": [
+    {"name":"IUPAC Periodic Table of Elements (2022)","url":"https://iupac.org/what-we-do/periodic-table-of-elements/","note":"元素符号、原子序数及标准原子量；练习题为本项目原创。"}
+  ]
+}
