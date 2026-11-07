@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3a2fc4"/>
+      <stop offset="0.5" stop-color="#5844dd"/>
+      <stop offset="1" stop-color="#7d5ff0"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc45c"/>
+      <stop offset="1" stop-color="#ef8a1f"/>
+    </linearGradient>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#1b1266" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <g transform="translate(-34,-26)">
+    <g transform="rotate(9 636 472)">
+      <rect x="446" y="282" width="380" height="380" rx="104" fill="url(#amber)" filter="url(#soft)"/>
+    </g>
+
+    <g transform="rotate(-4 442 566)">
+      <rect x="252" y="376" width="380" height="380" rx="104" fill="#ffffff" filter="url(#soft)"/>
+      <text x="440" y="568" font-family="PingFang SC, Hiragino Sans GB, Heiti SC, sans-serif"
+            font-size="238" font-weight="600" text-anchor="middle"
+            dominant-baseline="central" fill="#4b3ad1">词</text>
+    </g>
+  </g>
+</svg>

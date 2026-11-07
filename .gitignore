@@ -16,6 +16,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# 小程序开发工具的工作区元数据
+miniprogram/.workbuddy/
+
 # Python
 __pycache__/
 *.py[cod]

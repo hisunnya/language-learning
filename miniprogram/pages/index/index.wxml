@@ -1,0 +1,53 @@
+<view class="page">
+  <view class="hero">
+    <view class="brand">
+      <view class="brand-mark">词</view>
+      <view class="brand-text">
+        <text class="brand-name">词境</text>
+        <text class="brand-sub">LEXICA</text>
+      </view>
+    </view>
+    <text class="title">单词消消乐</text>
+    <text class="subtitle">{{stage}} · {{grade}} · 人教版 PEP</text>
+  </view>
+
+  <view class="tabs">
+    <view
+      class="tab {{bookIndex === index ? 'tab-on' : ''}}"
+      wx:for="{{bookTabs}}"
+      wx:key="key"
+      data-index="{{index}}"
+      bindtap="onSwitchBook"
+    >{{item.name}}</view>
+  </view>
+
+  <view class="summary">
+    <text class="summary-text">共 {{totalWords}} 词 · 约 {{totalLevels}} 关</text>
+    <text class="summary-rule" bindtap="onShowRules">玩法</text>
+  </view>
+
+  <view class="start-card" hover-class="start-card-on" bindtap="onStartAll">
+    <view class="start-left">
+      <text class="start-title">全部单元</text>
+      <text class="start-desc">按顺序把所有单元玩一遍</text>
+    </view>
+    <view class="start-arrow">→</view>
+  </view>
+
+  <view class="unit-list">
+    <view
+      class="unit"
+      hover-class="unit-on"
+      wx:for="{{units}}"
+      wx:key="index"
+      data-index="{{item.index}}"
+      bindtap="onStartUnit"
+    >
+      <view class="unit-name">{{item.name}}</view>
+      <view class="unit-meta">{{item.count}} 词 · {{item.levels}} 关</view>
+    </view>
+  </view>
+
+  <text class="footnote">{{note}}</text>
+  <text class="footnote">课本内容版权归人民教育出版社所有，仅供个人学习使用。</text>
+</view>
