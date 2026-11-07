@@ -14,22 +14,17 @@
       chooseMolarMass: '「{formula} · {name}」的摩尔质量约是多少？',
       chooseChemicalChange: '以下哪项变化生成了新物质？',
       balance: '选择配平系数：{reaction}',
-      calculatePh: '强酸溶液「{name}」的 pH 约是多少？',
+      calculatePh: '「{name}」的 pH 约是多少？',
       answer: '选择一个答案',
       correct: '正确！继续保持好奇心。',
       wrong: '还差一点，正确答案是：{answer}',
       next: '下一题',
-      nextTen: '再来 10 题',
-      unit: '题',
       feedbackRight: '答对 +10',
-      best: '最佳得分',
       streak: '连续答对',
       element: '元素',
       number: '原子序数',
       mass: '原子量',
-      formula: '化学式',
-      focus: '已选中 {symbol}，点击题目类型开始练习',
-      score: '本次得分'
+      formula: '化学式'
     },
     en: {
       stage: { junior: 'Middle school', high: 'High school', university: 'University' },
@@ -48,17 +43,12 @@
       correct: 'Correct! Keep exploring.',
       wrong: 'Not quite. The answer is: {answer}',
       next: 'Next question',
-      nextTen: 'Play 10 more',
-      unit: 'questions',
       feedbackRight: '+10 points',
-      best: 'Best score',
       streak: 'Correct streak',
       element: 'Element',
       number: 'Atomic number',
       mass: 'Atomic weight',
-      formula: 'Formula',
-      focus: '{symbol} selected. Choose a challenge to practice.',
-      score: 'Score'
+      formula: 'Formula'
     }
   };
 
@@ -67,17 +57,6 @@
     high: { max: 30 },
     university: { max: 30 }
   };
-  var FORMULA_ATOMS = {
-    H2O: { H: 2, O: 1 }, CO2: { C: 1, O: 2 }, O2: { O: 2 }, H2: { H: 2 },
-    NaCl: { Na: 1, Cl: 1 }, CaCO3: { Ca: 1, C: 1, O: 3 }, HCl: { H: 1, Cl: 1 },
-    H2SO4: { H: 2, S: 1, O: 4 }, NH3: { N: 1, H: 3 }, NaOH: { Na: 1, O: 1, H: 1 },
-    CH4: { C: 1, H: 4 }, C6H12O6: { C: 6, H: 12, O: 6 }
-  };
-  var PH_QUESTIONS = [
-    { nameZh: '0.001 mol/L 盐酸', nameEn: '0.001 mol/L hydrochloric acid', answer: 3 },
-    { nameZh: '0.01 mol/L 盐酸', nameEn: '0.01 mol/L hydrochloric acid', answer: 2 },
-    { nameZh: '0.0001 mol/L 盐酸', nameEn: '0.0001 mol/L hydrochloric acid', answer: 4 }
-  ];
   var state = { stage: 'junior', mode: 'elements', round: 1, score: 0, streak: 0, answered: false, focus: null };
   var data = null;
 
@@ -110,16 +89,30 @@
   }
   function formatMass(value) { return Number(value).toFixed(value < 10 ? 3 : 2); }
   function molarMass(formula) {
-    var atoms = FORMULA_ATOMS[formula.formula];
+    var atoms = formula.atoms;
     return Object.keys(atoms).reduce(function (sum, symbol) {
       var element = data.elements.find(function (item) { return item.symbol === symbol; });
       return sum + element.mass * atoms[symbol];
     }, 0);
   }
+  // 以正确答案为中心生成不重复、且为正数的干扰项，凑够 count 个。
+  function nearbyNumbers(answer, offsets, count, precision) {
+    var seen = {};
+    seen[String(answer)] = true;
+    var extras = [];
+    offsets.forEach(function (offset) {
+      var value = Number((answer + offset).toFixed(precision));
+      if (value > 0 && !seen[String(value)]) {
+        seen[String(value)] = true;
+        extras.push(value);
+      }
+    });
+    return shuffle([answer].concat(extras.slice(0, count - 1))).map(function (value) {
+      return String(value);
+    });
+  }
   function distractorNumbers(answer, offsets, precision) {
-    return shuffle([answer].concat(offsets.map(function (offset) {
-      return Number((answer + offset).toFixed(precision));
-    }))).map(function (value) { return String(value); });
+    return nearbyNumbers(answer, offsets, 4, precision);
   }
   function currentElements() {
     return data.elements.filter(function (item) {
@@ -179,7 +172,7 @@
         return {
           kicker: text('formula'), visual: formulaText(formula.formula),
           prompt: text('chooseAtomCount', { formula: formulaText(formula.formula), symbol: symbol }),
-          choices: shuffle(['1', '2', '3', '4'].filter(function (value) { return value !== String(count); }).slice(0, 3).concat([String(count)])),
+          choices: nearbyNumbers(count, [1, -1, 2, -2, 3, 4], 4, 0),
           answer: String(count)
         };
       }
@@ -187,19 +180,21 @@
       return {
         kicker: text('formula'), visual: formulaText(formula.formula),
         prompt: text('chooseMolarMass', { formula: formulaText(formula.formula), name: elementName(formula) }),
-        choices: distractorNumbers(weight, [-10, -2, 4], 2),
+        choices: distractorNumbers(weight, [-10, -2, 4, 8, -1, 2, 16], 2),
         answer: String(weight)
       };
     }
 
     if (state.stage === 'junior') {
-      var change = data.changes[Math.floor(Math.random() * data.changes.length)];
-      var options = shuffle(data.changes.slice());
+      var chemical = data.changes.filter(function (item) { return item.type === 'chemical'; });
+      var physical = data.changes.filter(function (item) { return item.type !== 'chemical'; });
+      var right = chemical[Math.floor(Math.random() * chemical.length)];
+      var options = shuffle([right].concat(shuffle(physical).slice(0, 3)));
       return {
         kicker: text('mode').reactions, visual: '↔',
         prompt: text('chooseChemicalChange'),
         choices: options.map(function (item) { return elementName(item); }),
-        answer: elementName(options.find(function (item) { return item.type === 'chemical'; }))
+        answer: elementName(right)
       };
     }
     if (state.stage === 'high') {
@@ -210,12 +205,11 @@
         choices: shuffle(reaction.choices), answer: reaction.answer
       };
     }
-    var ph = PH_QUESTIONS[Math.floor(Math.random() * PH_QUESTIONS.length)];
-    var phName = language() === 'en' ? ph.nameEn : ph.nameZh;
+    var ph = data.phQuestions[Math.floor(Math.random() * data.phQuestions.length)];
     return {
       kicker: text('mode').reactions, visual: 'pH',
-      prompt: text('calculatePh', { name: phName }),
-      choices: shuffle(['1', '2', '3', '4'].filter(function (value) { return value !== String(ph.answer); }).slice(0, 3).concat([String(ph.answer)])),
+      prompt: text('calculatePh', { name: elementName(ph) }),
+      choices: nearbyNumbers(ph.answer, [1, -1, 2, -2, 3], 4, 0).filter(Boolean),
       answer: String(ph.answer)
     };
   }
@@ -321,15 +315,17 @@
     document.querySelectorAll('[data-mode]').forEach(function (button) {
       button.setAttribute('aria-selected', String(button.dataset.mode === mode));
     });
-    renderQuestion();
-  }
-
-  function applyDynamicLanguage() {
     renderElements();
     renderQuestion();
   }
 
-  fetch('/chemistry/data/chemistry.json').then(function (response) {
+  // 已作答的题不能重新出题，否则切换语言就能刷分；下一题自然会用新语言。
+  function applyDynamicLanguage() {
+    renderElements();
+    if (!state.answered) renderQuestion();
+  }
+
+  fetch('data/chemistry.json').then(function (response) {
     if (!response.ok) throw new Error('Chemistry data failed to load');
     return response.json();
   }).then(function (json) {
@@ -343,7 +339,6 @@
     $('nextQuestion').addEventListener('click', renderQuestion);
     var langButton = $('portalLangBtn');
     if (langButton) langButton.addEventListener('click', function () { setTimeout(applyDynamicLanguage, 0); });
-    window.addEventListener('portal-theme-change', function () {});
     renderElements();
     renderQuestion();
   }).catch(function (error) {
