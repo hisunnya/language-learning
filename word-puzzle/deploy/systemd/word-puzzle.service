@@ -13,8 +13,9 @@ Environment=WP_HOST=127.0.0.1
 Environment=WP_PORT=8765
 Environment=WP_DB=/var/lib/word-puzzle/app.db
 Environment=WP_QUIET=1
-# 发音音色：espeak-ng 的美式女声。想换其它美式女声就改这里（en-us+f1..+f5）。
-Environment=WP_TTS_VOICE=en-us+f3
+# Edge Neural 美式女声；网络合成失败时回退到本地 espeak-ng en-us+f3。
+Environment=WP_EDGE_TTS=/opt/word-puzzle/tts-venv/bin/edge-tts
+Environment=WP_TTS_VOICE=en-US-AriaNeural
 ExecStart=/usr/bin/python3 -m server.app
 Restart=on-failure
 RestartSec=3

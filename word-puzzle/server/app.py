@@ -287,15 +287,15 @@ class Handler(BaseHTTPRequestHandler):
             self._download_offline(m.group(1), query.get("inline") == "1")
             return
 
-        # ---- 发音音频（espeak-ng 美式女声） ----
+        # ---- 发音音频（神经语音 MP3 / 本地 eSpeak WAV） ----
         if path.startswith("/api/audio/") and method == "GET":
             word = unquote(path[len("/api/audio/"):])
             if not word or len(word) > 80:
                 raise HttpError(400, "单词不合法")
             data = tts.synth(word)
             if not data:
-                raise HttpError(404, "服务器没有装 espeak-ng，无法生成音频")
-            self._send(200, data, "audio/wav",
+                raise HttpError(404, "服务器没有可用的语音合成器")
+            self._send(200, data, tts.content_type(data),
                        {"Cache-Control": "public, max-age=604800"})
             return
 
@@ -424,6 +424,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000,
     Handler.db = db
     try:
         default_id = bank_mod.seed_default_bank(db)
+        bank_mod.seed_curriculum_banks(db)
     except Exception:
         traceback.print_exc()
         default_id = None

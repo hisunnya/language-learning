@@ -167,8 +167,7 @@
         }
       } catch (e) { }
     }
-    /* 在线模式：优先用后端渲染的美式女声音频（espeak-ng en-us+f3），
-       这样所有学生听到的都一样，也不受客户端音色影响。 */
+    /* 在线模式：优先用后端 Edge Neural 美式女声；合成失败时由后端回退到 eSpeak。 */
     if (serverAudioBase) {
       try {
         if (!audioCache[key]) {
@@ -312,10 +311,6 @@
       });
 
       window.addEventListener('resize', function () { self.layoutCols(); });
-      document.addEventListener('touchmove', function (e) {
-        if (e.touches.length > 1) e.preventDefault();
-      }, { passive: false });
-
       self.showHome();
       self.render();
       return this;
@@ -384,7 +379,7 @@
     rulesHtml: function () {
       return '<div class="rule">' +
         '<div><b>目标</b>：把英文卡片和中文意思配成一对</div>' +
-        '<div><b>怎么点</b>：点任意一侧听发音，再点另一侧的对应卡片（中文先点也行）</div>' +
+        '<div><b>怎么点</b>：点英文卡听发音；中文卡可先选，不会播放语音</div>' +
         '<div><b>怎么算分</b>：配对 +100，连击额外加分；答错扣 3 秒、扣 20 分</div>' +
         '<div><b>时间</b>：每关 ' + this.game.levelTime + ' 秒，剩余时间折算成分数，下一关时间更长</div>' +
         '</div>';
@@ -536,7 +531,9 @@
       };
       $('ov-replay').onclick = function () { hidePanel(); g.replay(); };
       $('ov-home').onclick = function () {
-        hidePanel(); self.finish(); g.restart(); self.showHome();
+        hidePanel(); self.finish();
+        if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
+        g.restart(); self.showHome();
       };
       this.render();
       if (!hasNext) this.finish();
@@ -556,7 +553,9 @@
       showPanel(html);
       $('ov-retry').onclick = function () { hidePanel(); g.replay(); };
       $('ov-home').onclick = function () {
-        hidePanel(); self.finish(); g.restart(); self.showHome();
+        hidePanel(); self.finish();
+        if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
+        g.restart(); self.showHome();
       };
       this.render();
       this.finish();
@@ -586,9 +585,9 @@
         if (st.sel && st.sel.card && st.sel.card.el) {
           st.sel.card.el.classList.add('sel');
         }
-        speak(evt.word.en);
+        if (evt.side === 'en') speak(evt.word.en);
         sfx.click();
-        /* 先点中文也是可以的，给个提示让人知道下一步 */
+        /* 中文卡只选择，不朗读；英文卡才播放发音。 */
         if (evt.side === 'cn') toast('先点中文也行，再点对应的英文配对');
         this.render();
       } else if (evt.type === 'switch') {
@@ -597,7 +596,7 @@
           evt.prevCard.el.classList.remove('sel');
         }
         if (evt.card && evt.card.el) evt.card.el.classList.add('sel');
-        speak(evt.word.en);
+        if (evt.side === 'en') speak(evt.word.en);
         sfx.click();
         toast(evt.prevSide === 'en'
           ? '刚选的是英文，再点中文配对'
@@ -608,7 +607,7 @@
         }
         this.render();
       } else if (evt.type === 'repeat') {
-        speak(evt.word.en);
+        if (evt.card && evt.card.t === 'en') speak(evt.word.en);
         sfx.click();
       } else if (evt.type === 'match') {
         var enEl = evt.enCard ? evt.enCard.el : null;

@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS banks (
     unit_mode    TEXT NOT NULL DEFAULT 'all',   -- all | per-unit | range
     unit_from    INTEGER DEFAULT 0,
     unit_to      INTEGER DEFAULT 0,
-    pairs_per_level INTEGER DEFAULT 15,  -- 一关最多多少词
+    pairs_per_level INTEGER DEFAULT 12,  -- 一关最多多少词
     word_count   INTEGER DEFAULT 0,
     unit_count   INTEGER DEFAULT 0,
     created_at   TEXT NOT NULL
@@ -131,7 +131,7 @@ class Database:
         columns = {row["name"] for row in self.query("PRAGMA table_info(banks)")}
         if "pairs_per_level" not in columns:
             self.execute("ALTER TABLE banks ADD COLUMN "
-                         "pairs_per_level INTEGER DEFAULT 15")
+                         "pairs_per_level INTEGER DEFAULT 12")
 
     # ---------------- 基础操作 ----------------
 
@@ -217,7 +217,7 @@ class Database:
                  meta["level4"], meta["source"], meta.get("material_id"),
                  meta.get("unit_mode", "all"), meta.get("unit_from", 0),
                  meta.get("unit_to", 0),
-                 int(meta.get("pairs_per_level") or 15), len(words),
+                 int(meta.get("pairs_per_level") or 12), len(words),
                  len({w["unit"] for w in words}), ts),
             )
             bid = cur.lastrowid

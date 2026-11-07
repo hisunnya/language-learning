@@ -61,6 +61,21 @@ else
   echo "    已存在，跳过"
 fi
 
+say "安装 Edge Neural 自然语音（失败时保留 eSpeak 兜底）"
+TTS_VENV=/opt/word-puzzle/tts-venv
+install -d /opt/word-puzzle
+if [[ ! -x "$TTS_VENV/bin/edge-tts" ]]; then
+  if python3 -m venv "$TTS_VENV" \
+      && PIP_DISABLE_PIP_VERSION_CHECK=1 "$TTS_VENV/bin/python" -m pip install \
+        --upgrade 'edge-tts>=7,<8'; then
+    echo "    Edge Neural TTS 已安装"
+  else
+    warn "Edge Neural TTS 安装失败；网站将使用本地 eSpeak 美式女声"
+  fi
+else
+  echo "    Edge Neural TTS 已安装，跳过"
+fi
+
 say "安装 systemd 服务"
 sed "s|/var/lib/word-puzzle|$DATA_DIR|g" \
     "$INSTALL_DIR/deploy/systemd/word-puzzle.service" \
@@ -105,7 +120,7 @@ cat <<EOF
   能力自检：
     PDF 文本抽取 : $(command -v pdftotext >/dev/null 2>&1 && echo "已启用 (poppler)" || echo "未安装（用内置解析器）")
     图片版 PDF   : $(command -v tesseract >/dev/null 2>&1 && echo "已启用 (OCR)" || echo "未安装（扫描件读不了）")
-    美式女声发音 : $(command -v espeak-ng >/dev/null 2>&1 && echo "已启用 (en-us+f3)" || echo "未安装（用浏览器自带发音）")
+    美式女声发音 : $(if [[ -x /opt/word-puzzle/tts-venv/bin/edge-tts ]]; then echo "Edge Neural (en-US-AriaNeural)"; elif command -v espeak-ng >/dev/null 2>&1; then echo "eSpeak 兜底 (en-us+f3)"; else echo "未安装"; fi)
 
   常用命令：
     sudo systemctl status $SITE_NAME

@@ -93,6 +93,29 @@ class TestGameplayCopy(unittest.TestCase):
         for key in ("目标", "怎么点", "怎么算分", "时间"):
             self.assertIn(key, body, "玩法说明少了「%s」" % key)
 
+    def test_only_english_cards_trigger_word_pronunciation(self):
+        source = self._ui()
+        self.assertEqual(source.count(
+            "if (evt.side === 'en') speak(evt.word.en);"), 2)
+        self.assertIn(
+            "if (evt.card && evt.card.t === 'en') speak(evt.word.en);", source)
+
+    def test_level_picker_and_game_controls_are_touch_friendly(self):
+        css = (ROOT / "web" / "css" / "game.css").read_text(encoding="utf-8")
+        play = (ROOT / "web" / "play.html").read_text(encoding="utf-8")
+        ui = self._ui()
+        self.assertIn(".lvbtn#lvpick{max-height:", css)
+        self.assertIn("min-height:44px", css)
+        self.assertNotIn("user-scalable=no", play)
+        self.assertNotIn("touchmove", ui)
+
+    def test_online_result_home_button_returns_to_bank_home(self):
+        ui = self._ui()
+        play = (ROOT / "web" / "js" / "page-play.js").read_text(encoding="utf-8")
+        self.assertIn("backHref: API.path('/')", play)
+        self.assertEqual(ui.count("location.href = cfg.backHref"), 1)
+        self.assertEqual(ui.count("location.href = self.cfg.backHref"), 2)
+
 
 class TestHierarchy(unittest.TestCase):
     def test_levels_present(self):
@@ -383,17 +406,17 @@ class TestBank(TempDB):
         for group in groups:
             self.assertLessEqual(len(group["words"]), 6)
 
-    def test_pairs_per_level_defaults_to_fifteen(self):
+    def test_pairs_per_level_defaults_to_twelve(self):
         b = bank_mod.create_bank(self.db, {
             "source": "seed", "level1": "初中", "level2": "九年级",
             "level3": "上册", "level4": "all", "unit_mode": "all",
         })
-        self.assertEqual(self.db.get_bank(b["id"])["pairs_per_level"], 15)
+        self.assertEqual(self.db.get_bank(b["id"])["pairs_per_level"], 12)
 
     def test_pairs_per_level_out_of_range_falls_back(self):
         for value in (0, 999, "abc", None):
             self.assertEqual(
-                bank_mod.resolve_pairs_per_level({"pairs_per_level": value}), 15)
+                bank_mod.resolve_pairs_per_level({"pairs_per_level": value}), 12)
 
     def test_seed_default_bank_idempotent(self):
         a = bank_mod.seed_default_bank(self.db)
@@ -402,6 +425,31 @@ class TestBank(TempDB):
         bank = self.db.get_bank(a)
         self.assertEqual(bank["title"], "人教版初中九年级上册")
         self.assertEqual(bank["word_count"], 239)
+
+    def test_default_bank_migrates_legacy_level_size_without_changing_id(self):
+        old_id = bank_mod.seed_default_bank(self.db)
+        self.db.execute("UPDATE banks SET pairs_per_level=15 WHERE id=?", (old_id,))
+
+        new_id = bank_mod.seed_default_bank(self.db)
+
+        self.assertEqual(new_id, old_id)
+        self.assertEqual(self.db.get_bank(new_id)["pairs_per_level"], 12)
+
+    def test_seed_curriculum_banks_shows_every_book_idempotently(self):
+        default_id = bank_mod.seed_default_bank(self.db)
+        first = bank_mod.seed_curriculum_banks(self.db)
+        second = bank_mod.seed_curriculum_banks(self.db)
+        banks = [b for b in self.db.list_banks() if b["source"] == "seed"]
+
+        self.assertEqual(len(first), 12)
+        self.assertEqual(first, second)
+        self.assertEqual(len(banks), 13)
+        self.assertEqual(self.db.get_bank(default_id)["title"],
+                         "人教版初中九年级上册")
+        titles = {b["title"] for b in banks}
+        self.assertIn("人教版初中七年级上册", titles)
+        self.assertIn("人教版高中高一必修第一册", titles)
+        self.assertTrue(all(b["word_count"] > 0 for b in banks))
 
     def test_seed_default_bank_renames_legacy_title_in_place(self):
         bid = bank_mod.seed_default_bank(self.db)

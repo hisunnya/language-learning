@@ -16,6 +16,7 @@ import unittest
 import wave
 import zipfile
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -93,21 +94,16 @@ class TestIPA(unittest.TestCase):
 # ---------------------------------------------------------------- 发音
 
 class TestTTS(unittest.TestCase):
-    def test_voice_is_american_female(self):
-        """默认音色必须是美式女声。"""
-        v = tts.voice()
-        self.assertTrue(v.startswith("en-us"), f"音色不是美式：{v}")
-        self.assertIn("+f", v, f"音色不是女声变体：{v}")
+    def test_voice_is_american_neural_female(self):
+        self.assertEqual(tts.voice(), "en-US-AriaNeural")
 
     def test_invalid_voice_falls_back(self):
         """配置被改坏时必须退回美式女声，不能读成别的语言。"""
         original = tts.DEFAULT_VOICE
         try:
-            for bad in ("zh", "en-gb", "en-gb+f2", "de", ""):
+            for bad in ("zh", "en-gb", "en-gb+f2", "en-us+f3", "de", ""):
                 tts.DEFAULT_VOICE = bad
-                v = tts.voice()
-                self.assertTrue(v.startswith("en-us"), f"{bad!r} 没被拦下来：{v}")
-                self.assertIn("+f", v, f"{bad!r} 没被拦下来：{v}")
+                self.assertEqual(tts.voice(), "en-US-AriaNeural")
         finally:
             tts.DEFAULT_VOICE = original
 
@@ -116,18 +112,40 @@ class TestTTS(unittest.TestCase):
         self.assertIn("tts_voice", d)
         self.assertIn("tts_available", d)
         self.assertIn("tts_error", d)
+        self.assertIn("tts_remote", d)
 
-    @unittest.skipUnless(tts.available(), "没装 espeak-ng")
-    def test_synth_returns_wav(self):
-        data = tts.synth("apple")
+    def test_audio_content_type_detects_mp3_and_wav(self):
+        self.assertEqual(tts.content_type(b"RIFF....WAVE"), "audio/wav")
+        self.assertEqual(tts.content_type(b"ID3...."), "audio/mpeg")
+
+    def test_synth_prefers_edge_then_falls_back(self):
+        with (mock.patch.object(tts, "find_edge_tts", return_value="edge-tts"),
+              mock.patch.object(tts, "_synth_edge", return_value=b"ID3 neural")
+              as edge,
+              mock.patch.object(tts, "_synth_espeak", return_value=b"RIFF local")
+              as espeak):
+            self.assertEqual(tts.synth("apple"), b"ID3 neural")
+            edge.assert_called_once()
+            espeak.assert_not_called()
+
+        with (mock.patch.object(tts, "find_edge_tts", return_value="edge-tts"),
+              mock.patch.object(tts, "_synth_edge", return_value=None),
+              mock.patch.object(tts, "_synth_espeak", return_value=b"RIFF local")
+              as espeak):
+            self.assertEqual(tts.synth("apple"), b"RIFF local")
+            espeak.assert_called_once()
+
+    @unittest.skipUnless(tts.find_espeak(), "没装 espeak-ng")
+    def test_espeak_fallback_returns_wav(self):
+        data = tts._synth_espeak("apple")
         self.assertTrue(data, "espeak-ng 应该能合成音频")
         self.assertEqual(data[:4], b"RIFF")
         self.assertEqual(data[8:12], b"WAVE")
 
-    @unittest.skipUnless(tts.available(), "没装 espeak-ng")
-    def test_synth_is_female_by_pitch(self):
-        """用基频判断音色性别：女声基频明显高于男声。"""
-        f0 = _measure_f0(tts.synth("the quick brown fox jumps over the lazy dog"))
+    @unittest.skipUnless(tts.find_espeak(), "没装 espeak-ng")
+    def test_espeak_fallback_is_female_by_pitch(self):
+        f0 = _measure_f0(tts._synth_espeak(
+            "the quick brown fox jumps over the lazy dog"))
         self.assertIsNotNone(f0, "测不出基频")
         # 女声通常在 160~250 Hz，男声在 80~130 Hz
         self.assertGreater(f0, 145, f"基频 {f0:.0f} Hz 偏低，可能不是女声")
