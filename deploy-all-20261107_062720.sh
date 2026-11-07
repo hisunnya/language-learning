@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Git pull 后在生产服务器运行：sudo bash deploy-all-20261107_023816.sh
+# Git pull 后在生产服务器运行：sudo bash deploy-all-20261107_062720.sh
 # 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
 set -euo pipefail
 
