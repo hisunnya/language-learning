@@ -236,11 +236,12 @@ cd word-puzzle && python3 tools/check_js.py                  # JS 语法体检
 language-learning/
 ├── AGENTS.md               # 本文件
 ├── README.md               # 仓库总说明（中文）
-├── hub/                    # 总主页「语林 Lingua Grove」—— 四个工具的入口
+├── hub/                    # 总主页「语林 Lingua Grove」—— 五个工具的入口
 ├── word-puzzle/            # 词境 Lexica —— 英语词汇游戏（网站版）
 ├── topic-app/              # 每日话题 Daily Topics —— 初中生家庭讨论
 ├── ham-exam/               # 无线电执照 Ham Exam —— 业余无线电模拟考试
-└── chemistry/              # 化学探秘 Chem Quest —— 分龄化学练习
+├── chemistry/              # 化学探秘 Chem Quest —— 分龄化学练习
+└── physics/                # 物理探秘 Phys Quest —— 分龄物理练习
 ```
 
 - **The deployment directory is not the git working tree.** A `git pull` does
@@ -261,6 +262,7 @@ language-learning/
 | Daily discussion | 每日话题 | Daily Topics | `topic-app/` |
 | Radio exam | 无线电执照 | Ham Exam | `ham-exam/` |
 | Chemistry learning | 化学探秘 | Chem Quest | `chemistry/` |
+| Physics learning | 物理探秘 | Phys Quest | `physics/` |
 | Portal (hub) | 语林 | Lingua Grove | `hub/` |
 
 The vocabulary game was called 「单词消消乐」 while it was a single file. That
@@ -277,13 +279,15 @@ titles, headers, README and the hub.
 | `/var/www/topic-app` | 每日话题（纯静态） |
 | `/var/www/ham-exam` | 无线电执照（纯静态） |
 | `/var/www/chemistry` | 化学探秘（纯静态） |
+| `/var/www/physics` | 物理探秘（纯静态） |
 | `/var/www/lingua-grove` | 总主页（纯静态） |
 
 `word-puzzle/deploy/install.sh` installs the Lexica backend and systemd service.
 `hub/deploy/install.sh` publishes the hub and its four static project trees
-(topics, ham exam, chemistry) and configures the shared nginx entry. The root
-`deploy-all-<timestamp>.sh` runs both installers from a copy of the repo on the
-target host (the server does not `git pull`).
+(topics, ham exam, chemistry, physics) and configures the shared nginx entry. The root
+`deploy-all-<timestamp>.sh` runs both installers from the repo checkout on the
+target host: on production the flow is `git pull`, then run the script, which
+copies the files into the paths above.
 
 **Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
 previous one with `git mv` to the new timestamp (never keep two side by side),
@@ -332,8 +336,9 @@ do not restart those services as a side effect of a deploy.
   units, `apt`, the standard directory layout, `nginx` for static sites.
   Scripts must stay Debian/Ubuntu-neutral (`apt-get`, `www-data`, Python
   `venv` for pip packages — system pip is externally managed).
-- Deploy by copying files in and reloading — `git pull` on the server is not
-  part of the flow.
+- Deploy is `git pull` in the checkout (`/root/language-learning`), then
+  `sudo bash deploy-all-<timestamp>.sh`: the script copies the files into the
+  deployment paths and reloads. The checkout itself is never what nginx serves.
 
 ### 6.2.1 The development VM
 

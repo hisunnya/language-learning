@@ -290,12 +290,12 @@ class TestProjectLinks(unittest.TestCase):
         self.assertIn("min-height: 64px", m.group(1))
         self.assertIn("font-size: 17px", m.group(1))
 
-    def test_four_projects_present(self):
-        for key in ("lexica", "topics", "ham", "chemistry"):
+    def test_five_projects_present(self):
+        for key in ("lexica", "topics", "ham", "chemistry", "physics"):
             self.assertIn('data-project-link="%s"' % key, HTML)
 
-    def test_config_has_all_four(self):
-        for key in ("lexica", "topics", "ham", "chemistry"):
+    def test_config_has_all_five(self):
+        for key in ("lexica", "topics", "ham", "chemistry", "physics"):
             self.assertRegex(CONFIG, r"%s\s*:" % key,
                              "config.js 里少了 %s 的地址" % key)
 
@@ -320,9 +320,11 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("alias /var/www/ham-exam/;", NGINX)
         self.assertIn("location ^~ /chemistry/", NGINX)
         self.assertIn("alias /var/www/chemistry/;", NGINX)
+        self.assertIn("location ^~ /physics/", NGINX)
+        self.assertIn("alias /var/www/physics/;", NGINX)
 
     def test_mounts_without_trailing_slash_redirect(self):
-        for name in ("topics", "ham", "chemistry", "word-puzzle"):
+        for name in ("topics", "ham", "chemistry", "physics", "word-puzzle"):
             self.assertIn("location = /%s {\n        return 301 /%s/;" % (name, name), NGINX)
 
     def test_whole_site_script_retries_smoke_checks_and_covers_every_module(self):
@@ -330,9 +332,16 @@ class TestDeployment(unittest.TestCase):
         self.assertEqual(len(scripts), 1, "根目录只保留一份带时间戳的整站部署脚本")
         text = scripts[0].read_text(encoding="utf-8")
         self.assertIn("retry ", text)   # nginx reload 是异步的，冒烟检查要重试
-        for path in ("/chemistry/", "/chemistry/data/chemistry.json", "/ham/",
+        for path in ("/chemistry/", "/chemistry/data/chemistry.json", "/physics/",
+                     "/physics/data/physics.json", "/physics/js/physics-core.js", "/ham/",
                      "/topics/", "/word-puzzle/api/health"):
             self.assertIn(path, text)
+
+    def test_installer_does_not_publish_physics_tests(self):
+        script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
+        self.assertNotIn('physics/." ', script)
+        self.assertIn('physics/js"', script)
+        self.assertIn('physics/data"', script)
 
     def test_installer_does_not_publish_chemistry_tests(self):
         script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
