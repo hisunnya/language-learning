@@ -177,11 +177,11 @@
     return p;
   }
 
-  /* 「每关词数」：默认 15，输错了也按默认值来 */
+  /* 「每关词数」：默认 12，输错了也按默认值来 */
   function pairsPerLevel() {
     var input = document.getElementById('pairsPerLevel');
-    var value = input ? parseInt(input.value, 10) : 15;
-    if (!value || value < 4 || value > 40) return 15;
+    var value = input ? parseInt(input.value, 10) : 12;
+    if (!value || value < 4 || value > 40) return 12;
     return value;
   }
 

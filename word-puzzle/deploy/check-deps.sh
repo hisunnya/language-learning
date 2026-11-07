@@ -4,6 +4,7 @@ set -euo pipefail
 
 PACKAGES=(
   python3
+  python3-venv
   nginx
   systemd
   passwd

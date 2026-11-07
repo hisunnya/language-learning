@@ -330,13 +330,10 @@ This is a product requirement, not a preference.
   The table is generated from the CMU Pronouncing Dictionary (US
   pronunciations) and converted from ARPAbet to IPA. **Never use ECDICT's
   `phonetic` column** — it holds British transcriptions.
-- **Spoken audio**: espeak-ng `-v en-us+f3`. `en-us` is American English and
-  `+f3` is the female variant of that voice. `+fN` is female, `+mN` is male —
-  verified by measuring the fundamental frequency (`en-us+f3` ≈ 208 Hz,
-  `en-us` ≈ 101 Hz).
-- The voice whitelist accepts only `en-us` and `en-us+f1..f9`. A misconfigured
-  value falls back to `en-us+f3`, so the site **cannot** read in British or
-  Chinese.
+- **Spoken audio**: prefer Edge Neural TTS `en-US-AriaNeural` for natural
+  American female speech. Only the English word requested for playback is sent
+  to the online voice service; generated audio is cached. On network or install
+  failure, fall back to local espeak-ng `-v en-us+f3`.
 - The browser TTS fallback must pick an `en-US` locale and prefer a
   female-named local voice.
 
