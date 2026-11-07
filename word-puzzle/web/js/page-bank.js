@@ -99,7 +99,7 @@
     }).join('');
 
     box.querySelectorAll('[data-offline]').forEach(function (b) {
-      b.onclick = function () { makeOffline(parseInt(b.dataset.offline, 10)); };
+      b.onclick = function () { makeOffline(parseInt(b.dataset.offline, 10), b); };
     });
     box.querySelectorAll('[data-del]').forEach(function (b) {
       b.onclick = function () {
@@ -185,8 +185,10 @@
     return value;
   }
 
-  function makeOffline(bankId) {
-    API.toast('正在生成离线测试页…', 8000);
+  function makeOffline(bankId, button) {
+    var originalText = button ? button.textContent : '';
+    if (button) { button.disabled = true; button.textContent = '正在合成语音…'; }
+    API.toast('正在合成离线语音，可能需要几分钟，请勿关闭此页。', 600000);
     return API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
       API.toast('已生成：' + res.filename);
       API.download(res.url, res.filename).catch(function () {
@@ -194,6 +196,11 @@
       });
       loadFiles();
       return res;
+    }).catch(function (e) {
+      API.toast(e.message, 12000);
+      throw e;
+    }).finally(function () {
+      if (button) { button.disabled = false; button.textContent = originalText; }
     });
   }
 

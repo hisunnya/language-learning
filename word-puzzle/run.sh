@@ -23,6 +23,10 @@ if [ ! -f data/pep_curriculum.json ]; then
   "$PY" tools/build_seed_data.py
 fi
 
+if [[ -z "${WP_EDGE_TTS:-}" && -x "$PWD/var/tts-venv/bin/edge-tts" ]]; then
+  export WP_EDGE_TTS="$PWD/var/tts-venv/bin/edge-tts"
+fi
+
 echo
 echo "  word-puzzle 开发服务器"
 echo "  地址：http://${HOST}:${PORT}/"

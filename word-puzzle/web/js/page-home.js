@@ -37,7 +37,7 @@
       '  </div></div>';
 
     var btn = box.querySelector('[data-offline]');
-    if (btn) btn.onclick = function () { makeOffline(b.id); };
+    if (btn) btn.onclick = function () { makeOffline(b.id, btn); };
   }
 
   function renderBanks() {
@@ -61,7 +61,7 @@
     }).join('');
 
     box.querySelectorAll('[data-offline]').forEach(function (btn) {
-      btn.onclick = function () { makeOffline(parseInt(btn.dataset.offline, 10)); };
+      btn.onclick = function () { makeOffline(parseInt(btn.dataset.offline, 10), btn); };
     });
     box.querySelectorAll('[data-del]').forEach(function (btn) {
       btn.onclick = function () {
@@ -81,14 +81,20 @@
     }).catch(function (e) { API.toast(e.message); });
   }
 
-  function makeOffline(bankId) {
-    API.toast('正在生成离线测试页…', 8000);
-    API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
+  function makeOffline(bankId, button) {
+    var originalText = button ? button.textContent : '';
+    if (button) { button.disabled = true; button.textContent = '正在合成语音…'; }
+    API.toast('正在合成离线语音，可能需要几分钟，请勿关闭此页。', 600000);
+    return API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
       API.toast('已生成：' + res.filename);
       API.download(res.url, res.filename).catch(function () {
         API.toast('浏览器未允许下载，请到题库工作台打开离线页后另存。', 6000);
       });
-    }).catch(function (e) { API.toast(e.message); });
+    }).catch(function (e) {
+      API.toast(e.message, 12000);
+    }).finally(function () {
+      if (button) { button.disabled = false; button.textContent = originalText; }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -138,7 +144,10 @@
       s.pairs_per_level = pairsPerLevel();
       var btn = this;
       btn.disabled = true;
+      btn.textContent = '正在准备语音…';
       API.post('/api/banks', s).then(function (res) {
+        btn.textContent = '正在合成语音…';
+        API.toast('正在合成离线语音，可能需要几分钟，请勿关闭此页。', 600000);
         return API.post('/api/banks/' + res.bank.id + '/offline', {});
       }).then(function (res) {
         API.toast('已生成：' + res.filename + '。若下载被拦截，可在题库工作台打开。', 6000);
@@ -149,8 +158,9 @@
         btn.disabled = false;
         loadBanks();
       }).catch(function (e) {
-        API.toast(e.message);
+        API.toast(e.message, 12000);
         btn.disabled = false;
+        btn.textContent = '生成离线测试';
       });
     };
   });

@@ -363,7 +363,12 @@ class Handler(BaseHTTPRequestHandler):
             raise HttpError(404, str(exc)) from exc
         words = db.bank_words(bid)
         try:
-            filename, html = offline.build_offline_html(bank, payload)
+            audio = tts.synth_many([word["en"] for word in words])
+            filename, html = offline.build_offline_html(
+                bank, payload, audio=audio,
+                back_href=self._offline_home_href())
+        except tts.SynthesisError as exc:
+            raise HttpError(503, str(exc)) from exc
         except ValueError as exc:
             raise HttpError(400, str(exc)) from exc
         OUTBOX.mkdir(parents=True, exist_ok=True)
@@ -373,6 +378,22 @@ class Handler(BaseHTTPRequestHandler):
                         "size": len(html.encode("utf-8")),
                         "levels": len(payload),
                         "words": len(words)})
+
+    def _offline_home_href(self) -> str:
+        configured = os.environ.get("WP_PUBLIC_HOME_URL", "").strip()
+        if configured:
+            parsed = urlparse(configured)
+            if parsed.scheme in ("http", "https") and parsed.netloc and not parsed.username:
+                return configured.rstrip("/") + "/"
+
+        host = (self.headers.get("X-Forwarded-Host")
+                or self.headers.get("Host", "")).split(",", 1)[0].strip()
+        scheme = (self.headers.get("X-Forwarded-Proto", "http")
+                  .split(",", 1)[0].strip().lower())
+        if scheme not in ("http", "https") or not re.fullmatch(
+                r"[A-Za-z0-9.-]+(?::\d{1,5})?", host):
+            return ""
+        return f"{scheme}://{host}/"
 
     def _list_offline(self) -> None:
         OUTBOX.mkdir(parents=True, exist_ok=True)

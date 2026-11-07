@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,6 +28,10 @@ _espeak_path: str | None = None
 _espeak_checked = False
 _espeak_works = False
 _last_error = ""
+
+
+class SynthesisError(RuntimeError):
+    """某个词无法使用当前选定的合成器生成音频。"""
 
 
 def _data_dirs() -> list[str]:
@@ -225,16 +230,42 @@ def _synth_espeak(word: str, exe: str | None = None) -> bytes | None:
 
 
 def synth(word: str) -> bytes | None:
-    """合成单词音频并缓存；优先 MP3 神经语音，失败时使用 WAV 兜底。"""
+    """合成单词音频；已安装 Edge 时不逐词切换音色。"""
     word = (word or "").strip()
     if not word:
         return None
     edge = find_edge_tts()
     if edge:
-        data = _synth_edge(word, edge)
-        if data:
-            return data
+        return _synth_edge(word, edge)
     return _synth_espeak(word)
+
+
+def synth_many(words: list[str], workers: int = 4) -> dict[str, bytes]:
+    """用同一个引擎合成所有词，避免离线题库混用神经声线和 eSpeak。"""
+    unique = list(dict.fromkeys(word.strip() for word in words if word.strip()))
+    if not unique:
+        return {}
+
+    edge = find_edge_tts()
+    if edge:
+        with ThreadPoolExecutor(max_workers=min(workers, len(unique))) as pool:
+            audio = list(pool.map(lambda word: _synth_edge(word, edge), unique))
+        failed = [word for word, data in zip(unique, audio) if not data]
+        if failed:
+            sample = ", ".join(failed[:5])
+            raise SynthesisError(
+                f"Edge Neural 语音生成失败（{sample}）。未混用其他声音，请稍后重试。")
+        return dict(zip(unique, audio))  # type: ignore[arg-type]
+
+    exe = find_espeak()
+    if not exe:
+        raise SynthesisError("服务器没有可用的语音合成器，无法生成带语音的离线题库")
+    audio = [_synth_espeak(word, exe) for word in unique]
+    failed = [word for word, data in zip(unique, audio) if not data]
+    if failed:
+        sample = ", ".join(failed[:5])
+        raise SynthesisError(f"本地 eSpeak 语音生成失败（{sample}）")
+    return dict(zip(unique, audio))  # type: ignore[arg-type]
 
 
 def content_type(data: bytes) -> str:

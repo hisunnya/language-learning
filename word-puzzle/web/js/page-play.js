@@ -41,9 +41,9 @@
         title: bank.title,
         subtitle: [bank.level1, bank.level2, bank.level3, bank.level4].join(' · '),
         pickUnit: bank.unit_mode === 'per-unit',
-        backHref: API.path('/'),
+        backHref: location.origin + '/',
         wordTotal: bank.word_count,
-        /* 在线版：发音优先使用后端 Edge Neural 美式女声，离线或不可用时使用浏览器 TTS。 */
+        /* 在线版使用服务端固定语音引擎；失败时提示，不切换本地声线。 */
         audioBase: API.path('/api/audio/'),
         onFinish: function (report) {
           WPAdapter.save(report, { bank_id: bank.id, title: bank.title });

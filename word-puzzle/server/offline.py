@@ -11,10 +11,13 @@
 from __future__ import annotations
 
 import json
+import base64
 import re
 import time
 from pathlib import Path
 from typing import Any
+
+from . import tts
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -82,6 +85,8 @@ var WP_DATA = {data};
     title: WP_DATA.title,
     subtitle: WP_DATA.subtitle,
     pickUnit: WP_DATA.pickUnit,    wordTotal: WP_DATA.wordTotal,    homeExtra: WP_DATA.homeExtra,
+    audio: WP_DATA.audio,
+    backHref: WP_DATA.backHref,
     onFinish: function (report) {{
       WPAdapter.save(report, WP_DATA.meta);
     }}
@@ -137,7 +142,9 @@ def build_levels(groups: list[dict]) -> list[dict]:
 
 
 def build_offline_html(bank: dict, groups: list[dict],
-                       when: time.struct_time | None = None) -> tuple[str, str]:
+                       when: time.struct_time | None = None,
+                       audio: dict[str, bytes] | None = None,
+                       back_href: str = "") -> tuple[str, str]:
     """返回 ``(文件名, HTML 内容)``。"""
     levels = build_levels(groups)
     if not levels:
@@ -150,6 +157,14 @@ def build_offline_html(bank: dict, groups: list[dict],
         bank.get("level3", ""), bank.get("level4", ""),
     ]).strip(" ·")
 
+    embedded_audio = {}
+    for word, clip in (audio or {}).items():
+        if clip:
+            key = _audio_slug(word)
+            mime = tts.content_type(clip)
+            encoded = base64.b64encode(clip).decode("ascii")
+            embedded_audio[key] = f"data:{mime};base64,{encoded}"
+
     data = {
         "title": title,
         "subtitle": subtitle or "离线测试题",
@@ -157,6 +172,8 @@ def build_offline_html(bank: dict, groups: list[dict],
         "pickUnit": bank.get("unit_mode") == "per-unit",
         "wordTotal": total,
         "homeExtra": "",
+        "audio": embedded_audio,
+        "backHref": back_href,
         "meta": {
             "title": title,
             "bank_id": bank.get("id"),
@@ -180,3 +197,7 @@ def build_offline_html(bank: dict, groups: list[dict],
 def _escape(text: str) -> str:
     return (str(text).replace("&", "&amp;").replace("<", "&lt;")
             .replace(">", "&gt;").replace('"', "&quot;"))
+
+
+def _audio_slug(word: str) -> str:
+    return word.strip().lower()
