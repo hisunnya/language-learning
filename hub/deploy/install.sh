@@ -8,8 +8,9 @@ SERVER_NAME="${LINGUA_SERVER_NAME:-10.211.55.5}"
 HUB_ROOT=/var/www/lingua-grove
 TOPICS_ROOT=/var/www/topic-app
 HAM_ROOT=/var/www/ham-exam
-AVAILABLE=/etc/nginx/sites-available/lingua-grove
-ENABLED=/etc/nginx/sites-enabled/lingua-grove
+CONF_DIR=/etc/nginx/conf.d
+CONF_FILE=$CONF_DIR/lingua-grove.conf
+LEGACY_HUB_ENABLED=/etc/nginx/sites-enabled/lingua-grove
 LEXICA_ENABLED=/etc/nginx/sites-enabled/word-puzzle.conf
 
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
@@ -17,6 +18,10 @@ die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
 [[ $(id -u) -eq 0 ]] || die "请使用 sudo 运行此脚本"
 [[ "$SERVER_NAME" =~ ^[A-Za-z0-9.-]+$ ]] || die "LINGUA_SERVER_NAME 格式无效"
+
+BACKUP_DIR="$(mktemp -d)"
+TEMP_CONF="$CONF_FILE.tmp.$$"
+trap 'rm -rf "$BACKUP_DIR"; rm -f "$TEMP_CONF"' EXIT
 
 say "检查项目依赖"
 bash "$REPO_DIR/word-puzzle/deploy/check-deps.sh"
@@ -32,23 +37,38 @@ cp -a "$REPO_DIR/ham-exam/index.html" "$REPO_DIR/ham-exam/css" \
   "$REPO_DIR/ham-exam/data" "$REPO_DIR/ham-exam/images" "$REPO_DIR/ham-exam/js" "$HAM_ROOT/"
 chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT"
 
-say "启用总主页并将词境挂到 /word-puzzle/"
-sed "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" \
-  "$REPO_DIR/hub/deploy/lingua-grove.conf" > "$AVAILABLE"
-ln -sfn "$AVAILABLE" "$ENABLED"
+say "写入 conf.d 总入口并将词境挂到 /word-puzzle/"
+install -d "$CONF_DIR"
 
-lexica_link_target=""
-if [[ -L "$LEXICA_ENABLED" ]]; then
-  lexica_link_target="$(readlink "$LEXICA_ENABLED")"
-  rm "$LEXICA_ENABLED"
+old_conf=0
+if [[ -e "$CONF_FILE" || -L "$CONF_FILE" ]]; then
+  cp -a "$CONF_FILE" "$BACKUP_DIR/lingua-grove.conf"
+  old_conf=1
+fi
+old_hub=0
+if [[ -e "$LEGACY_HUB_ENABLED" || -L "$LEGACY_HUB_ENABLED" ]]; then
+  cp -a "$LEGACY_HUB_ENABLED" "$BACKUP_DIR/legacy-lingua-grove"
+  old_hub=1
+  rm -f "$LEGACY_HUB_ENABLED"
+fi
+old_lexica=0
+if [[ -e "$LEXICA_ENABLED" || -L "$LEXICA_ENABLED" ]]; then
+  cp -a "$LEXICA_ENABLED" "$BACKUP_DIR/legacy-word-puzzle"
+  old_lexica=1
+  rm -f "$LEXICA_ENABLED"
 fi
 
+sed "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" \
+  "$REPO_DIR/hub/deploy/lingua-grove.conf" > "$TEMP_CONF"
+chmod 0644 "$TEMP_CONF"
+mv "$TEMP_CONF" "$CONF_FILE"
+
 if ! nginx -t; then
-  rm -f "$ENABLED"
-  if [[ -n "$lexica_link_target" ]]; then
-    ln -s "$lexica_link_target" "$LEXICA_ENABLED"
-  fi
-  die "nginx 配置检查失败；已恢复词境原站点链接"
+  rm -f "$CONF_FILE" "$LEGACY_HUB_ENABLED" "$LEXICA_ENABLED"
+  [[ "$old_conf" -eq 0 ]] || cp -a "$BACKUP_DIR/lingua-grove.conf" "$CONF_FILE"
+  [[ "$old_hub" -eq 0 ]] || cp -a "$BACKUP_DIR/legacy-lingua-grove" "$LEGACY_HUB_ENABLED"
+  [[ "$old_lexica" -eq 0 ]] || cp -a "$BACKUP_DIR/legacy-word-puzzle" "$LEXICA_ENABLED"
+  die "nginx 配置检查失败；已恢复部署前的配置"
 fi
 systemctl reload nginx
 

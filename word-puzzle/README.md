@@ -270,7 +270,7 @@ sudo env WP_SERVER_NAME=10.211.55.5 ./deploy/install.sh
 
 部署脚本会：建 `wordpuzzle` 系统用户
 → 代码放到 `/srv/word-puzzle` → 数据目录 `/var/lib/word-puzzle` → 生成内置词库
-→ 装并启动 systemd 服务 → 装 nginx 站点配置。
+→ 装并启动 systemd 服务 → 将 nginx 配置写入 `/etc/nginx/conf.d/word-puzzle.conf`。
 
 `WP_SERVER_NAME` 用于指定 nginx 主机名；上例让首页通过 `http://10.211.55.5/` 访问。
 如果词境要作为语林总主页的子项目，完成后再运行 `sudo env LINGUA_SERVER_NAME=10.211.55.5 bash hub/deploy/install.sh`，
@@ -290,9 +290,9 @@ sudo cp deploy/systemd/word-puzzle.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now word-puzzle
 
 # 2. nginx
-sudo cp deploy/nginx/word-puzzle.conf /etc/nginx/sites-available/word-puzzle
-sudo sed -i 's/word-puzzle.example.com/你的域名/' /etc/nginx/sites-available/word-puzzle
-sudo ln -s /etc/nginx/sites-available/word-puzzle /etc/nginx/sites-enabled/
+sudo install -d /etc/nginx/conf.d
+sudo sed 's/word-puzzle.example.com/你的域名/' deploy/nginx/word-puzzle.conf \
+    | sudo tee /etc/nginx/conf.d/word-puzzle.conf >/dev/null
 sudo nginx -t && sudo systemctl reload nginx
 ```
 

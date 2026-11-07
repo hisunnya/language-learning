@@ -302,9 +302,9 @@ The household LAN is **10.0.0.0/20**.
 
 **10.1.1.93** — PVE (Proxmox VE) host.
 
-- nginx is **already installed and configured**. Add sites as
-  `/etc/nginx/sites-available/<name>` plus a symlink into
-  `sites-enabled/`, then `nginx -t && systemctl reload nginx`.
+- nginx is **already installed and configured**. Put site configs in
+  `/etc/nginx/conf.d/<name>.conf`, then run
+  `nginx -t && systemctl reload nginx`. Create `conf.d/` if it is missing.
 - PVE means the machine also runs a few **virtual machines**. When something
   on the host misbehaves, check whether it is actually a guest VM before
   blaming the host.
