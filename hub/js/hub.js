@@ -72,6 +72,16 @@
       "chemistry.f4": "纯前端练习",
       "chemistry.cta": "开始探索",
 
+      "physics.name": "物理探秘",
+      "physics.en": "Phys Quest",
+      "physics.tagline": "分龄物理挑战",
+      "physics.desc": "从物理量与单位、公式速算到现象判断，按学段闯关，每题都附解题步骤。",
+      "physics.f1": "初中 · 量与单位",
+      "physics.f2": "高中 · 公式速算",
+      "physics.f3": "大学 · 概念辨析",
+      "physics.f4": "每题附解题步骤",
+      "physics.cta": "开始挑战",
+
       "notes.a.title": "全部本地运行",
       "notes.a.body": "词汇游戏用 Python 标准库加 SQLite，话题和考试是纯前端，不依赖任何云服务，也不需要大模型。",
       "notes.b.title": "局域网内直连",
@@ -139,6 +149,16 @@
       "chemistry.f3": "University · Solutions",
       "chemistry.f4": "Runs in your browser",
       "chemistry.cta": "Start exploring",
+
+      "physics.name": "Phys Quest",
+      "physics.en": "物理探秘",
+      "physics.tagline": "Physics challenges by level",
+      "physics.desc": "Practise quantities and units, quick calculations and concepts, matched to each learning stage. Every answer shows its working.",
+      "physics.f1": "Middle school · Units",
+      "physics.f2": "High school · Calculation",
+      "physics.f3": "University · Concepts",
+      "physics.f4": "Worked answers",
+      "physics.cta": "Start the challenge",
 
       "notes.a.title": "Everything runs locally",
       "notes.a.body": "The vocabulary game is Python standard library plus SQLite; topics and the exam are pure front end. No cloud service, no language model.",

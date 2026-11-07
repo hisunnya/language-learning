@@ -4,11 +4,12 @@
 
 | 项目 | 内容 | 技术栈 |
 | --- | --- | --- |
-| [`hub/`](hub/) | **语林 Lingua Grove** 总主页：四个工具的入口，中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
+| [`hub/`](hub/) | **语林 Lingua Grove** 总主页：五个工具的入口，中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
 | [`word-puzzle/`](word-puzzle/) | **词境 Lexica**（网站版）：人教版 PEP 初中 + 高中英语词汇题库、四级层级选题、上传资料、导出单文件离线测试页、成绩入库 | Python 标准库 + SQLite + 原生 JS，nginx 部署 |
 | [`topic-app/`](topic-app/) | **每日话题 Daily Topics**：适合初中水平的家庭话题讨论，随机抽题 + 参考方向 + 历史记录 | 纯前端，零依赖，localStorage |
 | [`ham-exam/`](ham-exam/) | **无线电执照 Ham Exam**：业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
-| [`chemistry/`](chemistry/) | **化学探秘 Chem Quest**：初中元素配对、高中反应配平、大学溶液推理 | 纯前端，零依赖，localStorage |
+| [`chemistry/`](chemistry/) | **化学探秘 Chem Quest**：初中元素配对、高中反应配平、大学溶液推理；选择、数值填空、配对、排序、找错七种题型 | 纯前端，零依赖，localStorage |
+| [`physics/`](physics/) | **物理探秘 Phys Quest**：初中量与单位、高中公式速算、大学概念辨析；公式题参数化出题，错误选项来自典型错误；选择、数值填空、配对、量级排序、找错七种题型，答完附解题步骤 | 纯前端，零依赖，localStorage |
 
 > 产品现在叫**词境 Lexica**，目录名 `word-puzzle/` 保持不变（改了会打断服务器上
 > 已经部署好的 systemd、nginx 和路径）。
@@ -31,6 +32,7 @@ cd topic-app/topic-app && python3 -m http.server 8081
 cd ham-exam && ./start.sh                 # → http://127.0.0.1:8080
 
 cd chemistry && python3 -m http.server 8082 # → http://127.0.0.1:8082
+cd physics   && python3 -m http.server 8083 # → http://127.0.0.1:8083
 ```
 
 ---
@@ -96,7 +98,8 @@ language-learning/
     ├── data/{bank.js,bank.json}            # 题库（两份内容完全一致）
     ├── images/                             # 53 张电路附图
     └── tools/                              # 题库生成脚本（从官方 PDF 生成 bank.json）
-  └── chemistry/                              # 化学探秘 Chem Quest（纯静态分龄练习）
+  ├── chemistry/                              # 化学探秘 Chem Quest（纯静态分龄练习）
+  └── physics/                                # 物理探秘 Phys Quest（纯静态分龄练习）
 ```
 
 ---
@@ -105,7 +108,7 @@ language-learning/
 
 ## 是什么
 
-三个工具的入口页。纯静态，没有任何后端依赖，扔进 nginx 就能用。
+五个工具的入口页。纯静态，没有任何后端依赖，扔进 nginx 就能用。
 
 | 特性 | 说明 |
 | --- | --- |
@@ -125,13 +128,13 @@ language-learning/
 在生产服务器执行 `git pull` 后，从仓库根目录运行：
 
 ```bash
-sudo bash ./deploy-all-20261107_221445.sh
+sudo bash ./deploy-all-20261107_225110.sh
 ```
 
 脚本默认部署到 `10.1.1.93`，会更新词境后端、语林门户、每日话题、无线电执照和 nginx 统一入口（配置写入 `/etc/nginx/conf.d/lingua-grove.conf`），并检查四个页面及词境 API。缺少 `conf.d` 时会自动创建；词境现有数据库会保留。目标地址不同时可覆盖：
 
 ```bash
-sudo env LINGUA_SERVER_NAME=服务器IP或域名 bash ./deploy-all-20261107_221445.sh
+sudo env LINGUA_SERVER_NAME=服务器IP或域名 bash ./deploy-all-20261107_225110.sh
 ```
 
 ---

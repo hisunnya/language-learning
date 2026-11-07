@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="indigo">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>物理探秘 · Phys Quest</title>
+<meta name="description" content="按学段练习物理量与单位、公式速算和现象判断。">
+<link rel="stylesheet" href="/shared/module-header.css">
+<link rel="stylesheet" href="css/physics.css">
+</head>
+<body>
+<main class="phys-page">
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/" aria-label="Lingua Grove website home">
+      <span class="portal-brand-mark" aria-hidden="true">理</span>
+      <span class="portal-brand-copy">
+        <strong><span data-module-zh="物理探秘" data-module-en="Phys Quest">物理探秘</span><em>PHYS QUEST</em></strong>
+        <small data-module-zh="用公式读懂世界" data-module-en="Read the world in formulas">用公式读懂世界</small>
+      </span>
+    </a>
+    <nav class="portal-nav portal-nav--compact">
+      <a class="active" href="/" data-module-zh="返回语林" data-module-en="Lingua Grove home">返回语林</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <section class="intro-band">
+    <div>
+      <p class="eyebrow" data-module-zh="物理 · 推理 · 挑战" data-module-en="PHYSICS · REASONING · CHALLENGE">物理 · 推理 · 挑战</p>
+      <h1 data-module-zh="每个公式，都是一条规律。" data-module-en="Every formula is a rule of nature.">每个公式，都是一条规律。</h1>
+      <p class="intro-copy" data-module-zh="从单位换算到公式速算，选一个学段开始挑战；每道题答完都会看到解题步骤。" data-module-en="From units to quick calculations, pick a level and start. Every answer comes with the working.">从单位换算到公式速算，选一个学段开始挑战；每道题答完都会看到解题步骤。</p>
+    </div>
+    <div class="score-strip" aria-live="polite">
+      <div><span data-module-zh="本次得分" data-module-en="SCORE">本次得分</span><strong id="scoreValue">0</strong></div>
+      <div><span data-module-zh="连续答对" data-module-en="STREAK">连续答对</span><strong id="streakValue">0</strong></div>
+    </div>
+  </section>
+
+  <section class="practice-controls" aria-label="Practice controls">
+    <div class="control-row">
+      <span class="control-label" data-module-zh="学习阶段" data-module-en="LEVEL">学习阶段</span>
+      <div class="segmented" id="stageControls" role="group" aria-label="学习阶段">
+        <button type="button" data-stage="junior" data-module-zh="初中" data-module-en="Middle school" aria-pressed="true">初中</button>
+        <button type="button" data-stage="high" data-module-zh="高中" data-module-en="High school" aria-pressed="false">高中</button>
+        <button type="button" data-stage="university" data-module-zh="大学" data-module-en="University" aria-pressed="false">大学</button>
+      </div>
+    </div>
+    <div class="control-row">
+      <span class="control-label" data-module-zh="挑战类型" data-module-en="PRACTICE">挑战类型</span>
+      <div class="mode-tabs" id="modeControls" role="tablist" aria-label="挑战类型">
+        <button type="button" role="tab" data-mode="units" data-module-zh="量与单位" data-module-en="Units" aria-selected="true">量与单位</button>
+        <button type="button" role="tab" data-mode="calc" data-module-zh="公式速算" data-module-en="Calculation" aria-selected="false">公式速算</button>
+        <button type="button" role="tab" data-mode="input" data-module-zh="数值填空" data-module-en="Fill in" aria-selected="false">数值填空</button>
+        <button type="button" role="tab" data-mode="match" data-module-zh="配对" data-module-en="Matching" aria-selected="false">配对</button>
+        <button type="button" role="tab" data-mode="order" data-module-zh="量级排序" data-module-en="Ordering" aria-selected="false">量级排序</button>
+        <button type="button" role="tab" data-mode="mistake" data-module-zh="找错" data-module-en="Spot the mistake" aria-selected="false">找错</button>
+        <button type="button" role="tab" data-mode="concepts" data-module-zh="现象与概念" data-module-en="Concepts" aria-selected="false">现象与概念</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="workspace" aria-labelledby="questionTitle">
+    <div class="challenge-area">
+      <div class="challenge-meta">
+        <span class="mode-mark" id="modeMark">UNIT LAB</span>
+        <span><span data-module-zh="第" data-module-en="ROUND">第</span> <b id="roundValue">1</b><span data-module-zh="题" data-module-en="">题</span></span>
+      </div>
+      <p class="question-kicker" id="questionKicker"></p>
+      <h2 id="questionTitle" aria-live="polite"></h2>
+      <div class="formula-stage" id="formulaStage" aria-hidden="true"></div>
+      <div class="answer-options" id="answerOptions" role="group" aria-label="答案选项"></div>
+      <div class="answer-feedback" id="answerFeedback" aria-live="polite"></div>
+      <div class="answer-explain" id="answerExplain" aria-live="polite"></div>
+      <button class="next-button" id="nextQuestion" type="button" disabled>
+        <span data-module-zh="继续挑战" data-module-en="Next challenge">继续挑战</span>
+        <span aria-hidden="true">→</span>
+      </button>
+    </div>
+
+    <aside class="reference-panel">
+      <div class="reference-heading">
+        <div>
+          <p class="eyebrow" data-module-zh="随手查" data-module-en="QUICK REFERENCE">随手查</p>
+          <h2 data-module-zh="物理量速查" data-module-en="Quantity guide">物理量速查</h2>
+        </div>
+        <span class="ref-count" id="refCount">13</span>
+      </div>
+      <p class="reference-hint" data-module-zh="点选物理量卡片，直接练它的单位。" data-module-en="Tap a quantity to practise its unit.">点选物理量卡片，直接练它的单位。</p>
+      <div class="ref-list" id="refList"></div>
+      <p class="source-note">
+        <span data-module-zh="常量与单位参考" data-module-en="Constants and units:">常量与单位参考</span>
+        <a href="https://physics.nist.gov/cuu/Constants/" target="_blank" rel="noopener">NIST</a>
+        ·
+        <a href="https://www.bipm.org/en/measurement-units" target="_blank" rel="noopener">BIPM</a>
+      </p>
+    </aside>
+  </section>
+
+  <footer class="phys-footer">
+    <span data-module-zh="物理探秘 · 用公式读懂世界" data-module-en="Phys Quest · Read the world in formulas">物理探秘 · 用公式读懂世界</span>
+    <span data-module-zh="安全练习 · 不涉及真实实验操作" data-module-en="Safe practice · No real-world procedures">安全练习 · 不涉及真实实验操作</span>
+  </footer>
+</main>
+<script src="/shared/module-header.js"></script>
+<script src="js/physics-core.js"></script>
+<script src="js/physics.js"></script>
+</body>
+</html>

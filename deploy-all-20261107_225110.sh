@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把仓库拷到服务器后运行（服务器上不 git pull）：sudo bash deploy-all-20261107_221445.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261107_225110.sh
 # 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
 set -euo pipefail
 
@@ -21,8 +21,10 @@ for path in \
   topic-app/topic-app/index.html \
   ham-exam/index.html \
   chemistry/index.html \
-  chemistry/data/chemistry.json; do
-  [[ -f "$REPO_DIR/$path" ]] || die "仓库文件缺失：$path；请确认仓库已完整拷到服务器"
+  chemistry/data/chemistry.json \
+  physics/index.html \
+  physics/data/physics.json; do
+  [[ -f "$REPO_DIR/$path" ]] || die "仓库文件缺失：$path；请确认 git pull 已完成"
 done
 
 say "部署词境后端（保留现有数据库）"
@@ -32,7 +34,7 @@ WP_SERVER_NAME="$SERVER_NAME" \
 WP_SKIP_NGINX=1 \
   bash "$REPO_DIR/word-puzzle/deploy/install.sh"
 
-say "部署语林门户、每日话题、无线电执照、化学探秘和统一 nginx 入口"
+say "部署语林门户、每日话题、无线电执照、化学探秘、物理探秘和统一 nginx 入口"
 LINGUA_SERVER_NAME="$SERVER_NAME" bash "$REPO_DIR/hub/deploy/install.sh"
 
 say "执行整站冒烟检查"
@@ -71,6 +73,10 @@ check_path /ham/
 check_path /chemistry/
 check_path /chemistry/data/chemistry.json
 check_path /chemistry/js/chemistry.js
+check_path /physics/
+check_path /physics/data/physics.json
+check_path /physics/js/physics-core.js
+check_path /physics/js/physics.js
 check_path /word-puzzle/
 check_path /word-puzzle/css/app.css
 
@@ -84,6 +90,7 @@ cat <<EOF
   每日话题：http://$SERVER_NAME/topics/
   无线电执照：http://$SERVER_NAME/ham/
   化学探秘：http://$SERVER_NAME/chemistry/
+  物理探秘：http://$SERVER_NAME/physics/
   词境 Lexica：http://$SERVER_NAME/word-puzzle/
 
 词境服务：systemctl status word-puzzle

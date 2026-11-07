@@ -13,6 +13,7 @@
 * ``hub/js/``                —— 总主页
 * ``topic-app/topic-app/``   —— 每日话题
 * ``ham-exam/js/`` 和 ``ham-exam/data/`` —— 无线电执照
+* ``chemistry/js/`` 和 ``physics/js/`` —— 化学探秘、物理探秘
 
 用法::
 
@@ -34,6 +35,8 @@ JS_DIRS = [
     REPO / "topic-app" / "topic-app",
     REPO / "ham-exam" / "js",
     REPO / "ham-exam" / "data",
+    REPO / "chemistry" / "js",
+    REPO / "physics" / "js",
 ]
 
 PAIRS = {")": "(", "]": "[", "}": "{"}

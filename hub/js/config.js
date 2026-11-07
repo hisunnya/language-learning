@@ -7,8 +7,8 @@
    三种常见部署方式，选一种，把对应的路径填上：
 
    A) 同一台服务器（默认）
-      hub 在 80 端口，四个项目分别挂在 /word-puzzle/、
-      /topics/、/ham/ 和 /chemistry/ 下。
+      hub 在 80 端口，五个项目分别挂在 /word-puzzle/、
+      /topics/、/ham/、/chemistry/ 和 /physics/ 下。
 
    B) 不同端口
       把 href 改成完整地址，例如 http://10.1.1.93:8765/
@@ -28,4 +28,7 @@ window.LINGUA_PROJECTS = {
 
    // 化学探秘 Chem Quest —— 纯前端
    chemistry: "/chemistry/",
+
+   // 物理探秘 Phys Quest —— 纯前端
+   physics: "/physics/",
 };
