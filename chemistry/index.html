@@ -51,6 +51,10 @@
         <button type="button" role="tab" data-mode="elements" data-module-zh="元素速配" data-module-en="Elements" aria-selected="true">元素速配</button>
         <button type="button" role="tab" data-mode="formulas" data-module-zh="化学式" data-module-en="Formulas" aria-selected="false">化学式</button>
         <button type="button" role="tab" data-mode="reactions" data-module-zh="反应推理" data-module-en="Reactions" aria-selected="false">反应推理</button>
+        <button type="button" role="tab" data-mode="input" data-module-zh="数值填空" data-module-en="Fill in" aria-selected="false">数值填空</button>
+        <button type="button" role="tab" data-mode="match" data-module-zh="配对" data-module-en="Matching" aria-selected="false">配对</button>
+        <button type="button" role="tab" data-mode="order" data-module-zh="排序" data-module-en="Ordering" aria-selected="false">排序</button>
+        <button type="button" role="tab" data-mode="mistake" data-module-zh="找错" data-module-en="Spot the mistake" aria-selected="false">找错</button>
       </div>
     </div>
   </section>
@@ -66,6 +70,7 @@
       <div class="formula-stage" id="formulaStage" aria-hidden="true"></div>
       <div class="answer-options" id="answerOptions" role="group" aria-label="答案选项"></div>
       <div class="answer-feedback" id="answerFeedback" aria-live="polite"></div>
+      <div class="answer-explain" id="answerExplain" aria-live="polite"></div>
       <button class="next-button" id="nextQuestion" type="button" disabled>
         <span data-module-zh="继续挑战" data-module-en="Next challenge">继续挑战</span>
         <span aria-hidden="true">→</span>
@@ -95,6 +100,7 @@
   </footer>
 </main>
 <script src="/shared/module-header.js"></script>
+<script src="js/chemistry-core.js"></script>
 <script src="js/chemistry.js"></script>
 </body>
 </html>

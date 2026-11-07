@@ -50,10 +50,51 @@ class TestChemistryData(unittest.TestCase):
     def test_script_has_no_second_copy_of_formula_atoms(self):
         self.assertNotIn("FORMULA_ATOMS", SCRIPT)
 
+    def test_page_offers_every_practice_type(self):
+        for mode in ("elements", "formulas", "reactions", "input", "match", "order", "mistake"):
+            self.assertIn('data-mode="%s"' % mode, HTML)
+        self.assertIn('id="answerExplain"', HTML)
+        self.assertLess(HTML.index("chemistry-core.js"), HTML.index("js/chemistry.js"))
+
     def test_page_uses_paths_relative_to_the_module(self):
         self.assertIn("fetch('data/chemistry.json')", SCRIPT)
         self.assertIn('href="css/chemistry.css"', HTML)
         self.assertIn('src="js/chemistry.js"', HTML)
+
+    def test_every_reaction_is_really_balanced(self):
+        """独立写一个解析器验算：标准系数必须让两边每种原子个数相等。"""
+        def atoms(formula):
+            counts = {}
+            for symbol, n in re.findall(r"([A-Z][a-z]?)(\d*)", formula):
+                counts[symbol] = counts.get(symbol, 0) + int(n or 1)
+            return counts
+
+        for entry in DATA["balancedReactions"]:
+            left, right = (side.split("+") for side in entry["prompt"].split("→"))
+            coefficients = [int(c) for c in entry["answer"].split(",")]
+            self.assertEqual(len(coefficients), len(left) + len(right), entry["prompt"])
+            totals = {}
+            for sign, formulas, offset in ((1, left, 0), (-1, right, len(left))):
+                for i, formula in enumerate(formulas):
+                    for symbol, n in atoms(formula.strip()).items():
+                        totals[symbol] = totals.get(symbol, 0) + sign * n * coefficients[offset + i]
+            self.assertEqual({k: v for k, v in totals.items() if v}, {}, entry["prompt"])
+
+    def test_wrong_formulas_are_curated_and_never_valid(self):
+        valid = {f["formula"] for f in DATA["formulas"]}
+        for item in DATA["wrongFormulas"]:
+            for key in ("zh", "en", "wrong", "right", "whyZh", "whyEn"):
+                self.assertTrue(item[key], item)
+            self.assertNotIn(item["wrong"], valid, "写错的化学式不能恰好是题库里的有效化学式")
+            self.assertNotEqual(item["wrong"], item["right"])
+        self.assertGreaterEqual(len(DATA["wrongFormulas"]), 6)
+
+    def test_ph_scale_has_room_to_order(self):
+        values = sorted(item["ph"] for item in DATA["phScale"])
+        self.assertGreaterEqual(len(values), 6)
+        self.assertEqual(len(set(values)), len(values))
+        for item in DATA["phScale"]:
+            self.assertTrue(item["zh"] and item["en"])
 
     def test_element_dataset_cites_iupac(self):
         self.assertTrue(any("iupac.org" in source["url"] for source in DATA["sources"]))
