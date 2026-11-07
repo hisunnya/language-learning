@@ -246,7 +246,7 @@ language-learning/
 - **The deployment directory is not the git working tree.** A `git pull` does
   not change what the running service serves; the code has to be copied to the
   server and the service restarted.
-- Directory names are lowercase, because production is Ubuntu and paths are
+- Directory names are lowercase, because production is Linux (Debian) and paths are
   case-sensitive there.
 - **Product names are names, not paths.** The product is 「词境 Lexica」; the
   directory is still `word-puzzle/` because renaming it would break the
@@ -282,7 +282,13 @@ titles, headers, README and the hub.
 `word-puzzle/deploy/install.sh` installs the Lexica backend and systemd service.
 `hub/deploy/install.sh` publishes the hub and its four static project trees
 (topics, ham exam, chemistry) and configures the shared nginx entry. The root
-`deploy-all-<timestamp>.sh` runs both installers after `git pull`.
+`deploy-all-<timestamp>.sh` runs both installers from a copy of the repo on the
+target host (the server does not `git pull`).
+
+**Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
+previous one with `git mv` to the new timestamp (never keep two side by side),
+keep its file checks, smoke checks and printed URLs in step with the code — a
+new module is added to all three — and commit it together with the change.
 
 ---
 
@@ -304,24 +310,46 @@ The household LAN is **10.0.0.0/20**.
 
 ### 6.2 The production server
 
-**10.1.1.93** — PVE (Proxmox VE) host.
+**10.1.1.93** — PVE (Proxmox VE) host, hostname `pve03`.
 
-- nginx is **already installed and configured**. Put site configs in
+It runs **Debian 13 (trixie)**, not Ubuntu — PVE is built on Debian. Anything
+that names a distribution must use `debian`/`trixie` there: the nginx.org apt
+repository is `https://nginx.org/packages/debian trixie nginx`, and an
+`ubuntu` URL returns 404. The host also runs Docker and LXC next to the VMs;
+do not restart those services as a side effect of a deploy.
+
+- nginx is **already installed and configured** — **1.30.6 (stable)**, the same
+  version as the development VM (6.2.1). Both are meant to stay on the
+  nginx.org stable line; upgrade them together so a config that passes on the
+  VM means the same thing in production. Site configs go in `conf.d/`; the
+  nginx.org package has no `sites-enabled/`. Put site configs in
   `/etc/nginx/conf.d/<name>.conf`, then run
   `nginx -t && systemctl reload nginx`. Create `conf.d/` if it is missing.
 - PVE means the machine also runs a few **virtual machines**. When something
   on the host misbehaves, check whether it is actually a guest VM before
   blaming the host.
-- Apart from the VMs, treat it as an ordinary **Ubuntu server**: systemd
+- Apart from the VMs, treat it as an ordinary **Debian server**: systemd
   units, `apt`, the standard directory layout, `nginx` for static sites.
+  Scripts must stay Debian/Ubuntu-neutral (`apt-get`, `www-data`, Python
+  `venv` for pip packages — system pip is externally managed).
 - Deploy by copying files in and reloading — `git pull` on the server is not
   part of the flow.
 
+### 6.2.1 The development VM
+
+**10.211.55.5** — an Ubuntu 26.04 arm64 VM used as the test target for the
+deploy scripts. It is reachable over SSH as `boyang2` with passwordless
+`sudo`, so `sudo env LINGUA_SERVER_NAME=10.211.55.5 bash deploy-all-<timestamp>.sh`
+runs there for real. Never grant passwordless `sudo` on 10.1.1.93.
+
 ### 6.3 Where the work happens
 
-Development happens on a workstation inside the home network; deployment is a
-copy to 10.1.1.93 plus a service reload. A change that has only been verified
-on the workstation has **not** been verified in production — say so.
+Development happens on a macOS workstation and on the development VM
+(6.2.1) in parallel; deployment is a copy to 10.1.1.93 plus a service reload.
+The scripts need root, systemd and nginx, so they cannot run on macOS: verify
+them on the development VM. A change that has only been verified on the
+workstation or the development VM has **not** been verified in production —
+say so.
 
 ---
 

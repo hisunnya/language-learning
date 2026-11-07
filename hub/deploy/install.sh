@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Deploy Lingua Grove and its three projects behind the host's nginx.
+# Deploy Lingua Grove and its four projects behind the host's nginx.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SERVER_NAME="${LINGUA_SERVER_NAME:-10.211.55.5}"
+# 默认是生产机；开发测试机请显式传 LINGUA_SERVER_NAME=10.211.55.5。
+SERVER_NAME="${LINGUA_SERVER_NAME:-10.1.1.93}"
 HUB_ROOT=/var/www/lingua-grove
 TOPICS_ROOT=/var/www/topic-app
 HAM_ROOT=/var/www/ham-exam
@@ -37,7 +38,9 @@ cp -a "$REPO_DIR/hub/shared/." "$HUB_ROOT/shared/"
 cp -a "$REPO_DIR/topic-app/topic-app/." "$TOPICS_ROOT/"
 cp -a "$REPO_DIR/ham-exam/index.html" "$REPO_DIR/ham-exam/css" \
   "$REPO_DIR/ham-exam/data" "$REPO_DIR/ham-exam/images" "$REPO_DIR/ham-exam/js" "$HAM_ROOT/"
-cp -a "$REPO_DIR/chemistry/." "$CHEM_ROOT/"
+# 只拷运行时需要的文件，不把 tests/ 发布到网站目录。
+cp -a "$REPO_DIR/chemistry/index.html" "$REPO_DIR/chemistry/css" \
+  "$REPO_DIR/chemistry/data" "$REPO_DIR/chemistry/js" "$CHEM_ROOT/"
 chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT"
 
 say "写入 conf.d 总入口并将词境挂到 /word-puzzle/"
@@ -82,6 +85,7 @@ cat <<EOF
   总主页：http://$SERVER_NAME/
   每日话题：http://$SERVER_NAME/topics/
   无线电执照：http://$SERVER_NAME/ham/
+  化学探秘：http://$SERVER_NAME/chemistry/
   词境 Lexica：http://$SERVER_NAME/word-puzzle/
 
 EOF

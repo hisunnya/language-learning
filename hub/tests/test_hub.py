@@ -321,6 +321,25 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("location ^~ /chemistry/", NGINX)
         self.assertIn("alias /var/www/chemistry/;", NGINX)
 
+    def test_mounts_without_trailing_slash_redirect(self):
+        for name in ("topics", "ham", "chemistry", "word-puzzle"):
+            self.assertIn("location = /%s {\n        return 301 /%s/;" % (name, name), NGINX)
+
+    def test_whole_site_script_retries_smoke_checks_and_covers_every_module(self):
+        scripts = sorted(HUB.parent.glob("deploy-all-*.sh"))
+        self.assertEqual(len(scripts), 1, "根目录只保留一份带时间戳的整站部署脚本")
+        text = scripts[0].read_text(encoding="utf-8")
+        self.assertIn("retry ", text)   # nginx reload 是异步的，冒烟检查要重试
+        for path in ("/chemistry/", "/chemistry/data/chemistry.json", "/ham/",
+                     "/topics/", "/word-puzzle/api/health"):
+            self.assertIn(path, text)
+
+    def test_installer_does_not_publish_chemistry_tests(self):
+        script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
+        self.assertNotIn('chemistry/." ', script)
+        self.assertIn('chemistry/js"', script)
+        self.assertIn('LINGUA_SERVER_NAME:-10.1.1.93', script)
+
     def test_shared_module_header_assets_have_a_common_url(self):
         self.assertIn("location ^~ /shared/", NGINX)
         self.assertTrue((HUB / "shared" / "module-header.css").exists())
