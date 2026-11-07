@@ -1,0 +1,57 @@
+page {
+  --game-page: #f4f6fb;
+  --game-card: #ffffff;
+  --game-panel: #ffffff;
+  --game-chip: #f2f6fd;
+  --game-ink: #172033;
+  --game-muted: #68758a;
+  --game-primary: #4f46e5;
+  --game-primary-dark: #3730a3;
+  --game-accent: #d97706;
+  --game-line-en: #cbd5f5;
+  --game-bg-en: #eef2ff;
+  --game-line-cn: #efd9be;
+  --game-bg-cn: #fff4e5;
+  --game-on-primary: #ffffff;
+
+  min-height: 100%;
+  background: var(--game-page);
+  color: var(--game-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+view,
+text {
+  box-sizing: border-box;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  padding: 0 20rpx;
+  border-radius: 24rpx;
+  font-size: 29rpx;
+  font-weight: 700;
+  color: var(--game-on-primary);
+  background: var(--game-primary);
+  box-shadow: 0 6rpx 0 var(--game-primary-dark);
+}
+
+.btn-ghost {
+  color: var(--game-muted);
+  background: var(--game-card);
+  box-shadow: 0 6rpx 0 var(--game-line-en);
+}
+
+.btn-warn {
+  background: #ff8c42;
+  box-shadow: 0 6rpx 0 #d96c22;
+}
+
+.btn-pressed {
+  transform: translateY(4rpx);
+  box-shadow: none;
+}

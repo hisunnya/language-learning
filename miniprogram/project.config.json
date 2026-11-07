@@ -1,0 +1,23 @@
+{
+  "description": "词境 · 单词消消乐（微信小程序版）",
+  "packOptions": {
+    "ignore": [
+      {
+        "type": "folder",
+        "value": ".workbuddy"
+      }
+    ],
+    "include": []
+  },
+  "setting": {
+    "bundle": false,
+    "es6": true,
+    "minified": true,
+    "postcss": true,
+    "urlCheck": true
+  },
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "word-puzzle-miniprogram",
+  "miniprogramRoot": "./"
+}

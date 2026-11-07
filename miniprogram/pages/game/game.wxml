@@ -1,0 +1,81 @@
+<view class="app">
+  <view class="hud">
+    <view class="hud-row">
+      <view class="stat">
+        <text class="k">时间</text>
+        <text class="v {{timeWarn ? 'v-warn' : 'v-time'}}">{{timeLeft}}</text>
+      </view>
+      <view class="stat">
+        <text class="k">得分</text>
+        <text class="v v-score">{{score}}</text>
+      </view>
+      <view class="stat">
+        <text class="k">最高连击</text>
+        <text class="v">{{best}}</text>
+      </view>
+    </view>
+    <view class="progress">
+      <view class="progress-i {{timeWarn ? 'progress-warn' : ''}}" style="width:{{timePct}}%"></view>
+    </view>
+    <view class="ptext">
+      <text class="ptext-lv">第 {{levelNo}}/{{levelTotal}} 关 · {{levelName}}</text>
+      <text>{{matched}}/{{total}}</text>
+    </view>
+  </view>
+
+  <view class="board">
+    <view
+      wx:for="{{cards}}"
+      wx:key="key"
+      class="{{item.cls}}"
+      data-id="{{item.id}}"
+      data-t="{{item.t}}"
+      bindtap="onTapCard"
+    >
+      <text class="tag">{{item.t === 'en' ? 'EN' : 'CN'}}</text>
+      <text class="w">{{item.text}}</text>
+      <text class="ipa" wx:if="{{item.ipa}}">{{item.ipa}}</text>
+      <text class="say" wx:if="{{item.t === 'en'}}">🔊</text>
+    </view>
+  </view>
+
+  <view class="fx" wx:if="{{fxShow}}">{{fxText}}</view>
+
+  <view class="bar">
+    <view class="btn btn-ghost bar-btn" hover-class="btn-pressed" bindtap="onShowRules">玩法</view>
+    <view class="btn btn-ghost bar-btn" hover-class="btn-pressed" bindtap="onReplay">重玩本关</view>
+    <view class="btn btn-warn bar-btn" hover-class="btn-pressed" bindtap="onRestartAll">从头开始</view>
+  </view>
+</view>
+
+<view class="overlay" wx:if="{{overlay === 'clear'}}">
+  <view class="panel">
+    <text class="panel-title">本关通过</text>
+    <text class="panel-score">{{overlayScore}}</text>
+    <view class="kv">
+      <text>剩余时间奖励</text>
+      <text class="kv-b">+{{overlayBonus}}</text>
+    </view>
+    <view class="kv">
+      <text>下一关加时</text>
+      <text class="kv-b">+{{overlayNextBonus}} 秒</text>
+    </view>
+    <view class="panel-actions">
+      <view class="btn btn-ghost" hover-class="btn-pressed" bindtap="onFinish">结束</view>
+      <view class="btn" hover-class="btn-pressed" bindtap="onNextLevel" wx:if="{{overlayHasNext}}">下一关</view>
+      <view class="btn" hover-class="btn-pressed" bindtap="onFinish" wx:else>看总成绩</view>
+    </view>
+  </view>
+</view>
+
+<view class="overlay" wx:if="{{overlay === 'over'}}">
+  <view class="panel">
+    <text class="panel-title">时间到</text>
+    <text class="panel-sub">这一关没在时间内配完，再来一次？</text>
+    <text class="panel-score">{{overlayScore}}</text>
+    <view class="panel-actions">
+      <view class="btn btn-ghost" hover-class="btn-pressed" bindtap="onRestartAll">从头开始</view>
+      <view class="btn" hover-class="btn-pressed" bindtap="onReplay">重玩本关</view>
+    </view>
+  </view>
+</view>
