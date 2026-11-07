@@ -34,6 +34,27 @@ class TestChemistryData(unittest.TestCase):
             self.assertIn(reaction["answer"], reaction["choices"])
             self.assertGreaterEqual(len(reaction["choices"]), 4)
 
+    def test_junior_changes_can_build_one_right_three_wrong(self):
+        kinds = [item["type"] for item in DATA["changes"]]
+        self.assertGreaterEqual(kinds.count("chemical"), 1)
+        self.assertGreaterEqual(kinds.count("physical"), 3)
+
+    def test_ph_answers_match_the_molarity(self):
+        import math
+        for item in DATA["phQuestions"]:
+            self.assertTrue(item["zh"] and item["en"])
+            p = -math.log10(item["molarity"])
+            expected = round(p) if item["kind"] == "acid" else 14 - round(p)
+            self.assertEqual(item["answer"], expected, item["en"])
+
+    def test_script_has_no_second_copy_of_formula_atoms(self):
+        self.assertNotIn("FORMULA_ATOMS", SCRIPT)
+
+    def test_page_uses_paths_relative_to_the_module(self):
+        self.assertIn("fetch('data/chemistry.json')", SCRIPT)
+        self.assertIn('href="css/chemistry.css"', HTML)
+        self.assertIn('src="js/chemistry.js"', HTML)
+
     def test_element_dataset_cites_iupac(self):
         self.assertTrue(any("iupac.org" in source["url"] for source in DATA["sources"]))
 
