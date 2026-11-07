@@ -236,10 +236,11 @@ cd word-puzzle && python3 tools/check_js.py                  # JS 语法体检
 language-learning/
 ├── AGENTS.md               # 本文件
 ├── README.md               # 仓库总说明（中文）
-├── hub/                    # 总主页「语林 Lingua Grove」—— 三个工具的入口
+├── hub/                    # 总主页「语林 Lingua Grove」—— 四个工具的入口
 ├── word-puzzle/            # 词境 Lexica —— 英语词汇游戏（网站版）
 ├── topic-app/              # 每日话题 Daily Topics —— 初中生家庭讨论
-└── ham-exam/               # 无线电执照 Ham Exam —— 业余无线电模拟考试
+├── ham-exam/               # 无线电执照 Ham Exam —— 业余无线电模拟考试
+└── chemistry/              # 化学探秘 Chem Quest —— 分龄化学练习
 ```
 
 - **The deployment directory is not the git working tree.** A `git pull` does
@@ -259,6 +260,7 @@ language-learning/
 | Vocabulary game | 词境 | Lexica | `word-puzzle/` |
 | Daily discussion | 每日话题 | Daily Topics | `topic-app/` |
 | Radio exam | 无线电执照 | Ham Exam | `ham-exam/` |
+| Chemistry learning | 化学探秘 | Chem Quest | `chemistry/` |
 | Portal (hub) | 语林 | Lingua Grove | `hub/` |
 
 The vocabulary game was called 「单词消消乐」 while it was a single file. That
@@ -274,11 +276,13 @@ titles, headers, README and the hub.
 | `/var/lib/word-puzzle` | 词境的 SQLite 数据库和离线页 |
 | `/var/www/topic-app` | 每日话题（纯静态） |
 | `/var/www/ham-exam` | 无线电执照（纯静态） |
+| `/var/www/chemistry` | 化学探秘（纯静态） |
 | `/var/www/lingua-grove` | 总主页（纯静态） |
 
-`word-puzzle/deploy/install.sh` is the only installer in the repository. The
-other three are static trees copied into `/var/www/`; `hub/deploy/` and
-`topic-app/部署说明.md` describe their nginx blocks.
+`word-puzzle/deploy/install.sh` installs the Lexica backend and systemd service.
+`hub/deploy/install.sh` publishes the hub and its four static project trees
+(topics, ham exam, chemistry) and configures the shared nginx entry. The root
+`deploy-all-<timestamp>.sh` runs both installers after `git pull`.
 
 ---
 

@@ -8,6 +8,7 @@ SERVER_NAME="${LINGUA_SERVER_NAME:-10.211.55.5}"
 HUB_ROOT=/var/www/lingua-grove
 TOPICS_ROOT=/var/www/topic-app
 HAM_ROOT=/var/www/ham-exam
+CHEM_ROOT=/var/www/chemistry
 CONF_DIR=/etc/nginx/conf.d
 CONF_FILE=$CONF_DIR/lingua-grove.conf
 LEGACY_HUB_ENABLED=/etc/nginx/sites-enabled/lingua-grove
@@ -28,14 +29,16 @@ bash "$REPO_DIR/word-puzzle/deploy/check-deps.sh"
 
 systemctl is-active --quiet word-puzzle || die "词境后端 word-puzzle 未运行，请先部署并启动它"
 
-say "部署三个前端项目"
-install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT"
+say "部署四个前端项目"
+[[ -f "$REPO_DIR/chemistry/index.html" ]] || die "缺少化学探秘页面"
+install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT"
 cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$HUB_ROOT/"
 cp -a "$REPO_DIR/hub/shared/." "$HUB_ROOT/shared/"
 cp -a "$REPO_DIR/topic-app/topic-app/." "$TOPICS_ROOT/"
 cp -a "$REPO_DIR/ham-exam/index.html" "$REPO_DIR/ham-exam/css" \
   "$REPO_DIR/ham-exam/data" "$REPO_DIR/ham-exam/images" "$REPO_DIR/ham-exam/js" "$HAM_ROOT/"
-chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT"
+cp -a "$REPO_DIR/chemistry/." "$CHEM_ROOT/"
+chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT"
 
 say "写入 conf.d 总入口并将词境挂到 /word-puzzle/"
 install -d "$CONF_DIR"

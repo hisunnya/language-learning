@@ -567,8 +567,8 @@ def _content_stream_text(content: bytes,
 
 # ------------------------------------------------------------------ OCR
 
-def _ocr(path: str) -> str:
-    """扫描件 → OCR 文字。
+def _ocr(path: str, psm_modes: tuple[int, ...] = (3,)) -> list[tuple[int, str]]:
+    """扫描件 → 多种版面模式的 OCR 候选文本。
 
     用 tesseract 的 TSV 输出（带每个词的坐标）**按行重建**版面：
     普通的文本输出会把「英文列」和「中文列」分成两块，
@@ -590,24 +590,29 @@ def _ocr(path: str) -> str:
         if not pages:
             raise PdfError("PDF 转图片失败")
 
-        texts: list[str] = []
-        for img in pages[:MAX_PAGES]:
-            langs = "eng+chi_sim" if _has_lang("chi_sim") else "eng"
-            text = _ocr_page_tsv(img, langs)
-            if not text:
-                text = _ocr_page_plain(img, langs)
-            if text.strip():
-                texts.append(text)
-        if not texts:
+        langs = "eng+chi_sim" if _has_lang("chi_sim") else "eng"
+        results: list[tuple[int, str]] = []
+        for psm in psm_modes:
+            texts: list[str] = []
+            for img in pages[:MAX_PAGES]:
+                text = _ocr_page_tsv(img, langs, psm=psm)
+                if not text:
+                    text = _ocr_page_plain(img, langs, psm=psm)
+                if text.strip():
+                    texts.append(text)
+            if texts:
+                results.append((psm, "\n".join(texts)))
+        if not results:
             raise PdfError("OCR 没识别出文字")
-        return "\n".join(texts)
+        return results
 
 
-def _ocr_page_plain(img: Path, langs: str) -> str:
+def _ocr_page_plain(img: Path, langs: str, psm: int = 3) -> str:
     """普通文本模式（TSV 解析失败时的兜底）。"""
     try:
         proc = subprocess.run(
-            ["tesseract", str(img), "stdout", "-l", langs],
+            ["tesseract", str(img), "stdout", "-l", langs,
+             "--psm", str(psm), "--oem", "1"],
             capture_output=True, timeout=180)
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -621,7 +626,7 @@ _TSV_HEADER = ("level", "page_num", "block_num", "par_num", "line_num",
                "word_num", "left", "top", "width", "height", "conf", "text")
 
 
-def _ocr_page_tsv(img: Path, langs: str) -> str:
+def _ocr_page_tsv(img: Path, langs: str, psm: int = 3) -> str:
     """用 TSV 输出按坐标重建行/列。
 
     * 先按 y 坐标把词聚成**行**（同一水平线上的词）；
@@ -630,7 +635,8 @@ def _ocr_page_tsv(img: Path, langs: str) -> str:
     """
     try:
         proc = subprocess.run(
-            ["tesseract", str(img), "stdout", "-l", langs, "tsv"],
+            ["tesseract", str(img), "stdout", "-l", langs,
+             "--psm", str(psm), "--oem", "1", "tsv"],
             capture_output=True, timeout=180)
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -729,7 +735,7 @@ def _has_lang(lang: str) -> bool:
 
 # ------------------------------------------------------------------ 入口
 
-def pdf_candidates(data: bytes) -> list[tuple[str, str]]:
+def pdf_candidates(data: bytes, force_ocr: bool = False) -> list[tuple[str, str]]:
     """把 PDF 抽成文字，返回**按优先级排好的候选列表** ``[(文本, 引擎名), ...]``。
 
     有时候 poppler 会因为字体子集缺 ``CIDSystemInfo`` 之类的元数据而**漏字**
@@ -749,22 +755,30 @@ def pdf_candidates(data: bytes) -> list[tuple[str, str]]:
         path = fh.name
     out: list[tuple[str, str]] = []
     try:
-        if has_poppler():
+        if not force_ocr:
+            if has_poppler():
+                try:
+                    text = _pdftotext(path)
+                    if text.strip():
+                        out.append((text, "pdftotext"))
+                except PdfError:
+                    pass
             try:
-                text = _pdftotext(path)
+                text = _builtin_extract(data)
                 if text.strip():
-                    out.append((text, "pdftotext"))
+                    out.append((text, "builtin"))
             except PdfError:
                 pass
-        try:
-            text = _builtin_extract(data)
-            if text.strip():
-                out.append((text, "builtin"))
-        except PdfError:
-            pass
-        if not out:
-            # 一个文字都没抽到 → 大概率是扫描件，走 OCR
-            out.append((_ocr(path), "ocr"))
+
+        if force_ocr:
+            # 文字层存在但没有可解析词条时，重试更适合词表的版面模式。
+            modes = (6, 11)
+        elif not out:
+            modes = (3,)
+        else:
+            modes = ()
+        for psm, text in _ocr(path, modes) if modes else []:
+            out.append((text, f"ocr-psm{psm}"))
         return [(t[:MAX_CHARS], e) for t, e in out]
     finally:
         try:

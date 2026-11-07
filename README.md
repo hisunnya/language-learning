@@ -1,15 +1,15 @@
 # language-learning · 语林 Lingua Grove
 
-家庭语言学习工具集。三个项目互相独立，各自都能单独跑起来，另有一个总主页把它们串起来。
+家庭学习工具集。四个项目互相独立，各自都能单独跑起来，另有一个总主页把它们串起来。
 
 | 项目 | 内容 | 技术栈 |
 | --- | --- | --- |
-| [`hub/`](hub/) | **语林 Lingua Grove** 总主页：三个工具的入口，中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
+| [`hub/`](hub/) | **语林 Lingua Grove** 总主页：四个工具的入口，中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
 | [`word-puzzle/`](word-puzzle/) | **词境 Lexica**（网站版）：人教版 PEP 初中 + 高中英语词汇题库、四级层级选题、上传资料、导出单文件离线测试页、成绩入库 | Python 标准库 + SQLite + 原生 JS，nginx 部署 |
 | [`topic-app/`](topic-app/) | **每日话题 Daily Topics**：适合初中水平的家庭话题讨论，随机抽题 + 参考方向 + 历史记录 | 纯前端，零依赖，localStorage |
 | [`ham-exam/`](ham-exam/) | **无线电执照 Ham Exam**：业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
+| [`chemistry/`](chemistry/) | **化学探秘 Chem Quest**：初中元素配对、高中反应配平、大学溶液推理 | 纯前端，零依赖，localStorage |
 
-> 「消消乐」是词境 Lexica 还在单文件阶段时的临时叫法，不是产品名。
 > 产品现在叫**词境 Lexica**，目录名 `word-puzzle/` 保持不变（改了会打断服务器上
 > 已经部署好的 systemd、nginx 和路径）。
 
@@ -29,6 +29,8 @@ cd topic-app/topic-app && python3 -m http.server 8081
 
 # ham-exam（纯前端）
 cd ham-exam && ./start.sh                 # → http://127.0.0.1:8080
+
+cd chemistry && python3 -m http.server 8082 # → http://127.0.0.1:8082
 ```
 
 ---
@@ -85,7 +87,7 @@ language-learning/
 │   ├── 初中生每日话题.xlsx                  # 原始话题库
 │   ├── make_topics.py                      # 从 Excel 生成 topics.js
 │   └── 部署说明.md                          # nginx 配置
-└── ham-exam/
+├── ham-exam/
     ├── README.md
     ├── index.html                          # 入口
     ├── start.sh / start.bat                # 一键起本地服务
@@ -94,6 +96,7 @@ language-learning/
     ├── data/{bank.js,bank.json}            # 题库（两份内容完全一致）
     ├── images/                             # 53 张电路附图
     └── tools/                              # 题库生成脚本（从官方 PDF 生成 bank.json）
+  └── chemistry/                              # 化学探秘 Chem Quest（纯静态分龄练习）
 ```
 
 ---

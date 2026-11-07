@@ -180,30 +180,37 @@
         </svg>
       </a>
     </article>
-  </section>
 
-  <!-- ==================== 说明 ==================== -->
-  <section class="notes">
-    <div class="note">
-      <h3 data-i18n="notes.a.title">全部本地运行</h3>
-      <p data-i18n="notes.a.body">
-        词汇游戏用 Python 标准库加 SQLite，话题和考试是纯前端，
-        不依赖任何云服务，也不需要大模型。
-      </p>
-    </div>
-    <div class="note">
-      <h3 data-i18n="notes.b.title">局域网内直连</h3>
-      <p data-i18n="notes.b.body">
-        家庭网络 10.0.0.0/20 内直接用浏览器打开，不需要 VPN。
-        部署细节见仓库 README。
-      </p>
-    </div>
-    <div class="note">
-      <h3 data-i18n="notes.c.title">随时能带走</h3>
-      <p data-i18n="notes.c.body">
-        题库可以导出成单个 HTML 离线页，拷到任何电脑上双击就能继续做题。
-      </p>
-    </div>
+    <!-- ---- 化学探秘 Chem Quest ---- -->
+    <article class="project" data-project="chemistry">
+      <div class="project-head">
+        <span class="project-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3h6M10 3v6l-5.8 9.2A1.8 1.8 0 0 0 5.7 21h12.6a1.8 1.8 0 0 0 1.5-2.8L14 9V3"/>
+            <path d="M7 16h10M9 13h6"/>
+          </svg>
+        </span>
+        <div class="project-titles">
+          <h3><span data-i18n="chemistry.name">化学探秘</span><em data-i18n="chemistry.en">Chem Quest</em></h3>
+          <p data-i18n="chemistry.tagline">分龄化学挑战</p>
+        </div>
+      </div>
+      <p class="project-desc" data-i18n="chemistry.desc">从元素符号、化学式到反应推理，按学段闯关，在预测与解题中认识化学。</p>
+      <ul class="chips">
+        <li data-i18n="chemistry.f1">初中 · 元素配对</li>
+        <li data-i18n="chemistry.f2">高中 · 反应配平</li>
+        <li data-i18n="chemistry.f3">大学 · 浓度推理</li>
+        <li data-i18n="chemistry.f4">纯前端练习</li>
+      </ul>
+      <a class="btn btn-primary" data-project-link="chemistry" href="/chemistry/">
+        <span data-i18n="chemistry.cta">开始探索</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h13M13 6l6 6-6 6"/>
+        </svg>
+      </a>
+    </article>
   </section>
 
   <footer class="foot">

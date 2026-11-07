@@ -109,7 +109,7 @@ python3 -m server.app --host 0.0.0.0 --port 8000
 | 情况 | 怎么办 |
 | --- | --- |
 | `.doc`（老格式） | **不支持**，请在 Word 里「另存为 .docx」再传 |
-| `.pdf` 是扫描件 / 图片 | 会自动走 OCR（需要装 `tesseract-ocr`） |
+| `.pdf` 是扫描件 / 图片 | 会自动走 OCR（需要装 `tesseract-ocr`）；文字层有残留但找不到词条时也会强制 OCR，并比较多种版面模式 |
 | `.pdf` 是两栏排版 | 内置解析器会按坐标还原列；`pdftotext -layout` 也保留列 |
 | 中文释义 + 英文混排一行 | 支持，一行里能拆出多个词条（多列表格） |
 | 音标列 | 认 `/.../` 和 `[...]` 两种写法；没写就自动补 |
@@ -124,8 +124,8 @@ python3 -m server.app --host 0.0.0.0 --port 8000
 sudo apt install poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-chi-sim
 ```
 
-不装也能用：内置的 PDF 解析器（纯 Python）能读文字版 PDF，只是复杂排版准确率略低；
-扫描件必须有 OCR 才认得出来。
+扫描件优先用 `eng+chi_sim`，会尝试常规、整块和稀疏文本版面模式；扫描件必须安装 OCR，
+否则只能提示安装依赖。文字版 PDF 即使没有 Poppler，也会尝试内置解析器。
 
 上传后这份资料就能在「题源」里选中，用来生成题库。
 

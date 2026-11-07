@@ -62,6 +62,16 @@
       "ham.f4": "53 张电路附图",
       "ham.cta": "进入模拟考试",
 
+      "chemistry.name": "化学探秘",
+      "chemistry.en": "Chem Quest",
+      "chemistry.tagline": "分龄化学挑战",
+      "chemistry.desc": "从元素符号、化学式到反应推理，按学段闯关，在预测与解题中认识化学。",
+      "chemistry.f1": "初中 · 元素配对",
+      "chemistry.f2": "高中 · 反应配平",
+      "chemistry.f3": "大学 · 浓度推理",
+      "chemistry.f4": "纯前端练习",
+      "chemistry.cta": "开始探索",
+
       "notes.a.title": "全部本地运行",
       "notes.a.body": "词汇游戏用 Python 标准库加 SQLite，话题和考试是纯前端，不依赖任何云服务，也不需要大模型。",
       "notes.b.title": "局域网内直连",
@@ -119,6 +129,16 @@
       "ham.f3": "Timer and answer sheet",
       "ham.f4": "53 circuit diagrams",
       "ham.cta": "Open the mock exam",
+
+      "chemistry.name": "Chem Quest",
+      "chemistry.en": "化学探秘",
+      "chemistry.tagline": "Chemistry challenges by level",
+      "chemistry.desc": "Explore chemistry through elements, formulas and reaction puzzles, with challenges matched to each learning stage.",
+      "chemistry.f1": "Middle school · Elements",
+      "chemistry.f2": "High school · Reactions",
+      "chemistry.f3": "University · Solutions",
+      "chemistry.f4": "Runs in your browser",
+      "chemistry.cta": "Start exploring",
 
       "notes.a.title": "Everything runs locally",
       "notes.a.body": "The vocabulary game is Python standard library plus SQLite; topics and the exam are pure front end. No cloud service, no language model.",

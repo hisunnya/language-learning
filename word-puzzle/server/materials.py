@@ -270,10 +270,25 @@ def parse_pdf(raw: bytes) -> list[dict]:
         raise ParseError(str(exc)) from exc
 
     best: list[dict] = []
-    for text, engine in candidates:
-        words = wordlist.parse_lines(text.splitlines())
+    for text, _engine in candidates:
+        words = wordlist.parse_glossary_text(text)
+        if not words:
+            words = wordlist.parse_lines(text.splitlines())
         if len(words) > len(best):
             best = words
+
+    if not best and pdf_mod.has_ocr():
+        try:
+            ocr_candidates = pdf_mod.pdf_candidates(raw, force_ocr=True)
+        except pdf_mod.PdfError as exc:
+            raise ParseError(str(exc)) from exc
+        for text, _engine in ocr_candidates:
+            words = wordlist.parse_glossary_text(text)
+            if not words:
+                words = wordlist.parse_lines(text.splitlines())
+            if len(words) > len(best):
+                best = words
+        candidates.extend(ocr_candidates)
     if not best:
         engines = "/".join(e for _, e in candidates) or "无"
         raise ParseError(

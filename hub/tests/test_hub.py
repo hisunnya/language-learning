@@ -281,12 +281,21 @@ class TestPalettePicker(unittest.TestCase):
 class TestProjectLinks(unittest.TestCase):
     """三个项目的入口都要在。"""
 
-    def test_three_projects_present(self):
-        for key in ("lexica", "topics", "ham"):
+    def test_homepage_hides_explanatory_notes(self):
+        self.assertNotIn('<section class="notes">', HTML)
+
+    def test_project_entry_buttons_are_large(self):
+        m = re.search(r"\.btn\s*\{(.*?)\n\}", CSS, re.S)
+        self.assertIsNotNone(m)
+        self.assertIn("min-height: 64px", m.group(1))
+        self.assertIn("font-size: 17px", m.group(1))
+
+    def test_four_projects_present(self):
+        for key in ("lexica", "topics", "ham", "chemistry"):
             self.assertIn('data-project-link="%s"' % key, HTML)
 
-    def test_config_has_all_three(self):
-        for key in ("lexica", "topics", "ham"):
+    def test_config_has_all_four(self):
+        for key in ("lexica", "topics", "ham", "chemistry"):
             self.assertRegex(CONFIG, r"%s\s*:" % key,
                              "config.js 里少了 %s 的地址" % key)
 
@@ -304,11 +313,13 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("server_name __LINGUA_SERVER_NAME__;", NGINX)
         self.assertIn("root /var/www/lingua-grove;", NGINX)
 
-    def test_two_static_apps_are_mounted_under_the_hub(self):
+    def test_static_apps_are_mounted_under_the_hub(self):
         self.assertIn("location ^~ /topics/", NGINX)
         self.assertIn("alias /var/www/topic-app/;", NGINX)
         self.assertIn("location ^~ /ham/", NGINX)
         self.assertIn("alias /var/www/ham-exam/;", NGINX)
+        self.assertIn("location ^~ /chemistry/", NGINX)
+        self.assertIn("alias /var/www/chemistry/;", NGINX)
 
     def test_shared_module_header_assets_have_a_common_url(self):
         self.assertIn("location ^~ /shared/", NGINX)
