@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sqlite3
@@ -147,37 +148,47 @@ class Database:
         rows = self.query(sql, args)
         return rows[0] if rows else None
 
-    def execute(self, sql: str, args: Iterable[Any] = ()) -> sqlite3.Cursor:
+    @contextlib.contextmanager
+    def _tx(self):
+        """加锁的写事务：成功提交，失败回滚。
+
+        不回滚的话，半截写入会留在打开的事务里，被之后任意请求的 commit 一并提交。
+        """
         with self._lock:
-            cur = self._conn.execute(sql, tuple(args))
+            try:
+                yield self._conn
+            except BaseException:
+                self._conn.rollback()
+                raise
             self._conn.commit()
-            return cur
+
+    def execute(self, sql: str, args: Iterable[Any] = ()) -> sqlite3.Cursor:
+        with self._tx() as conn:
+            return conn.execute(sql, tuple(args))
 
     def executemany(self, sql: str, rows: Iterable[Iterable[Any]]) -> None:
-        with self._lock:
-            self._conn.executemany(sql, [tuple(r) for r in rows])
-            self._conn.commit()
+        with self._tx() as conn:
+            conn.executemany(sql, [tuple(r) for r in rows])
 
     # ---------------- materials ----------------
 
     def insert_material(self, name: str, filename: str, fmt: str, size: int,
                         note: str, words: list[dict]) -> int:
         ts = now_iso()
-        with self._lock:
-            cur = self._conn.execute(
+        with self._tx() as conn:
+            cur = conn.execute(
                 "INSERT INTO materials(name, filename, fmt, size, note, "
                 "word_count, unit_count, created_at) VALUES (?,?,?,?,?,?,?,?)",
                 (name, filename, fmt, size, note, len(words),
                  len({w['unit'] for w in words}), ts),
             )
             mid = cur.lastrowid
-            self._conn.executemany(
+            conn.executemany(
                 "INSERT INTO material_words(material_id, unit, en, cn, ipa, pos, ord) "
                 "VALUES (?,?,?,?,?,?,?)",
                 [(mid, w["unit"], w["en"], w["cn"], w.get("ipa", ""),
                   w.get("pos", ""), i) for i, w in enumerate(words)],
             )
-            self._conn.commit()
         return mid
 
     def list_materials(self) -> list[dict]:
@@ -197,18 +208,17 @@ class Database:
     def delete_material(self, mid: int) -> bool:
         if not self.get_material(mid):
             return False
-        with self._lock:
-            self._conn.execute("DELETE FROM material_words WHERE material_id=?", (mid,))
-            self._conn.execute("DELETE FROM materials WHERE id=?", (mid,))
-            self._conn.commit()
+        with self._tx() as conn:
+            conn.execute("DELETE FROM material_words WHERE material_id=?", (mid,))
+            conn.execute("DELETE FROM materials WHERE id=?", (mid,))
         return True
 
     # ---------------- banks ----------------
 
     def insert_bank(self, meta: dict, words: list[dict]) -> int:
         ts = now_iso()
-        with self._lock:
-            cur = self._conn.execute(
+        with self._tx() as conn:
+            cur = conn.execute(
                 "INSERT INTO banks(title, level1, level2, level3, level4, source, "
                 "material_id, unit_mode, unit_from, unit_to, pairs_per_level, "
                 "word_count, unit_count, created_at) "
@@ -221,13 +231,12 @@ class Database:
                  len({w["unit"] for w in words}), ts),
             )
             bid = cur.lastrowid
-            self._conn.executemany(
+            conn.executemany(
                 "INSERT INTO bank_words(bank_id, unit, en, cn, ipa, pos, ord) "
                 "VALUES (?,?,?,?,?,?,?)",
                 [(bid, w["unit"], w["en"], w["cn"], w.get("ipa", ""),
                   w.get("pos", ""), i) for i, w in enumerate(words)],
             )
-            self._conn.commit()
         return bid
 
     def list_banks(self) -> list[dict]:
@@ -247,10 +256,9 @@ class Database:
     def delete_bank(self, bid: int) -> bool:
         if not self.get_bank(bid):
             return False
-        with self._lock:
-            self._conn.execute("DELETE FROM bank_words WHERE bank_id=?", (bid,))
-            self._conn.execute("DELETE FROM banks WHERE id=?", (bid,))
-            self._conn.commit()
+        with self._tx() as conn:
+            conn.execute("DELETE FROM bank_words WHERE bank_id=?", (bid,))
+            conn.execute("DELETE FROM banks WHERE id=?", (bid,))
         return True
 
     # ---------------- scores ----------------
@@ -260,8 +268,8 @@ class Database:
         detail = rec.get("detail")
         if not isinstance(detail, str):
             detail = json.dumps(detail or [], ensure_ascii=False)
-        with self._lock:
-            cur = self._conn.execute(
+        with self._tx() as conn:
+            cur = conn.execute(
                 "INSERT INTO scores(bank_id, bank_title, device, nickname, mode, "
                 "score, matched, total_pairs, wrong, best_combo, duration, "
                 "level_count, detail, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -273,7 +281,6 @@ class Database:
                  int(rec.get("duration", 0)), int(rec.get("level_count", 0)),
                  detail, ts),
             )
-            self._conn.commit()
         return int(cur.lastrowid)
 
     def list_scores(self, limit: int = 200, bank_id: int | None = None) -> list[dict]:

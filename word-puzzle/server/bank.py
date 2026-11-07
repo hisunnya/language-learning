@@ -39,6 +39,16 @@ MIN_PAIRS_PER_LEVEL = 4
 MAX_PAIRS_PER_LEVEL_LIMIT = 40
 
 
+def _to_int(value, default: int) -> int:
+    """前端传来的单元号可能是任意输入，转不成整数就按「单元区间不合法」处理。"""
+    if value in (None, ""):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise BankError("单元区间不合法") from None
+
+
 class BankError(Exception):
     """生成题库失败，message 直接展示给用户。"""
 
@@ -64,8 +74,8 @@ def resolve_levels(payload: dict) -> dict[str, str]:
     if names["level4"] in UNIT_MODE_LABELS:
         mode = str(payload.get("unit_mode") or "all")
         if mode == "range":
-            lo = int(payload.get("unit_from") or 1)
-            hi = int(payload.get("unit_to") or 0)
+            lo = _to_int(payload.get("unit_from"), 1)
+            hi = _to_int(payload.get("unit_to"), 0)
             names["level4"] = (f"第{lo}至第{hi}单元" if hi >= lo
                                else "第 N 至第 M 单元")
         else:
@@ -106,8 +116,8 @@ def apply_unit_mode(units: list[dict], mode: str,
                     unit_from: int = 0, unit_to: int = 0) -> list[dict]:
     if mode == "range":
         total = len(units)
-        lo = max(1, int(unit_from or 1))
-        hi = int(unit_to or total)
+        lo = max(1, _to_int(unit_from, 1))
+        hi = _to_int(unit_to, total) or total
         hi = min(hi, total)
         if lo > hi:
             raise BankError("单元区间不合法")

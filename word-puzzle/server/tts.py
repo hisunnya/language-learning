@@ -30,6 +30,39 @@ _espeak_works = False
 _last_error = ""
 
 
+MAX_WORD_LENGTH = 80
+MAX_CACHE_FILES = int(os.environ.get("WP_AUDIO_CACHE_MAX", "5000"))
+
+
+def is_valid_word(word: str) -> bool:
+    """可以交给 TTS 子进程的词：不能以 ``-`` 开头（会被当成命令行选项），也不能含控制字符。
+
+    词库里有 ``( real ) estate agent`` 这样以括号开头的词，所以不能要求首字符是字母数字；
+    子进程另外用 ``--text=`` 和 ``--`` 隔开参数，这里只是第二道防线。
+    """
+    if not word or len(word) > MAX_WORD_LENGTH:
+        return False
+    if word[0] == "-":
+        return False
+    return not any(ord(ch) < 32 or ord(ch) == 127 for ch in word)
+
+
+def _prune_cache() -> None:
+    """缓存文件超过上限时删掉最旧的一成，避免被不同单词刷满磁盘。"""
+    try:
+        files = [e for e in os.scandir(AUDIO_DIR) if e.is_file()]
+        if len(files) <= MAX_CACHE_FILES:
+            return
+        files.sort(key=lambda e: e.stat().st_mtime)
+        for entry in files[:max(1, len(files) // 10)]:
+            try:
+                os.unlink(entry.path)
+            except OSError:
+                pass
+    except OSError:
+        pass
+
+
 class SynthesisError(RuntimeError):
     """某个词无法使用当前选定的合成器生成音频。"""
 
@@ -174,7 +207,7 @@ def _synth_edge(word: str, exe: str) -> bytes | None:
     os.unlink(temp_name)
     try:
         proc = subprocess.run(
-            [exe, "--voice", voice(), "--text", word,
+            [exe, "--voice", voice(), f"--text={word}",
              "--write-media", temp_name, "--no-progress"],
             capture_output=True, timeout=30,
         )
@@ -185,6 +218,7 @@ def _synth_edge(word: str, exe: str) -> bytes | None:
             _edge_retry_after = time.monotonic() + 60
             return None
         os.replace(temp_name, target)
+        _prune_cache()
         return target.read_bytes()
     except (OSError, subprocess.SubprocessError) as exc:
         _last_error = str(exc)
@@ -208,12 +242,25 @@ def _synth_espeak(word: str, exe: str | None = None) -> bytes | None:
     if target.exists() and target.stat().st_size > 44:
         return target.read_bytes()
 
+    # 先写临时文件再原子替换：并发请求不会读到写了一半的 WAV，失败也不留残片。
+    fd, temp_name = tempfile.mkstemp(prefix="wp-tts-", suffix=".wav", dir=AUDIO_DIR)
+    os.close(fd)
+    temp = Path(temp_name)
     try:
-        proc = _run_espeak(
-            [exe, "-v", FALLBACK_VOICE, "--stdout", "-w", str(target), word],
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
+        try:
+            proc = _run_espeak(
+                [exe, "-v", FALLBACK_VOICE, "--stdout", "-w", temp_name, "--", word],
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if proc.returncode == 0 and temp.exists() and temp.stat().st_size > 44:
+            os.replace(temp_name, target)
+            _prune_cache()
+    finally:
+        try:
+            os.unlink(temp_name)
+        except FileNotFoundError:
+            pass
     if proc.returncode != 0 or not target.exists():
         # espeak-ng 存在但跑不起来（缺库 / 缺 espeak-ng-data）——记下来，
         # 让 /api/meta 能报出真实原因，别让前端以为只是「没装」。
@@ -232,7 +279,7 @@ def _synth_espeak(word: str, exe: str | None = None) -> bytes | None:
 def synth(word: str) -> bytes | None:
     """合成单词音频；已安装 Edge 时不逐词切换音色。"""
     word = (word or "").strip()
-    if not word:
+    if not is_valid_word(word):
         return None
     edge = find_edge_tts()
     if edge:
@@ -245,6 +292,9 @@ def synth_many(words: list[str], workers: int = 4) -> dict[str, bytes]:
     unique = list(dict.fromkeys(word.strip() for word in words if word.strip()))
     if not unique:
         return {}
+    bad = [word for word in unique if not is_valid_word(word)]
+    if bad:
+        raise SynthesisError(f"这些词无法合成语音（{', '.join(bad[:5])}）：不能以 - 开头")
 
     edge = find_edge_tts()
     if edge:

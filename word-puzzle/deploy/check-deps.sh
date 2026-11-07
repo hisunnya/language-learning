@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Check and install all Ubuntu packages needed by the app and its full feature set.
+# Check and install all Debian/Ubuntu packages needed by the app and its full feature set.
 set -euo pipefail
 
 PACKAGES=(
   python3
   python3-venv
+  rsync
   nginx
   systemd
   passwd

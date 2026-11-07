@@ -24,6 +24,8 @@ from xml.etree import ElementTree
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 
+MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
+
 class DocxError(Exception):
     """docx 解析失败。"""
 
@@ -85,6 +87,10 @@ def docx_to_lines(data: bytes) -> list[str]:
                 n.startswith("word/") for n in names):
             raise DocxError("Word 文件里找不到正文，可能已被加密")
         raise DocxError("Word 文件结构异常")
+
+    # 防 zip 炸弹：压缩包本身受上传上限约束，但解压后的正文可以大得多。
+    if zf.getinfo("word/document.xml").file_size > MAX_DOCUMENT_BYTES:
+        raise DocxError("Word 正文过大（解压后超过 20MB），请拆分后再上传")
 
     try:
         raw = zf.read("word/document.xml")

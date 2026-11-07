@@ -45,8 +45,9 @@ if command -v rsync >/dev/null 2>&1; then
     --exclude 'var/' --exclude '.git/' --exclude '__pycache__/' \
     "$SRC_DIR"/ "$INSTALL_DIR"/
 else
-  cp -a "$SRC_DIR"/. "$INSTALL_DIR"/
-  rm -rf "$INSTALL_DIR/.git" "$INSTALL_DIR/var"
+  # 没有 rsync 时的兜底：逐项拷贝，跳过 var/（离线页和音频缓存）和 .git。
+  find "$SRC_DIR" -mindepth 1 -maxdepth 1 ! -name var ! -name .git \
+    -exec cp -a {} "$INSTALL_DIR"/ \;
 fi
 
 say "准备数据目录 $DATA_DIR"
@@ -77,7 +78,8 @@ else
 fi
 
 say "安装 systemd 服务"
-sed "s|/var/lib/word-puzzle|$DATA_DIR|g" \
+sed -e "s|/var/lib/word-puzzle|$DATA_DIR|g" \
+    -e "s|^Environment=WP_PORT=.*|Environment=WP_PORT=$PORT|" \
     "$INSTALL_DIR/deploy/systemd/word-puzzle.service" \
     > /etc/systemd/system/$SITE_NAME.service
 systemctl daemon-reload

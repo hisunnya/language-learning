@@ -11,11 +11,13 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import mimetypes
 import os
 import re
 import sys
+import threading
 import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -77,6 +79,26 @@ def parse_multipart(body: bytes, content_type: str) -> dict:
     return fields
 
 
+# PDF/OCR 解析和离线页生成很吃 CPU 和内存：同时最多处理这么多个，其余直接 503。
+HEAVY_JOBS = threading.BoundedSemaphore(int(os.environ.get("WP_HEAVY_JOBS", "2")))
+
+
+def int_param(value, name: str, default: int | None = None,
+              low: int | None = None, high: int | None = None) -> int | None:
+    """解析整数参数；非法输入返回 400，而不是让异常变成 500。"""
+    if value in (None, ""):
+        return default
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        raise HttpError(400, f"参数 {name} 需要是整数") from None
+    if low is not None and number < low:
+        raise HttpError(400, f"参数 {name} 不能小于 {low}")
+    if high is not None:
+        number = min(number, high)
+    return number
+
+
 def json_bytes(obj) -> bytes:
     return json.dumps(obj, ensure_ascii=False).encode("utf-8")
 
@@ -87,6 +109,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "WordPuzzle/2.0"
     protocol_version = "HTTP/1.1"
     db: Database = None            # type: ignore[assignment]
+    _body_read = False
 
     # ---------------- 基础响应 ----------------
 
@@ -97,10 +120,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send(self, status: int, body: bytes, ctype: str,
               extra: dict | None = None) -> None:
+        self._close_if_body_unread()
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("X-Content-Type-Options", "nosniff")
+        if self.close_connection:
+            self.send_header("Connection", "close")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -114,12 +140,18 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"ok": False, "error": message}, status=status)
 
     def read_body(self) -> bytes:
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            raise HttpError(400, "Content-Length 不合法") from None
         if length <= 0:
+            self._body_read = True
             return b""
         if length > 50 * 1024 * 1024:
             raise HttpError(413, "请求体过大（上限 50MB）")
-        return self.rfile.read(length)
+        data = self.rfile.read(length)
+        self._body_read = True
+        return data
 
     def read_json(self) -> dict:
         raw = self.read_body()
@@ -147,20 +179,60 @@ class Handler(BaseHTTPRequestHandler):
     def do_DELETE(self):   # noqa: N802
         self._dispatch("DELETE")
 
+    @contextlib.contextmanager
+    def _heavy(self):
+        """限制同时进行的重活（PDF/OCR、离线页生成），超出就让客户端稍后再试。"""
+        if not HEAVY_JOBS.acquire(blocking=False):
+            raise HttpError(503, "服务器正忙，请稍后再试")
+        try:
+            yield
+        finally:
+            HEAVY_JOBS.release()
+
+    def _has_unread_body(self) -> bool:
+        if self._body_read:
+            return False
+        if self.headers.get("Transfer-Encoding"):
+            return True
+        return (self.headers.get("Content-Length") or "0").strip() not in ("", "0")
+
+    def _same_origin(self) -> bool:
+        """跨站伪造防护：浏览器发来的写请求，Origin 必须和 Host 同源。
+
+        curl、脚本等没有 Origin 头的请求照常放行。
+        """
+        origin = self.headers.get("Origin")
+        if not origin:
+            return True
+        host = (self.headers.get("X-Forwarded-Host")
+                or self.headers.get("Host", "")).split(",", 1)[0].strip()
+        return urlparse(origin).netloc == host
+
     def _dispatch(self, method: str) -> None:
+        self._body_read = False
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
         query = {k: v[0] for k, v in parse_qs(parsed.query).items()}
         try:
+            if method != "GET" and not self._same_origin():
+                raise HttpError(403, "跨站请求被拒绝")
             if path.startswith("/api/"):
                 self.handle_api(method, path, query)
             else:
                 self.handle_static(path)
         except HttpError as exc:
+            self._close_if_body_unread()
             self.send_error_json(exc.status, exc.message)
         except Exception as exc:  # pragma: no cover - 兜底
             traceback.print_exc()
+            self._close_if_body_unread()
             self.send_error_json(500, f"服务器内部错误：{exc}")
+
+    def _close_if_body_unread(self) -> None:
+        """出错时没读完请求体，就必须关连接：残留字节会被当成下一个请求，
+        而 nginx 会复用到后端的长连接，污染别人的请求。"""
+        if self._has_unread_body():
+            self.close_connection = True
 
     # ---------------- 静态文件 ----------------
 
@@ -229,7 +301,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True, "materials": db.list_materials()})
                 return
             if method == "POST":
-                self._upload_material()
+                with self._heavy():
+                    self._upload_material()
                 return
 
         m = re.fullmatch(r"/api/materials/(\d+)", path)
@@ -275,7 +348,8 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"/api/banks/(\d+)/offline", path)
         if m and method == "POST":
             self.read_json()
-            self._make_offline(int(m.group(1)))
+            with self._heavy():
+                self._make_offline(int(m.group(1)))
             return
 
         if path == "/api/offline" and method == "GET":
@@ -290,7 +364,7 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 发音音频（神经语音 MP3 / 本地 eSpeak WAV） ----
         if path.startswith("/api/audio/") and method == "GET":
             word = unquote(path[len("/api/audio/"):])
-            if not word or len(word) > 80:
+            if not tts.is_valid_word(word):
                 raise HttpError(400, "单词不合法")
             data = tts.synth(word)
             if not data:
@@ -302,10 +376,9 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 成绩 ----
         if path == "/api/scores":
             if method == "GET":
-                limit = min(int(query.get("limit", 100) or 100), 500)
-                bank_id = query.get("bank_id")
-                scores = db.list_scores(limit=limit,
-                                        bank_id=int(bank_id) if bank_id else None)
+                limit = int_param(query.get("limit"), "limit", 100, 1, 500)
+                bank_id = int_param(query.get("bank_id"), "bank_id")
+                scores = db.list_scores(limit=limit, bank_id=bank_id)
                 self.send_json({"ok": True, "scores": scores,
                                 "stats": db.score_stats()})
                 return
