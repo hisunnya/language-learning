@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把仓库拷到服务器后运行（服务器上不 git pull）：sudo bash deploy-all-20261107_221332.sh
+# 把仓库拷到服务器后运行（服务器上不 git pull）：sudo bash deploy-all-20261107_221426.sh
 # 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
 set -euo pipefail
 
