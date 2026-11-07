@@ -71,18 +71,28 @@ systemctl restart "$SITE_NAME"
 sleep 1
 systemctl --no-pager --lines=5 status "$SITE_NAME" || true
 
-say "安装 nginx 站点配置"
-if [ -f /etc/nginx/sites-available/$SITE_NAME.conf ]; then
-  cp /etc/nginx/sites-available/$SITE_NAME.conf "/etc/nginx/sites-available/$SITE_NAME.conf.bak.$(date +%s)"
-fi
-sed -e "s|/srv/word-puzzle|$INSTALL_DIR|g" \
-    -e "s|127.0.0.1:8765|127.0.0.1:$PORT|g" \
-  -e "s|word-puzzle.example.com|$SERVER_NAME|g" \
+if [[ "${WP_SKIP_NGINX:-0}" == "1" ]]; then
+  say "跳过独立 nginx 站点（由整站入口统一配置）"
+else
+  say "安装 nginx conf.d 配置"
+  CONF_DIR=/etc/nginx/conf.d
+  CONF_FILE="$CONF_DIR/$SITE_NAME.conf"
+  LEGACY_LINK="/etc/nginx/sites-enabled/$SITE_NAME.conf"
+  install -d "$CONF_DIR"
+  if [ -f "$CONF_FILE" ]; then
+    cp "$CONF_FILE" "$CONF_FILE.bak.$(date +%s)"
+  fi
+  sed -e "s|/srv/word-puzzle|$INSTALL_DIR|g" \
+      -e "s|127.0.0.1:8765|127.0.0.1:$PORT|g" \
+      -e "s|word-puzzle.example.com|$SERVER_NAME|g" \
     "$INSTALL_DIR/deploy/nginx/word-puzzle.conf" \
-    > "/etc/nginx/sites-available/$SITE_NAME.conf"
-ln -sf "/etc/nginx/sites-available/$SITE_NAME.conf" "/etc/nginx/sites-enabled/$SITE_NAME.conf"
-nginx -t
-systemctl reload nginx
+      > "$CONF_FILE"
+  if [[ -L "$LEGACY_LINK" ]]; then
+    rm "$LEGACY_LINK"
+  fi
+  nginx -t
+  systemctl reload nginx
+fi
 
 cat <<EOF
 
@@ -90,7 +100,7 @@ cat <<EOF
 
   * 后端：127.0.0.1:$PORT   （systemd: $SITE_NAME）
   * 数据库：$DATA_DIR/app.db
-  * 站点：http://$SERVER_NAME/
+  * nginx：$([[ "${WP_SKIP_NGINX:-0}" == "1" ]] && echo "交由整站入口配置" || echo "http://$SERVER_NAME/")
 
   能力自检：
     PDF 文本抽取 : $(command -v pdftotext >/dev/null 2>&1 && echo "已启用 (poppler)" || echo "未安装（用内置解析器）")
