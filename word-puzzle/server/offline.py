@@ -188,10 +188,18 @@ def build_offline_html(bank: dict, groups: list[dict],
         core=_read(CORE_FILE),
         ui=_read(UI_FILE),
         adapter=_read(ADAPTER_FILE),
-        data=json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+        data=_json_for_script(data),
         levels=len(levels),
     )
     return build_filename(bank, when), html
+
+
+def _json_for_script(data) -> str:
+    """JSON 放进 <script> 前要转义，否则词表里的 ``</script>`` 会提前结束脚本块。"""
+    text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    return (text.replace("&", "\\u0026").replace("<", "\\u003c")
+            .replace(">", "\\u003e").replace("\u2028", "\\u2028")
+            .replace("\u2029", "\\u2029"))
 
 
 def _escape(text: str) -> str:
