@@ -147,14 +147,16 @@
   }
 
   function speak(en, slug) {
-    var key = slug || slugify(en);
-    if (AUDIO[key]) {
+    var key = String(en || '').toLowerCase();
+    var legacyKey = slug || slugify(en);
+    var embedded = AUDIO[key] || AUDIO[legacyKey];
+    if (embedded) {
       try {
         if (!audioCache[key]) {
-          var a = new Audio(AUDIO[key]);
+          var a = new Audio(embedded);
           a.preload = 'auto';
           a.addEventListener('error', function () {
-            audioCache[key] = null; fallbackSpeak(en);
+            audioCache[key] = null; toast('内嵌单词音频无法播放');
           });
           audioCache[key] = a;
         }
@@ -162,7 +164,7 @@
         if (au) {
           au.pause(); au.currentTime = 0;
           var pr = au.play();
-          if (pr && pr.catch) pr.catch(function () { fallbackSpeak(en); });
+          if (pr && pr.catch) pr.catch(function () { toast('内嵌单词音频无法播放'); });
           return true;
         }
       } catch (e) { }
@@ -174,7 +176,7 @@
           var sa = new Audio(serverAudioBase + encodeURIComponent(en));
           sa.preload = 'auto';
           sa.addEventListener('error', function () {
-            audioCache[key] = null; fallbackSpeak(en);
+            audioCache[key] = null; toast('服务器语音暂时不可用，请稍后重试');
           });
           audioCache[key] = sa;
         }
@@ -182,11 +184,12 @@
         if (sau) {
           sau.pause(); sau.currentTime = 0;
           var spr = sau.play();
-          if (spr && spr.catch) spr.catch(function () { fallbackSpeak(en); });
+          if (spr && spr.catch) spr.catch(function () { toast('服务器语音暂时不可用，请稍后重试'); });
           return true;
         }
       } catch (e) { }
     }
+    if (serverAudioBase || AUDIO[key] || AUDIO[legacyKey]) return false;
     return fallbackSpeak(en);
   }
 
@@ -345,7 +348,7 @@
         '<button class="btn ghost" id="ov-list">查看全部词表</button>';
 
       if (cfg.backHref) {
-        html += '<button class="btn ghost" id="ov-back">返回</button>';
+        html += '<button class="btn ghost" id="ov-back">返回网站主页</button>';
       }
       html += '</div>';
 
@@ -502,6 +505,7 @@
       sfx.win();
       var self = this;
       var hasNext = evt.hasNext;
+      var homeLabel = self.cfg.backHref ? '返回网站主页' : '回到选关';
 
       var html = '<h2>第 ' + (st.lv + 1) + ' 关 通关！</h2>' +
         '<div class="big">' + evt.score + '</div>' +
@@ -517,7 +521,7 @@
       }
       html += '<div style="display:flex;gap:8px;margin-top:8px">' +
         '<button class="btn ghost" id="ov-replay">重玩本关</button>' +
-        '<button class="btn ghost" id="ov-home">回到首页</button></div>';
+        '<button class="btn ghost" id="ov-home">' + homeLabel + '</button></div>';
       showPanel(html);
 
       $('ov-next').onclick = function () {
@@ -544,12 +548,13 @@
       this.stopTimer();
       sfx.lose();
       var self = this;
+      var homeLabel = self.cfg.backHref ? '返回网站主页' : '回到选关';
       var html = '<h2>时间到！</h2><div class="big">' + evt.score + '</div>' +
         '<div class="kv"><span>本关配对</span><b>' + st.matched + ' / ' + st.total_pairs + '</b></div>' +
         '<div class="kv"><span>答错次数</span><b>' + st.wrong + '</b></div>' +
         '<p>再试一次，把剩下的词都消掉！</p>' +
         '<button class="btn gold" id="ov-retry" style="margin-top:10px">重玩本关</button>' +
-        '<div style="margin-top:8px"><button class="btn ghost" id="ov-home">回到首页</button></div>';
+        '<div style="margin-top:8px"><button class="btn ghost" id="ov-home">' + homeLabel + '</button></div>';
       showPanel(html);
       $('ov-retry').onclick = function () { hidePanel(); g.replay(); };
       $('ov-home').onclick = function () {

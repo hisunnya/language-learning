@@ -332,8 +332,10 @@ This is a product requirement, not a preference.
   `phonetic` column** — it holds British transcriptions.
 - **Spoken audio**: prefer Edge Neural TTS `en-US-AriaNeural` for natural
   American female speech. Only the English word requested for playback is sent
-  to the online voice service; generated audio is cached. On network or install
-  failure, fall back to local espeak-ng `-v en-us+f3`.
+  to the online voice service during play; generated audio is cached. When
+  building an offline page, all English words in the selected bank are sent for
+  synthesis and embedded in the HTML. On network or install failure, use local
+  espeak-ng `-v en-us+f3` consistently for the whole offline page.
 - The browser TTS fallback must pick an `en-US` locale and prefer a
   female-named local voice.
 

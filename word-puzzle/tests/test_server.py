@@ -17,6 +17,7 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -26,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from server import bank as bank_mod          # noqa: E402
-from server import hierarchy, materials, offline  # noqa: E402
+from server import hierarchy, materials, offline, tts  # noqa: E402
 from server.db import Database               # noqa: E402
 
 
@@ -109,12 +110,24 @@ class TestGameplayCopy(unittest.TestCase):
         self.assertNotIn("user-scalable=no", play)
         self.assertNotIn("touchmove", ui)
 
+    def test_embedded_audio_uses_full_word_keys(self):
+        source = self._ui()
+        self.assertIn("var key = String(en || '').toLowerCase();", source)
+        self.assertIn("var embedded = AUDIO[key] || AUDIO[legacyKey];", source)
+
     def test_online_result_home_button_returns_to_bank_home(self):
         ui = self._ui()
         play = (ROOT / "web" / "js" / "page-play.js").read_text(encoding="utf-8")
-        self.assertIn("backHref: API.path('/')", play)
+        self.assertIn("backHref: location.origin + '/'", play)
         self.assertEqual(ui.count("location.href = cfg.backHref"), 1)
         self.assertEqual(ui.count("location.href = self.cfg.backHref"), 2)
+
+    def test_online_game_has_site_home_link_and_does_not_mix_audio(self):
+        play = (ROOT / "web" / "play.html").read_text(encoding="utf-8")
+        self.assertIn('href="/" data-module-zh="返回网站主页"', play)
+        self.assertIn(
+            "if (serverAudioBase || AUDIO[key] || AUDIO[legacyKey]) return false;",
+            self._ui())
 
 
 class TestHierarchy(unittest.TestCase):
@@ -522,6 +535,15 @@ class TestOffline(TempDB):
         _, html = offline.build_offline_html(b, groups)
         self.assertIn("textbook", html)
 
+    def test_html_embeds_audio_as_data_uri(self):
+        b, groups = self.make()
+        _, html = offline.build_offline_html(b, groups, audio={
+            "take out": b"ID3one",
+            "take-out": b"ID3two",
+        }, back_href="https://school.example/")
+        self.assertEqual(html.count("data:audio/mpeg;base64,"), 2)
+        self.assertIn('"backHref":"https://school.example/"', html)
+
     def test_empty_bank_raises(self):
         b, _ = self.make()
         with self.assertRaises(ValueError):
@@ -616,7 +638,8 @@ class TestHTTP(unittest.TestCase):
             "level3": "上册", "level4": "all", "unit_mode": "all",
         })
         bid = res["bank"]["id"]
-        off = self.post(f"/api/banks/{bid}/offline")
+        with mock.patch.object(tts, "synth_many", return_value={"apple": b"ID3mock"}):
+            off = self.post(f"/api/banks/{bid}/offline")
         self.assertTrue(off["filename"].endswith(".html"))
         with urllib.request.urlopen(self.base + off["url"], timeout=10) as r:
             disposition = r.headers.get("Content-Disposition", "")
@@ -624,6 +647,8 @@ class TestHTTP(unittest.TestCase):
             self.assertIn("filename*=UTF-8''", disposition)
             html = r.read().decode()
         self.assertIn("var WP_DATA", html)
+        self.assertIn("data:audio/mpeg;base64,SUQzbW9jaw==", html)
+        self.assertIn('"backHref":"' + self.base + '/"', html)
 
     def test_offline_post_body_does_not_corrupt_keep_alive_connection(self):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
@@ -632,9 +657,10 @@ class TestHTTP(unittest.TestCase):
             banks = json.loads(connection.getresponse().read())["banks"]
             bank_id = banks[0]["id"]
 
-            connection.request("POST", f"/api/banks/{bank_id}/offline", body=b"{}",
-                               headers={"Content-Type": "application/json"})
-            generated = json.loads(connection.getresponse().read())
+            with mock.patch.object(tts, "synth_many", return_value={"apple": b"ID3mock"}):
+                connection.request("POST", f"/api/banks/{bank_id}/offline", body=b"{}",
+                                   headers={"Content-Type": "application/json"})
+                generated = json.loads(connection.getresponse().read())
 
             connection.request("GET", "/api/offline")
             files = json.loads(connection.getresponse().read())["files"]

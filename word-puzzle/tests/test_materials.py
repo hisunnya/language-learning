@@ -118,22 +118,37 @@ class TestTTS(unittest.TestCase):
         self.assertEqual(tts.content_type(b"RIFF....WAVE"), "audio/wav")
         self.assertEqual(tts.content_type(b"ID3...."), "audio/mpeg")
 
-    def test_synth_prefers_edge_then_falls_back(self):
-        with (mock.patch.object(tts, "find_edge_tts", return_value="edge-tts"),
-              mock.patch.object(tts, "_synth_edge", return_value=b"ID3 neural")
-              as edge,
-              mock.patch.object(tts, "_synth_espeak", return_value=b"RIFF local")
-              as espeak):
-            self.assertEqual(tts.synth("apple"), b"ID3 neural")
-            edge.assert_called_once()
-            espeak.assert_not_called()
-
+    def test_synth_does_not_mix_edge_with_espeak_on_failure(self):
         with (mock.patch.object(tts, "find_edge_tts", return_value="edge-tts"),
               mock.patch.object(tts, "_synth_edge", return_value=None),
               mock.patch.object(tts, "_synth_espeak", return_value=b"RIFF local")
               as espeak):
-            self.assertEqual(tts.synth("apple"), b"RIFF local")
-            espeak.assert_called_once()
+            self.assertIsNone(tts.synth("apple"))
+            espeak.assert_not_called()
+
+    def test_batch_synth_uses_one_engine_and_fails_without_mixing(self):
+        with (mock.patch.object(tts, "find_edge_tts", return_value="edge-tts"),
+              mock.patch.object(tts, "_synth_edge", side_effect=[b"ID3 a", b"ID3 b"]),
+              mock.patch.object(tts, "_synth_espeak") as espeak):
+            got = tts.synth_many(["apple", "banana", "apple"])
+            self.assertEqual(got, {"apple": b"ID3 a", "banana": b"ID3 b"})
+            espeak.assert_not_called()
+
+        with (mock.patch.object(tts, "find_edge_tts", return_value="edge-tts"),
+              mock.patch.object(tts, "_synth_edge", side_effect=[b"ID3 a", None]),
+              mock.patch.object(tts, "_synth_espeak") as espeak):
+            with self.assertRaises(tts.SynthesisError):
+                tts.synth_many(["apple", "banana"])
+            espeak.assert_not_called()
+
+    def test_batch_synth_uses_espeak_only_when_edge_is_absent(self):
+        with (mock.patch.object(tts, "find_edge_tts", return_value=None),
+              mock.patch.object(tts, "find_espeak", return_value="espeak-ng"),
+              mock.patch.object(tts, "_synth_espeak",
+                                side_effect=[b"RIFF a", b"RIFF b"]) as espeak):
+            got = tts.synth_many(["apple", "banana"])
+            self.assertEqual(got, {"apple": b"RIFF a", "banana": b"RIFF b"})
+            self.assertEqual(espeak.call_count, 2)
 
     @unittest.skipUnless(tts.find_espeak(), "没装 espeak-ng")
     def test_espeak_fallback_returns_wav(self):
