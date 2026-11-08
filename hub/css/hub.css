@@ -409,14 +409,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 64px;
-  padding: 16px 26px;
-  font-size: 17px;
+  min-height: 72px;
+  padding: 18px 28px;
+  font-size: 21px;
   font-weight: 700;
   border-radius: var(--radius-sm);
   transition: background var(--transition), color var(--transition), transform var(--transition);
 }
-.btn svg { width: 16px; height: 16px; }
+.btn svg { width: 20px; height: 20px; }
 .btn:hover { transform: translateX(2px); text-decoration: none; }
 
 .btn-primary { color: var(--accent-ink); background: var(--accent); }

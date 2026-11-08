@@ -287,8 +287,13 @@ class TestProjectLinks(unittest.TestCase):
     def test_project_entry_buttons_are_large(self):
         m = re.search(r"\.btn\s*\{(.*?)\n\}", CSS, re.S)
         self.assertIsNotNone(m)
-        self.assertIn("min-height: 64px", m.group(1))
-        self.assertIn("font-size: 17px", m.group(1))
+        self.assertIn("min-height: 72px", m.group(1))
+        self.assertIn("font-size: 21px", m.group(1))
+
+    def test_english_chemistry_and_physics_come_first(self):
+        order = re.findall(r'<article class="project" data-project="(\w+)"', HTML)
+        self.assertEqual(order[:3], ["lexica", "chemistry", "physics"])
+        self.assertEqual(sorted(order), sorted(["lexica", "topics", "ham", "chemistry", "physics"]))
 
     def test_five_projects_present(self):
         for key in ("lexica", "topics", "ham", "chemistry", "physics"):
