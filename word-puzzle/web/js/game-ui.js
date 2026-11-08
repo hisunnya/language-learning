@@ -314,6 +314,11 @@
       });
 
       window.addEventListener('resize', function () { self.layoutCols(); });
+      /* 页面切到后台（切标签页、锁屏）时暂停计时，回来再继续，不让玩家白白被扣时间 */
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) self.game.pause();
+        else if (self.game.resume()) self.render();
+      });
       self.showHome();
       self.render();
       return this;

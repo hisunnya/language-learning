@@ -45,7 +45,13 @@ function ok(value, note) {
 
 /* ---------- 加载 game-core.js ---------- */
 
-const sandbox = { console: console };
+/* 可控的时钟：核心用 Date.now() 算截止点，测试要能「快进」 */
+const clock = { now: 1700000000000 };
+class FakeDate extends Date {
+  static now() { return clock.now; }
+}
+
+const sandbox = { console: console, Date: FakeDate };
 sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
@@ -208,6 +214,136 @@ check('三种词全部配对后过关', () => {
   eq(game.state.matched, 3);
   eq(typesOf(events, 'levelClear').length, 1, '应当过关');
   eq(game.state.playing, false);
+});
+
+/* ---------- 重玩不能刷分 ---------- */
+
+/** 配对第 0..n-1 个词（中文先点） */
+function match(game, n) {
+  const c = cards(game);
+  for (let id = 0; id < n; id++) { game.pick(c.cn[id]); game.pick(c.en[id]); }
+}
+
+check('重玩本关会收回这一关里拿到的分', () => {
+  const { game } = newGame();
+  match(game, 2);
+  eq(game.state.score, 100 + 120, '先配对两个词');
+  game.replay();
+  eq(game.state.score, 0, '重玩后这一关的分应清零');
+  eq(game.state.matched, 0);
+});
+
+check('多次「拿分、重玩」不会累积分数', () => {
+  const { game } = newGame();
+  for (let i = 0; i < 5; i++) { match(game, 2); game.replay(); }
+  eq(game.state.score, 0);
+});
+
+check('重玩只收回本关的分，之前通关的分保留', () => {
+  const events = [];
+  const game = new WPGame.Game({
+    levels: [{ name: 'A', words: WORDS }, { name: 'B', words: WORDS }],
+    onEvent: (e) => events.push(e)
+  });
+  game.start(0);
+  match(game, 3);                      /* 通关第 1 关 */
+  const afterFirst = game.state.score;
+  ok(afterFirst > 0);
+  game.next();
+  match(game, 2);
+  game.replay();
+  eq(game.state.score, afterFirst, '应回到第 2 关开始时的分数');
+});
+
+check('时间到后重玩同样收回分数', () => {
+  const { game } = newGame();
+  match(game, 2);
+  clock.now += 200 * 1000;
+  game.tick();
+  eq(game.state.playing, false, '应当已经超时');
+  game.replay();
+  eq(game.state.score, 0);
+});
+
+/* ---------- 时长覆盖整局 ---------- */
+
+check('duration 覆盖所有关卡，不是只算最后一关', () => {
+  const game = new WPGame.Game({
+    levels: [{ name: 'A', words: WORDS }, { name: 'B', words: WORDS }], onEvent: () => {}
+  });
+  game.start(0);
+  clock.now += 40 * 1000;
+  match(game, 3);
+  game.next();
+  clock.now += 25 * 1000;
+  eq(game.report().duration, 65, '第 1 关 40 秒 + 第 2 关 25 秒');
+});
+
+check('重玩一关不会让 duration 归零', () => {
+  const { game } = newGame();
+  clock.now += 30 * 1000;
+  game.replay();
+  clock.now += 10 * 1000;
+  eq(game.report().duration, 40);
+});
+
+check('从头开始后 duration 重新计', () => {
+  const { game } = newGame();
+  clock.now += 50 * 1000;
+  game.restart();
+  clock.now += 5 * 1000;
+  eq(game.report().duration, 5);
+});
+
+/* ---------- 暂停：切到后台不扣时间 ---------- */
+
+check('暂停期间剩余时间冻结，恢复后接着走', () => {
+  const { game } = newGame();
+  clock.now += 20 * 1000;
+  game.tick();
+  const left = game.state.timeLeft;
+  ok(Math.abs(left - 100) < 0.01, '用掉 20 秒应剩 100 秒');
+  ok(game.pause(), '应当暂停成功');
+  clock.now += 90 * 1000;              /* 玩家切走 90 秒 */
+  eq(game.tick(), null, '暂停时 tick 不应推进');
+  ok(game.resume(), '应当恢复成功');
+  clock.now += 10 * 1000;
+  game.tick();
+  ok(Math.abs(game.state.timeLeft - 90) < 0.01, '恢复后只扣实际玩的 10 秒，实际 ' + game.state.timeLeft);
+  eq(game.state.playing, true, '不应因为切走而超时');
+});
+
+check('暂停时点牌无效', () => {
+  const { game, events } = newGame();
+  const c = cards(game);
+  game.pause();
+  eq(game.pick(c.cn[0]), null);
+  eq(typesOf(events, 'select').length, 0);
+  eq(game.state.sel, null);
+  game.resume();
+  game.pick(c.cn[0]);
+  eq(typesOf(events, 'select').length, 1, '恢复后可以点牌');
+});
+
+check('没在玩的时候暂停无效，重复暂停 / 恢复无副作用', () => {
+  const { game } = newGame();
+  ok(game.pause());
+  eq(game.pause(), false, '重复暂停');
+  ok(game.resume());
+  eq(game.resume(), false, '重复恢复');
+  const done = newGame().game;
+  match(done, 3);                      /* 已过关 */
+  eq(done.pause(), false, '已过关不能暂停');
+});
+
+check('每次配错都会记进 wrong_log', () => {
+  const { game } = newGame();
+  const c = cards(game);
+  game.pick(c.cn[0]); game.pick(c.en[1]);
+  const log = game.report().wrong_log;
+  eq(log.length, 1);
+  eq(log[0].en, 'banana');
+  eq(log[0].cn, '苹果');
 });
 
 /* ---------- 输出 ---------- */
