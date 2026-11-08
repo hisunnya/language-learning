@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import hashlib
+import random
 import re
 from typing import Any
 
@@ -180,8 +181,19 @@ def _resolve_duplicates(parts: list[dict], unit: str, max_pairs: int) -> list[di
     return resolved
 
 
+def _shuffled(items: list[dict], rng) -> list[dict]:
+    """Fisher-Yates 洗牌，只用 rng() 给出的 [0,1) 小数：和小程序的 bank.js 逐步一致，
+    测试里给两边同一串小数就能得到同一个结果。"""
+    out = list(items)
+    for i in range(len(out) - 1, 0, -1):
+        j = int(rng() * (i + 1))
+        out[i], out[j] = out[j], out[i]
+    return out
+
+
 def chunk_groups(groups: list[dict],
-                 max_pairs: int = MAX_PAIRS_PER_LEVEL) -> list[dict]:
+                 max_pairs: int = MAX_PAIRS_PER_LEVEL,
+                 rng=None) -> list[dict]:
     """把词量大的单元拆成多个关卡，并给不足的关卡补上复习词。
 
     切分
@@ -190,11 +202,16 @@ def chunk_groups(groups: list[dict],
 
     补齐
     ------
-    不足 max_pairs 的关卡，从**前面已经出现过的关卡**里取词补齐（相当于复习），
+    不足 max_pairs 的关卡，从**前面已经出现过的关卡**里**随机**取词补齐（相当于复习），
+    这样最后一关也正好是 max_pairs 个词；每次生成取到的复习词都不一样，
+    不会总是重复最前面那几个词。
     补进来的词在本关里不会和已有词重复——英文和中文都不重复，
     所以一关里不会出现两张一模一样的卡片（那会让配对变得含糊）。
     补过词的关卡名字后面会标上「含复习」。
+
+    rng 是返回 [0,1) 小数的函数，默认 ``random.random``；测试里可以传固定序列。
     """
+    rng = rng or random.random
     parts: list[dict] = []
     for group in groups:
         words = list(group.get("words") or [])
@@ -222,7 +239,9 @@ def chunk_groups(groups: list[dict],
         used_en = {w.get("en", "") for w in words}
         used_cn = {w.get("cn", "") for w in words}
         added = 0
-        for word in pool:
+        # 只有真的不够数才洗牌（并且只在这时消耗随机数）
+        candidates = _shuffled(pool, rng) if (pool and len(words) < max_pairs) else []
+        for word in candidates:
             if len(words) >= max_pairs:
                 break
             en = word.get("en", "")

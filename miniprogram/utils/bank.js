@@ -3,7 +3,8 @@
    ------------------------------------------------------------
    规则与网站版一致：
      1. 一个单元按 maxPairs 切开，多出来的部分叫「Unit N（1/3）」；
-     2. 不足 maxPairs 的关卡，从前面已经出现过的词里取词补齐（复习），
+     2. 不足 maxPairs 的关卡，从前面已经出现过的词里**随机**取词补齐（复习），
+        这样最后一关也正好是 maxPairs 个词，而且每次取到的复习词都不一样，
         补进来的词在本关里不会和已有词重复——英文和中文都不重复；
      3. 补过词的关卡名字后面标「含复习」。
    ============================================================ */
@@ -53,7 +54,21 @@ function resolveDuplicates(parts, unit, maxPairs) {
   return resolved;
 }
 
-function chunkGroups(groups, maxPairs) {
+/* Fisher-Yates 洗牌，只用 rng() 给出的 [0,1) 小数：和网站版 bank.py 逐步一致，
+   测试里给两边同一串小数就能得到同一个结果。 */
+function shuffled(items, rng) {
+  var out = items.slice();
+  for (var i = out.length - 1; i > 0; i--) {
+    var j = Math.floor(rng() * (i + 1));
+    var tmp = out[i];
+    out[i] = out[j];
+    out[j] = tmp;
+  }
+  return out;
+}
+
+function chunkGroups(groups, maxPairs, rng) {
+  rng = rng || Math.random;
   var parts = [];
 
   for (var g = 0; g < groups.length; g++) {
@@ -90,9 +105,11 @@ function chunkGroups(groups, maxPairs) {
     }
 
     var added = 0;
-    for (var k = 0; k < pool.length; k++) {
+    // 只有真的不够数才洗牌（并且只在这时消耗随机数）
+    var candidates = pool.length && part.words.length < maxPairs ? shuffled(pool, rng) : [];
+    for (var k = 0; k < candidates.length; k++) {
       if (part.words.length >= maxPairs) break;
-      var cand = pool[k];
+      var cand = candidates[k];
       if (usedEn[cand.en] || usedCn[cand.cn]) continue;
       part.words.push({ en: cand.en, cn: cand.cn, ipa: cand.ipa, pos: cand.pos });
       usedEn[cand.en] = 1;
@@ -113,7 +130,7 @@ function chunkGroups(groups, maxPairs) {
   return parts;
 }
 
-function buildLevels(book, unitIndex, maxPairs) {
+function buildLevels(book, unitIndex, maxPairs, rng) {
   var limit = maxPairs || MAX_PAIRS;
   if (limit < MIN_PAIRS || limit > MAX_PAIRS_LIMIT) limit = MAX_PAIRS;
 
@@ -125,7 +142,7 @@ function buildLevels(book, unitIndex, maxPairs) {
     groups = unit ? [unit] : [];
   }
 
-  var parts = chunkGroups(groups, limit);
+  var parts = chunkGroups(groups, limit, rng);
   return parts.map(function (part) {
     return { name: part.unit, words: part.words };
   });
