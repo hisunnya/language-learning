@@ -385,12 +385,14 @@ class TestBank(TempDB):
         chunks = bank_mod.chunk_groups([{"unit": "Unit 1", "words": words}],
                                        max_pairs=15)
         self.assertEqual([len(c["words"]) for c in chunks], [15, 15, 15])
-        # 最后一关的前 7 个是原词，后面 8 个是复习（来自前面的关卡）
+        # 最后一关的前 7 个是原词，后面 8 个是复习（随机取自前面的关卡）
         last = chunks[2]["words"]
         self.assertEqual([w["en"] for w in last[:7]],
                          ["w%d" % i for i in range(30, 37)])
-        self.assertEqual([w["en"] for w in last[7:]],
-                         ["w%d" % i for i in range(8)])
+        review = [w["en"] for w in last[7:]]
+        self.assertEqual(len(set(review)), 8, "复习词不能重复")
+        self.assertTrue(set(review) <= {"w%d" % i for i in range(30)},
+                        "复习词只能来自前面的关卡：" + str(review))
 
     def test_chunk_groups_never_repeats_a_card_in_one_level(self):
         words = [{"en": "w%d" % i, "cn": "词%d" % i, "ipa": ""} for i in range(37)]

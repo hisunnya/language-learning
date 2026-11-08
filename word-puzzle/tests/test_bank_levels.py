@@ -89,6 +89,53 @@ class TestRealCurriculum(unittest.TestCase):
                 db.close()
 
 
+class TestRandomReview(unittest.TestCase):
+    """最后一关不足一页时，用「随机重复」的复习词补满，而不是总用最前面那几个词。"""
+
+    UNIT = words(*[("w%d" % i, "词%d" % i) for i in range(37)])
+
+    def build(self, seed):
+        return bank_mod.chunk_groups([{"unit": "U", "words": [dict(w) for w in self.UNIT]}], 15,
+                                     rng=random.Random(seed).random)
+
+    def test_last_level_is_filled_to_a_full_page(self):
+        for seed in range(30):
+            parts = self.build(seed)
+            self.assertEqual([len(p["words"]) for p in parts], [15, 15, 15])
+            self.assertIn("含复习", parts[2]["unit"])
+            self.assertNotIn("含复习", parts[0]["unit"])
+
+    def test_review_words_come_from_earlier_levels_and_never_repeat_in_a_level(self):
+        earlier = {w["en"] for w in self.UNIT[:30]}
+        for seed in range(30):
+            last = self.build(seed)[2]["words"]
+            own, review = last[:7], last[7:]
+            self.assertEqual([w["en"] for w in own], ["w%d" % i for i in range(30, 37)])
+            self.assertTrue({w["en"] for w in review} <= earlier)
+            self.assertEqual(len({w["en"] for w in last}), 15)
+            self.assertEqual(len({w["cn"] for w in last}), 15)
+
+    def test_review_words_really_vary_and_are_not_always_the_first_ones(self):
+        seen, picks = set(), set()
+        for seed in range(60):
+            review = tuple(w["en"] for w in self.build(seed)[2]["words"][7:])
+            picks.add(frozenset(review))
+            seen.update(review)
+        self.assertGreater(len(picks), 30, "不同次生成应取到不同的复习词")
+        self.assertGreaterEqual(len(seen), 25, "补的词应分散在前面所有关卡里，而不是总重复最前面几个")
+
+    def test_default_rng_is_random_per_build(self):
+        builds = {tuple(w["en"] for w in bank_mod.chunk_groups(
+            [{"unit": "U", "words": [dict(w) for w in self.UNIT]}], 15)[2]["words"][7:]) for _ in range(20)}
+        self.assertGreater(len(builds), 10)
+
+    def test_a_level_that_is_already_full_consumes_no_randomness(self):
+        calls = []
+        unit = words(*[("w%d" % i, "词%d" % i) for i in range(30)])
+        bank_mod.chunk_groups([{"unit": "U", "words": unit}], 15, rng=lambda: calls.append(1) or 0.5)
+        self.assertEqual(calls, [], "没有短关时不应抽随机数（保证与小程序版逐步一致）")
+
+
 @unittest.skipUnless(NODE, "本机没有 node，跳过小程序切关一致性测试")
 class TestMiniprogramBankParity(unittest.TestCase):
     def test_same_levels_as_the_website_for_random_units(self):
@@ -102,19 +149,23 @@ class TestMiniprogramBankParity(unittest.TestCase):
                 chosen = rng.sample(pool, size)
                 groups.append({"unit": "Unit %d" % (u + 1), "words": words(*chosen)})
             cases.append({"groups": groups, "max": rng.choice([4, 6, 12, 12, 20])})
+        # 两边吃同一串随机小数：只要洗牌的调用方式有一点不同，结果就会对不上
+        stream = [rng.random() for _ in range(200000)]
         script = (
             "const bank=require(%s);const input=JSON.parse(require('fs').readFileSync(0,'utf8'));"
-            "const out=input.map(c=>bank.chunkGroups(c.groups.map(g=>({name:g.unit,words:g.words})),c.max)"
+            "let k=0;const rng=()=>input.stream[k++];"
+            "const out=input.cases.map(c=>bank.chunkGroups(c.groups.map(g=>({name:g.unit,words:g.words})),c.max,rng)"
             ".map(p=>({unit:p.unit,words:p.words.map(w=>[w.en,w.cn])})));"
             "process.stdout.write(JSON.stringify(out));" % json.dumps(str(MINI_BANK)))
-        proc = subprocess.run([NODE, "-e", script], input=json.dumps(cases), capture_output=True,
-                              text=True, timeout=60)
+        proc = subprocess.run([NODE, "-e", script], input=json.dumps({"cases": cases, "stream": stream}),
+                              capture_output=True, text=True, timeout=60)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         mini = json.loads(proc.stdout)
+        position = iter(stream)
         for case, got in zip(cases, mini):
             groups = [{"unit": g["unit"], "words": [dict(w) for w in g["words"]]} for g in case["groups"]]
             want = [{"unit": p["unit"], "words": [[w["en"], w["cn"]] for w in p["words"]]}
-                    for p in bank_mod.chunk_groups(groups, case["max"])]
+                    for p in bank_mod.chunk_groups(groups, case["max"], rng=lambda: next(position))]
             self.assertEqual(got, want)
 
 
