@@ -1,14 +1,43 @@
-<view class="page">
+<view class="page theme-{{theme}}">
   <view class="hero">
-    <view class="brand">
-      <view class="brand-mark">词</view>
-      <view class="brand-text">
-        <text class="brand-name">词境</text>
-        <text class="brand-sub">LEXICA</text>
+    <view class="hero-top">
+      <view class="brand">
+        <view class="brand-mark">词</view>
+        <view class="brand-text">
+          <text class="brand-name">{{t.brandName}}</text>
+          <text class="brand-sub">LEXICA</text>
+        </view>
+      </view>
+      <view class="controls">
+        <view
+          class="lang-btn"
+          hover-class="btn-pressed"
+          aria-role="button"
+          aria-label="{{t.langAria}}"
+          bindtap="onToggleLang"
+        >
+          <text class="{{lang === 'zh' ? 'on' : ''}}">中</text>
+          <text class="sep">/</text>
+          <text class="{{lang === 'en' ? 'on' : ''}}">EN</text>
+        </view>
+        <view class="swatches" aria-role="group" aria-label="{{t.paletteLabel}}">
+          <view
+            class="swatch-hit"
+            wx:for="{{palettes}}"
+            wx:key="key"
+            data-key="{{item.key}}"
+            aria-role="button"
+            aria-label="{{item.name}}"
+            bindtap="onPickTheme"
+          >
+            <view class="swatch {{item.on ? 'swatch-on' : ''}}" style="{{item.style}}"></view>
+          </view>
+        </view>
       </view>
     </view>
-    <text class="title">单词消消乐</text>
-    <text class="subtitle">{{stage}} · {{grade}} · 人教版 PEP</text>
+    <text class="palette-name">{{themeName}}</text>
+    <text class="title">{{t.title}}</text>
+    <text class="subtitle">{{t.subtitle}}</text>
   </view>
 
   <view class="tabs">
@@ -22,14 +51,14 @@
   </view>
 
   <view class="summary">
-    <text class="summary-text">共 {{totalWords}} 词 · 约 {{totalLevels}} 关</text>
-    <text class="summary-rule" bindtap="onShowRules">玩法</text>
+    <text class="summary-text">{{summaryText}}</text>
+    <text class="summary-rule" bindtap="onShowRules">{{t.rules}}</text>
   </view>
 
   <view class="start-card" hover-class="start-card-on" bindtap="onStartAll">
     <view class="start-left">
-      <text class="start-title">全部单元</text>
-      <text class="start-desc">按顺序把所有单元玩一遍</text>
+      <text class="start-title">{{t.startAll}}</text>
+      <text class="start-desc">{{t.startAllDesc}}</text>
     </view>
     <view class="start-arrow">→</view>
   </view>
@@ -44,10 +73,10 @@
       bindtap="onStartUnit"
     >
       <view class="unit-name">{{item.name}}</view>
-      <view class="unit-meta">{{item.count}} 词 · {{item.levels}} 关</view>
+      <view class="unit-meta">{{item.meta}}</view>
     </view>
   </view>
 
-  <text class="footnote">{{note}}</text>
-  <text class="footnote">课本内容版权归人民教育出版社所有，仅供个人学习使用。</text>
+  <text class="footnote">{{t.noteGrade}}</text>
+  <text class="footnote">{{t.copyright}}</text>
 </view>

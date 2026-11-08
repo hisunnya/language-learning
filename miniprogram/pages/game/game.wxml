@@ -1,16 +1,16 @@
-<view class="app">
+<view class="app theme-{{theme}}">
   <view class="hud">
     <view class="hud-row">
       <view class="stat">
-        <text class="k">时间</text>
+        <text class="k">{{t.hudTime}}</text>
         <text class="v {{timeWarn ? 'v-warn' : 'v-time'}}">{{timeLeft}}</text>
       </view>
       <view class="stat">
-        <text class="k">得分</text>
+        <text class="k">{{t.hudScore}}</text>
         <text class="v v-score">{{score}}</text>
       </view>
       <view class="stat">
-        <text class="k">最高连击</text>
+        <text class="k">{{t.hudBest}}</text>
         <text class="v">{{best}}</text>
       </view>
     </view>
@@ -18,7 +18,7 @@
       <view class="progress-i {{timeWarn ? 'progress-warn' : ''}}" style="width:{{timePct}}%"></view>
     </view>
     <view class="ptext">
-      <text class="ptext-lv">第 {{levelNo}}/{{levelTotal}} 关 · {{levelName}}</text>
+      <text class="ptext-lv">{{levelLine}}</text>
       <text>{{matched}}/{{total}}</text>
     </view>
   </view>
@@ -35,47 +35,47 @@
       <text class="tag">{{item.t === 'en' ? 'EN' : 'CN'}}</text>
       <text class="w">{{item.text}}</text>
       <text class="ipa" wx:if="{{item.ipa}}">{{item.ipa}}</text>
-      <text class="say" wx:if="{{item.t === 'en'}}">🔊</text>
+      <text class="say" wx:if="{{audioOn && item.t === 'en'}}">🔊</text>
     </view>
   </view>
 
   <view class="fx" wx:if="{{fxShow}}">{{fxText}}</view>
 
   <view class="bar">
-    <view class="btn btn-ghost bar-btn" hover-class="btn-pressed" bindtap="onShowRules">玩法</view>
-    <view class="btn btn-ghost bar-btn" hover-class="btn-pressed" bindtap="onReplay">重玩本关</view>
-    <view class="btn btn-warn bar-btn" hover-class="btn-pressed" bindtap="onRestartAll">从头开始</view>
+    <view class="btn btn-ghost bar-btn" hover-class="btn-pressed" bindtap="onShowRules">{{t.btnRules}}</view>
+    <view class="btn btn-ghost bar-btn" hover-class="btn-pressed" bindtap="onReplay">{{t.btnReplay}}</view>
+    <view class="btn btn-warn bar-btn" hover-class="btn-pressed" bindtap="onRestartAll">{{t.btnRestart}}</view>
   </view>
 </view>
 
-<view class="overlay" wx:if="{{overlay === 'clear'}}">
+<view class="overlay theme-{{theme}}" wx:if="{{overlay === 'clear'}}">
   <view class="panel">
-    <text class="panel-title">本关通过</text>
+    <text class="panel-title">{{t.clearTitle}}</text>
     <text class="panel-score">{{overlayScore}}</text>
     <view class="kv">
-      <text>剩余时间奖励</text>
+      <text>{{t.clearBonus}}</text>
       <text class="kv-b">+{{overlayBonus}}</text>
     </view>
     <view class="kv">
-      <text>下一关加时</text>
-      <text class="kv-b">+{{overlayNextBonus}} 秒</text>
+      <text>{{t.clearNext}}</text>
+      <text class="kv-b">{{overlayNextBonusText}}</text>
     </view>
     <view class="panel-actions">
-      <view class="btn btn-ghost" hover-class="btn-pressed" bindtap="onFinish">结束</view>
-      <view class="btn" hover-class="btn-pressed" bindtap="onNextLevel" wx:if="{{overlayHasNext}}">下一关</view>
-      <view class="btn" hover-class="btn-pressed" bindtap="onFinish" wx:else>看总成绩</view>
+      <view class="btn btn-ghost" hover-class="btn-pressed" bindtap="onFinish">{{t.btnFinish}}</view>
+      <view class="btn" hover-class="btn-pressed" bindtap="onNextLevel" wx:if="{{overlayHasNext}}">{{t.btnNextLevel}}</view>
+      <view class="btn" hover-class="btn-pressed" bindtap="onFinish" wx:else>{{t.btnTotal}}</view>
     </view>
   </view>
 </view>
 
-<view class="overlay" wx:if="{{overlay === 'over'}}">
+<view class="overlay theme-{{theme}}" wx:if="{{overlay === 'over'}}">
   <view class="panel">
-    <text class="panel-title">时间到</text>
-    <text class="panel-sub">这一关没在时间内配完，再来一次？</text>
+    <text class="panel-title">{{t.overTitle}}</text>
+    <text class="panel-sub">{{t.overSub}}</text>
     <text class="panel-score">{{overlayScore}}</text>
     <view class="panel-actions">
-      <view class="btn btn-ghost" hover-class="btn-pressed" bindtap="onRestartAll">从头开始</view>
-      <view class="btn" hover-class="btn-pressed" bindtap="onReplay">重玩本关</view>
+      <view class="btn btn-ghost" hover-class="btn-pressed" bindtap="onRestartAll">{{t.btnRestart}}</view>
+      <view class="btn" hover-class="btn-pressed" bindtap="onReplay">{{t.btnReplay}}</view>
     </view>
   </view>
 </view>

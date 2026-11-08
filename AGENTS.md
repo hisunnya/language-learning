@@ -152,6 +152,7 @@ page in the repository that implements all of §3 today, and the hub test
 | `word-puzzle/web/*.html` | — | — | — | ⚠️ to be brought up to §3 |
 | `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
 | `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
+| `miniprogram/` (WeChat) | `utils/i18n.js` | 5 (same names) | top-right, square swatches (tap, name shown below) | ✅ adapted, see 3.4.1 |
 
 The three ⚠️ pages predate this convention. When you touch one of them, bring
 it along: the target style is `hub/`, not the reverse. Do not "fix" the hub to
@@ -161,6 +162,24 @@ Note that `topic-app` already has three colour themes, but its picker is a
 row of three stacked colour bars with a text label — that is **not** the house
 style. Converting it means replacing the picker with diagonal-split squares
 and moving the theme variables onto `[data-theme="…"]`.
+
+#### 3.4.1 The WeChat mini program
+
+`miniprogram/` is not a web page, so §3 is adapted rather than copied:
+
+- Language: `utils/i18n.js` (`zh` / `en` tables with identical keys and
+  placeholders), toggle in the header next to the palettes, remembered in
+  `wx` storage (`wp_lang`). WXML contains no visible text of its own.
+- Palettes: the same five as the hub, as `.theme-<key>` blocks in `app.wxss`
+  with an identical variable set; the page root and every overlay carry the
+  class. The navigation bar and the page background are outside WXML and are
+  set from `utils/prefs.js`. Choice remembered as `wp_theme`.
+- Picker: small squares split along the diagonal (a hard 50 % stop, not the
+  `0 50%` two-position syntax, which older WebViews may not parse). There is no
+  hover on a phone, so the active palette's name is printed under the picker
+  instead of a tooltip.
+- `miniprogram/tests/` checks all of this; WXML rendering itself still has to
+  be looked at once in WeChat DevTools.
 
 ### 3.5 Adding a new page
 
@@ -217,6 +236,14 @@ A regression here must fail the suite rather than ship.
   `word-puzzle/tests/test_game_core.py`. It runs under `node` where node is
   available and **skips** where it is not, so the target host stays
   dependency-free. A change to the scoring or matching rules belongs there.
+- `miniprogram/utils/game-core.js` is a port of the website core. The two are
+  kept honest by `word-puzzle/tests/js/core_parity.test.js` (same seed, same
+  random sequence of picks / ticks / pauses / replays, state and events
+  compared at every step) and `word-puzzle/tests/test_bank_levels.py`
+  (`bank.py` and `miniprogram/utils/bank.js` must cut identical levels). Change
+  one copy and the other has to follow, or these fail.
+- The mini program has its own suite (`miniprogram/tests/`) and a fake `wx`
+  runtime (`tests/js/harness.js`) with a controllable clock and timers.
 - Run the suite before committing. A change that cannot be verified on this
   machine must say so explicitly instead of claiming success.
 - Verification means the real path, not only unit tests: a unit test with mock
@@ -226,6 +253,9 @@ A regression here must fail the suite rather than ship.
 cd word-puzzle && python3 -m unittest discover -s tests -v   # 后端用例
 cd hub        && python3 -m unittest discover -s tests -v   # 样式规范用例
 cd word-puzzle && python3 tools/check_js.py                  # JS 语法体检
+cd chemistry  && python3 -m unittest discover -s tests -v   # 化学探秘
+cd physics    && python3 -m unittest discover -s tests -v   # 物理探秘
+cd miniprogram && python3 -m unittest discover -s tests -v  # 小程序
 ```
 
 ---
@@ -263,6 +293,7 @@ language-learning/
 | Radio exam | 无线电执照 | Ham Exam | `ham-exam/` |
 | Chemistry learning | 化学探秘 | Chem Quest | `chemistry/` |
 | Physics learning | 物理探秘 | Phys Quest | `physics/` |
+| Vocabulary mini program | 词境 · 单词消消乐 | Lexica (WeChat) | `miniprogram/` |
 | Portal (hub) | 语林 | Lingua Grove | `hub/` |
 
 The vocabulary game was called 「单词消消乐」 while it was a single file. That
