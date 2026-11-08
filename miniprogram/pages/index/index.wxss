@@ -1,6 +1,8 @@
 .page {
   min-height: 100vh;
   padding: 40rpx 32rpx calc(60rpx + env(safe-area-inset-bottom));
+  background: var(--game-page);
+  color: var(--game-ink);
 }
 
 .hero {
@@ -22,8 +24,8 @@
   justify-content: center;
   font-size: 38rpx;
   font-weight: 700;
-  color: #ffffff;
-  background: linear-gradient(140deg, #4f46e5, #7c6cf0 55%, #f0a03c);
+  color: var(--game-on-primary);
+  background: linear-gradient(140deg, var(--game-brand-a), var(--game-brand-b) 55%, var(--game-brand-c));
 }
 
 .brand-text {
@@ -80,7 +82,7 @@
   background: var(--game-card);
   color: var(--game-primary);
   font-weight: 700;
-  box-shadow: 0 4rpx 14rpx rgba(30, 64, 120, 0.12);
+  box-shadow: 0 4rpx 14rpx var(--game-shadow);
 }
 
 .summary {
@@ -110,8 +112,8 @@
   justify-content: space-between;
   padding: 30rpx 32rpx;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #4f46e5, #6d5ce8);
-  box-shadow: 0 10rpx 26rpx rgba(79, 70, 229, 0.28);
+  background: linear-gradient(135deg, var(--game-primary), var(--game-primary-2));
+  box-shadow: 0 10rpx 26rpx var(--game-start-shadow);
 }
 
 .start-card-on {
@@ -127,18 +129,19 @@
 .start-title {
   font-size: 34rpx;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--game-on-primary);
 }
 
 .start-desc {
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--game-on-primary);
+  opacity: 0.82;
 }
 
 .start-arrow {
   font-size: 40rpx;
-  color: #ffffff;
+  color: var(--game-on-primary);
   opacity: 0.9;
 }
 
@@ -156,7 +159,7 @@
   border-radius: 22rpx;
   background: var(--game-card);
   border: 2rpx solid var(--game-line-en);
-  box-shadow: 0 4rpx 14rpx rgba(30, 64, 120, 0.06);
+  box-shadow: 0 4rpx 14rpx var(--game-shadow);
 }
 
 .unit-on {
@@ -181,4 +184,74 @@
   line-height: 1.7;
   color: var(--game-muted);
   opacity: 0.8;
+}
+
+/* ---------- 顶部：品牌 + 语言切换 + 配色方块 ---------- */
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  height: 56rpx;
+  padding: 0 20rpx;
+  border-radius: 99rpx;
+  border: 2rpx solid var(--game-line-en);
+  background: var(--game-card);
+  font-size: 24rpx;
+  font-weight: 700;
+  color: var(--game-muted);
+}
+
+.lang-btn .on {
+  color: var(--game-primary);
+}
+
+.lang-btn .sep {
+  margin: 0 6rpx;
+  opacity: 0.5;
+}
+
+.swatches {
+  display: flex;
+  align-items: center;
+  margin-left: 12rpx;
+}
+
+/* 触控区比方块大一圈，方块本身保持小而方 */
+.swatch-hit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60rpx;
+  height: 60rpx;
+}
+
+.swatch {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid var(--game-line-en);
+  /* 左下 = 页面底色，右上 = 强调色，两色硬切 */
+  background: linear-gradient(to top right, var(--swatch-bg) 50%, var(--swatch-main) 50%);
+}
+
+.swatch-on {
+  box-shadow: 0 0 0 4rpx var(--game-card), 0 0 0 7rpx var(--game-primary);
+}
+
+.palette-name {
+  display: block;
+  margin-top: 6rpx;
+  text-align: right;
+  font-size: 20rpx;
+  color: var(--game-muted);
 }

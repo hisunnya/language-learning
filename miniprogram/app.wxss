@@ -1,19 +1,221 @@
+/* ---------- 五套配色（和网站版一致；每套必须定义完全相同的变量） ---------- */
 page {
   --game-page: #f4f6fb;
   --game-card: #ffffff;
+  --game-card-top: #ffffff;
   --game-panel: #ffffff;
   --game-chip: #f2f6fd;
   --game-ink: #172033;
   --game-muted: #68758a;
   --game-primary: #4f46e5;
   --game-primary-dark: #3730a3;
+  --game-primary-2: #6d5ce8;
   --game-accent: #d97706;
   --game-line-en: #cbd5f5;
   --game-bg-en: #eef2ff;
   --game-line-cn: #efd9be;
   --game-bg-cn: #fff4e5;
   --game-on-primary: #ffffff;
+  --game-warn: #ff8c42;
+  --game-warn-dark: #d96c22;
+  --game-bad: #e5484d;
+  --game-en-ink: #123a6b;
+  --game-cn-tag: #e07b1a;
+  --game-ipa: #8aa0bb;
+  --game-shadow: rgba(30, 64, 120, 0.12);
+  --game-track: rgba(23, 32, 51, 0.12);
+  --game-sel: #ffb703;
+  --game-overlay: rgba(20, 36, 58, 0.55);
+  --game-prog-a: #4cc9a0;
+  --game-prog-b: #38b6ff;
+  --game-fx: #f0801a;
+  --game-start-shadow: rgba(79, 70, 229, 0.28);
+  --game-brand-a: #4f46e5;
+  --game-brand-b: #7c6cf0;
+  --game-brand-c: #f0a03c;
+}
 
+.theme-indigo {
+  --game-page: #f4f6fb;
+  --game-card: #ffffff;
+  --game-card-top: #ffffff;
+  --game-panel: #ffffff;
+  --game-chip: #f2f6fd;
+  --game-ink: #172033;
+  --game-muted: #68758a;
+  --game-primary: #4f46e5;
+  --game-primary-dark: #3730a3;
+  --game-primary-2: #6d5ce8;
+  --game-accent: #d97706;
+  --game-line-en: #cbd5f5;
+  --game-bg-en: #eef2ff;
+  --game-line-cn: #efd9be;
+  --game-bg-cn: #fff4e5;
+  --game-on-primary: #ffffff;
+  --game-warn: #ff8c42;
+  --game-warn-dark: #d96c22;
+  --game-bad: #e5484d;
+  --game-en-ink: #123a6b;
+  --game-cn-tag: #e07b1a;
+  --game-ipa: #8aa0bb;
+  --game-shadow: rgba(30, 64, 120, 0.12);
+  --game-track: rgba(23, 32, 51, 0.12);
+  --game-sel: #ffb703;
+  --game-overlay: rgba(20, 36, 58, 0.55);
+  --game-prog-a: #4cc9a0;
+  --game-prog-b: #38b6ff;
+  --game-fx: #f0801a;
+  --game-start-shadow: rgba(79, 70, 229, 0.28);
+  --game-brand-a: #4f46e5;
+  --game-brand-b: #7c6cf0;
+  --game-brand-c: #f0a03c;
+}
+
+.theme-ink {
+  --game-page: #0c1210;
+  --game-card: #141d19;
+  --game-card-top: #1a2620;
+  --game-panel: #141d19;
+  --game-chip: #1d2b24;
+  --game-ink: #e8f4ee;
+  --game-muted: #9cb1a5;
+  --game-primary: #34d399;
+  --game-primary-dark: #1f9d73;
+  --game-primary-2: #2bb585;
+  --game-accent: #e5b45a;
+  --game-line-en: #2f4a3d;
+  --game-bg-en: #17372a;
+  --game-line-cn: #4a3b24;
+  --game-bg-cn: #2a2315;
+  --game-on-primary: #062317;
+  --game-warn: #f59e5b;
+  --game-warn-dark: #c9742f;
+  --game-bad: #ff8a80;
+  --game-en-ink: #bdf3dc;
+  --game-cn-tag: #e5b45a;
+  --game-ipa: #86a595;
+  --game-shadow: rgba(0, 0, 0, 0.45);
+  --game-track: rgba(232, 244, 238, 0.14);
+  --game-sel: #fbbf24;
+  --game-overlay: rgba(0, 0, 0, 0.7);
+  --game-prog-a: #34d399;
+  --game-prog-b: #38bdf8;
+  --game-fx: #fbbf24;
+  --game-start-shadow: rgba(52, 211, 153, 0.25);
+  --game-brand-a: #34d399;
+  --game-brand-b: #2bb585;
+  --game-brand-c: #e5b45a;
+}
+
+.theme-amber {
+  --game-page: #fbf6ec;
+  --game-card: #ffffff;
+  --game-card-top: #ffffff;
+  --game-panel: #ffffff;
+  --game-chip: #f7ecdb;
+  --game-ink: #30251b;
+  --game-muted: #81705e;
+  --game-primary: #b45309;
+  --game-primary-dark: #7c3a06;
+  --game-primary-2: #d97706;
+  --game-accent: #0f766e;
+  --game-line-en: #e9d5b5;
+  --game-bg-en: #fbf0dc;
+  --game-line-cn: #bfe3dc;
+  --game-bg-cn: #e8f6f3;
+  --game-on-primary: #ffffff;
+  --game-warn: #ea580c;
+  --game-warn-dark: #b94408;
+  --game-bad: #b4233b;
+  --game-en-ink: #5b3a12;
+  --game-cn-tag: #0f766e;
+  --game-ipa: #a08c73;
+  --game-shadow: rgba(87, 58, 20, 0.14);
+  --game-track: rgba(48, 37, 27, 0.12);
+  --game-sel: #f59e0b;
+  --game-overlay: rgba(48, 37, 27, 0.55);
+  --game-prog-a: #d97706;
+  --game-prog-b: #f59e0b;
+  --game-fx: #b45309;
+  --game-start-shadow: rgba(180, 83, 9, 0.28);
+  --game-brand-a: #b45309;
+  --game-brand-b: #d97706;
+  --game-brand-c: #0f766e;
+}
+
+.theme-lotus {
+  --game-page: #fdf4f6;
+  --game-card: #ffffff;
+  --game-card-top: #ffffff;
+  --game-panel: #ffffff;
+  --game-chip: #f9eef3;
+  --game-ink: #321d29;
+  --game-muted: #846c79;
+  --game-primary: #db2777;
+  --game-primary-dark: #9d174d;
+  --game-primary-2: #ec4899;
+  --game-accent: #7c3aed;
+  --game-line-en: #f3cfe0;
+  --game-bg-en: #fdeaf3;
+  --game-line-cn: #d9ccf5;
+  --game-bg-cn: #f1ecfd;
+  --game-on-primary: #ffffff;
+  --game-warn: #f97316;
+  --game-warn-dark: #c2570c;
+  --game-bad: #b4233b;
+  --game-en-ink: #6b1d45;
+  --game-cn-tag: #7c3aed;
+  --game-ipa: #a08394;
+  --game-shadow: rgba(120, 20, 60, 0.12);
+  --game-track: rgba(50, 29, 41, 0.12);
+  --game-sel: #f59e0b;
+  --game-overlay: rgba(50, 29, 41, 0.55);
+  --game-prog-a: #ec4899;
+  --game-prog-b: #a855f7;
+  --game-fx: #db2777;
+  --game-start-shadow: rgba(219, 39, 119, 0.28);
+  --game-brand-a: #db2777;
+  --game-brand-b: #ec4899;
+  --game-brand-c: #7c3aed;
+}
+
+.theme-obsidian {
+  --game-page: #08080a;
+  --game-card: #111114;
+  --game-card-top: #16161a;
+  --game-panel: #111114;
+  --game-chip: #1a1a1f;
+  --game-ink: #f3f0e5;
+  --game-muted: #aaa59a;
+  --game-primary: #d4af37;
+  --game-primary-dark: #8f741a;
+  --game-primary-2: #e6c65a;
+  --game-accent: #64d6a5;
+  --game-line-en: #3b3420;
+  --game-bg-en: #292411;
+  --game-line-cn: #1f3a31;
+  --game-bg-cn: #12241d;
+  --game-on-primary: #15120a;
+  --game-warn: #f59e5b;
+  --game-warn-dark: #c47a38;
+  --game-bad: #ff8a80;
+  --game-en-ink: #f3e3a3;
+  --game-cn-tag: #64d6a5;
+  --game-ipa: #9b958a;
+  --game-shadow: rgba(0, 0, 0, 0.5);
+  --game-track: rgba(243, 240, 229, 0.14);
+  --game-sel: #e6c65a;
+  --game-overlay: rgba(0, 0, 0, 0.72);
+  --game-prog-a: #d4af37;
+  --game-prog-b: #64d6a5;
+  --game-fx: #e6c65a;
+  --game-start-shadow: rgba(212, 175, 55, 0.25);
+  --game-brand-a: #d4af37;
+  --game-brand-b: #e6c65a;
+  --game-brand-c: #64d6a5;
+}
+
+page {
   min-height: 100%;
   background: var(--game-page);
   color: var(--game-ink);
@@ -47,8 +249,8 @@ text {
 }
 
 .btn-warn {
-  background: #ff8c42;
-  box-shadow: 0 6rpx 0 #d96c22;
+  background: var(--game-warn);
+  box-shadow: 0 6rpx 0 var(--game-warn-dark);
 }
 
 .btn-pressed {

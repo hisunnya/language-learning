@@ -14,6 +14,7 @@
 * ``topic-app/topic-app/``   —— 每日话题
 * ``ham-exam/js/`` 和 ``ham-exam/data/`` —— 无线电执照
 * ``chemistry/js/`` 和 ``physics/js/`` —— 化学探秘、物理探秘
+* ``miniprogram/``（入口、utils、pages）—— 微信小程序
 
 用法::
 
@@ -37,6 +38,10 @@ JS_DIRS = [
     REPO / "ham-exam" / "data",
     REPO / "chemistry" / "js",
     REPO / "physics" / "js",
+    REPO / "miniprogram",
+    REPO / "miniprogram" / "utils",
+    REPO / "miniprogram" / "pages" / "index",
+    REPO / "miniprogram" / "pages" / "game",
 ]
 
 PAIRS = {")": "(", "]": "[", "}": "{"}

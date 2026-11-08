@@ -4,6 +4,8 @@
   height: 100vh;
   padding: 16rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
+  background: var(--game-page);
+  color: var(--game-ink);
 }
 
 .hud {
@@ -12,7 +14,7 @@
   margin-bottom: 16rpx;
   border-radius: 28rpx;
   background: var(--game-card);
-  box-shadow: 0 10rpx 30rpx rgba(30, 64, 120, 0.1);
+  box-shadow: 0 10rpx 30rpx var(--game-shadow);
 }
 
 .hud-row {
@@ -47,7 +49,7 @@
 }
 
 .v-warn {
-  color: #e5484d;
+  color: var(--game-bad);
   animation: pulse 0.7s infinite;
 }
 
@@ -70,18 +72,18 @@
   margin-top: 14rpx;
   border-radius: 99rpx;
   overflow: hidden;
-  background: rgba(23, 32, 51, 0.12);
+  background: var(--game-track);
 }
 
 .progress-i {
   height: 100%;
   border-radius: 99rpx;
-  background: linear-gradient(90deg, #4cc9a0, #38b6ff);
+  background: linear-gradient(90deg, var(--game-prog-a), var(--game-prog-b));
   transition: width 0.3s linear;
 }
 
 .progress-warn {
-  background: linear-gradient(90deg, #f0975c, #e5484d);
+  background: linear-gradient(90deg, var(--game-warn), var(--game-bad));
 }
 
 .ptext {
@@ -122,17 +124,17 @@
   border-radius: 26rpx;
   text-align: center;
   overflow: hidden;
-  box-shadow: 0 6rpx 20rpx rgba(30, 64, 120, 0.12);
+  box-shadow: 0 6rpx 20rpx var(--game-shadow);
   transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.3s ease;
 }
 
 .card-en {
-  background: linear-gradient(180deg, #ffffff, var(--game-bg-en));
+  background: linear-gradient(180deg, var(--game-card-top), var(--game-bg-en));
   border: 3rpx solid var(--game-line-en);
 }
 
 .card-cn {
-  background: linear-gradient(180deg, #ffffff, var(--game-bg-cn));
+  background: linear-gradient(180deg, var(--game-card-top), var(--game-bg-cn));
   border: 3rpx solid var(--game-line-cn);
 }
 
@@ -151,7 +153,7 @@
 }
 
 .card-cn .tag {
-  color: #e07b1a;
+  color: var(--game-cn-tag);
 }
 
 .card .w {
@@ -163,7 +165,7 @@
 }
 
 .card-en .w {
-  color: #123a6b;
+  color: var(--game-en-ink);
 }
 
 .card-cn .w {
@@ -174,7 +176,7 @@
 .card .ipa {
   margin-top: 6rpx;
   font-size: 19rpx;
-  color: #8aa0bb;
+  color: var(--game-ipa);
   font-family: "Times New Roman", Georgia, serif;
 }
 
@@ -188,7 +190,7 @@
 
 .card-sel {
   transform: scale(1.05);
-  box-shadow: 0 0 0 6rpx #ffb703, 0 12rpx 30rpx rgba(255, 183, 3, 0.35);
+  box-shadow: 0 0 0 6rpx var(--game-sel), 0 12rpx 30rpx var(--game-shadow);
   z-index: 2;
 }
 
@@ -242,8 +244,8 @@
   z-index: 70;
   font-size: 52rpx;
   font-weight: 700;
-  color: #f0801a;
-  text-shadow: 0 4rpx 14rpx rgba(255, 255, 255, 0.9);
+  color: var(--game-fx);
+  text-shadow: 0 4rpx 14rpx var(--game-card);
   pointer-events: none;
   animation: fly 0.8s ease-out forwards;
 }
@@ -290,7 +292,7 @@
   align-items: center;
   justify-content: center;
   padding: 40rpx;
-  background: rgba(20, 36, 58, 0.55);
+  background: var(--game-overlay);
 }
 
 .panel {
@@ -299,6 +301,7 @@
   padding: 44rpx 40rpx;
   border-radius: 40rpx;
   background: var(--game-panel);
+  color: var(--game-ink);
   box-shadow: 0 30rpx 80rpx rgba(0, 0, 0, 0.25);
   text-align: center;
 }

@@ -2,11 +2,19 @@ const bookData = require('../../data/grade9.js');
 const bank = require('../../utils/bank.js');
 const core = require('../../utils/game-core.js');
 const audio = require('../../utils/audio.js');
+const i18n = require('../../utils/i18n.js');
+const prefs = require('../../utils/prefs.js');
 
 const TIME_PER_LEVEL = core.LEVEL_TIME;
 
 Page({
   data: {
+    lang: 'zh',
+    theme: 'indigo',
+    t: i18n.dict('zh'),
+    audioOn: false,
+    levelLine: '',
+    overlayNextBonusText: '',
     levelName: '',
     levelNo: 1,
     levelTotal: 1,
@@ -28,12 +36,20 @@ Page({
   },
 
   onLoad: function (query) {
+    this.gone = false;
+    this.timers = [];
+    var snap = prefs.snapshot();
+    snap.audioOn = audio.enabled();
+    this.setData(snap);
+    prefs.applyChrome();
+    var t = snap.t;
+
     var bookIndex = Number(query.book || 0);
     var unit = query.unit === 'all' ? 'all' : Number(query.unit || 0);
     var book = bookData.books[bookIndex];
 
     if (!book) {
-      wx.showToast({ title: '题库未找到', icon: 'none' });
+      wx.showToast({ title: t.toastNoBank, icon: 'none' });
       return;
     }
 
@@ -42,7 +58,7 @@ Page({
     this.levels = bank.buildLevels(book, unit, bank.MAX_PAIRS);
 
     if (!this.levels.length) {
-      wx.showToast({ title: '这个范围内没有单词', icon: 'none' });
+      wx.showToast({ title: t.toastNoWords, icon: 'none' });
       return;
     }
 
@@ -59,16 +75,34 @@ Page({
   },
 
   onShow: function () {
+    // 回到前台：用冻结时的剩余时间接着走，切走的这段不算
+    if (this.game) this.game.resume();
     this.startTicker();
   },
 
   onHide: function () {
+    // 切到别的应用：暂停计时，免得学生回去看一眼消息就被扣时间
+    if (this.game) this.game.pause();
     this.stopTicker();
   },
 
   onUnload: function () {
+    this.gone = true;
     this.stopTicker();
+    (this.timers || []).forEach(function (id) { clearTimeout(id); });
+    this.timers = [];
     audio.dispose();
+  },
+
+  /* 页面卸载后不能再 setData，所以所有延时都登记起来，卸载时一起取消 */
+  later: function (fn, ms) {
+    var self = this;
+    var id = setTimeout(function () {
+      if (self.gone) return;
+      fn();
+    }, ms);
+    this.timers.push(id);
+    return id;
   },
 
   startTicker: function () {
@@ -101,7 +135,7 @@ Page({
       audio.play(evt.word && evt.word.en);
       this.markSelected(evt.card);
       wx.showToast({
-        title: evt.side === 'cn' ? '刚选的是英文，再点中文配对' : '刚选的是中文，再点英文配对',
+        title: i18n.switchHint(this.data.lang, evt.side),
         icon: 'none',
         duration: 900
       });
@@ -126,6 +160,7 @@ Page({
         overlayScore: evt.score,
         overlayBonus: evt.bonus,
         overlayNextBonus: evt.nextBonus,
+        overlayNextBonusText: i18n.format(this.data.t.clearNextValue, { n: evt.nextBonus }),
         overlayHasNext: evt.hasNext
       });
       return;
@@ -155,9 +190,16 @@ Page({
     this._cards = cards;
 
     var st = this.game.state;
+    var lang = this.data.lang;
+    var levelName = i18n.localizeLevel(evt.levelName || '', lang);
     this.setData({
       cards: cards,
-      levelName: evt.levelName || '',
+      levelName: levelName,
+      levelLine: i18n.format(this.data.t.levelLine, {
+        no: evt.level + 1,
+        total: this.levels.length,
+        name: levelName
+      }),
       levelNo: evt.level + 1,
       total: evt.total,
       matched: 0,
@@ -169,8 +211,15 @@ Page({
       overlay: ''
     });
 
-    wx.setNavigationBarTitle({ title: evt.levelName || '单词消消乐' });
-    audio.preload(evt.cards.map(function (c) { return c.word; }));
+    wx.setNavigationBarTitle({ title: levelName || this.data.t.navTitleGame });
+
+    // 进关就自动下载这一关的发音；下载失败只是没有声音，游戏照常进行。
+    // 本关的下载完成后，顺手把下一关的也预取好。
+    var lv = this.game.state.lv;
+    var next = this.levels[lv + 1];
+    audio.preload(evt.cards.map(function (c) { return c.word; })).then(function () {
+      if (next) audio.preload(next.words);
+    });
   },
 
   renderTime: function (timeLeft) {
@@ -224,7 +273,7 @@ Page({
     });
 
     this.flashFx('+' + evt.gain + (evt.combo > 1 ? '  ×' + evt.combo : ''));
-    setTimeout(function () {
+    this.later(function () {
       self.compactBoard();
     }, 460);
   },
@@ -261,7 +310,7 @@ Page({
     });
     this.renderTime(evt.timeLeft);
 
-    setTimeout(function () {
+    this.later(function () {
       var list = self._cards;
       if (!list) return;
       for (var j = 0; j < list.length; j++) {
@@ -279,9 +328,9 @@ Page({
   flashFx: function (text) {
     var self = this;
     this.setData({ fxShow: false });
-    setTimeout(function () {
+    this.later(function () {
       self.setData({ fxText: text, fxShow: true });
-      setTimeout(function () {
+      self.later(function () {
         self.setData({ fxShow: false });
       }, 800);
     }, 16);
@@ -326,10 +375,11 @@ Page({
 
   onRestartAll: function () {
     var self = this;
+    var t = this.data.t;
     wx.showModal({
-      title: '从头开始',
-      content: '分数会清零，从第一关重新来。确定吗？',
-      confirmText: '重新开始',
+      title: t.restartTitle,
+      content: t.restartBody,
+      confirmText: t.restartConfirm,
       success: function (res) {
         if (!res.confirm) return;
         self.game.restart();
@@ -340,17 +390,12 @@ Page({
   },
 
   onShowRules: function () {
-    var self = this;
+    var t = this.data.t;
     wx.showModal({
-      title: '怎么玩',
-      content:
-        '英文和中文都可以先点，点第二张时配对。\n\n' +
-        '每对 +100 分；连击每多一次 +20 分，最高 +100。\n' +
-        '配错扣 20 分、扣 3 秒，连击清零。\n\n' +
-        '每关 120 秒，过关后剩余时间每秒折算 10 分，' +
-        '并按剩余时间给下一关加时，最多 150 秒。',
+      title: t.rulesTitle,
+      content: t.rulesBody,
       showCancel: false,
-      confirmText: '知道了'
+      confirmText: t.gotIt
     });
   },
 
