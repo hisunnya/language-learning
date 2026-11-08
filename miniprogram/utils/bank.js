@@ -12,6 +12,47 @@ var MAX_PAIRS = 12;
 var MIN_PAIRS = 4;
 var MAX_PAIRS_LIMIT = 40;
 
+/* 从 candidates 里按顺序取出一关的词：英文、中文都不能重复，也不超过 maxPairs。
+   取不进来的词原样返回，调用方把它们顺延到下一关，而不是丢掉。 */
+function uniqueTake(candidates, maxPairs) {
+  var kept = [];
+  var rest = [];
+  var seenEn = {};
+  var seenCn = {};
+  for (var i = 0; i < candidates.length; i++) {
+    var word = candidates[i];
+    var full = maxPairs > 0 && kept.length >= maxPairs;
+    if (full || seenEn[word.en] || seenCn[word.cn]) {
+      rest.push(word);
+      continue;
+    }
+    seenEn[word.en] = 1;
+    seenCn[word.cn] = 1;
+    kept.push(word);
+  }
+  return { kept: kept, rest: rest };
+}
+
+/* 同一单元内：一关里英文或中文相同的词会让配对含糊，所以把重复的词顺延到本单元的
+   下一关；到了单元末尾还有剩的，单独成一关「补充」。一个词都不会丢。 */
+function resolveDuplicates(parts, unit, maxPairs) {
+  var resolved = [];
+  var carry = [];
+  for (var i = 0; i < parts.length; i++) {
+    var taken = uniqueTake(carry.concat(parts[i].words), maxPairs);
+    carry = taken.rest;
+    resolved.push({ unit: parts[i].unit, words: taken.kept });
+  }
+  var extra = 0;
+  while (carry.length) {
+    extra++;
+    var more = uniqueTake(carry, maxPairs);
+    carry = more.rest;
+    resolved.push({ unit: unit + '（' + (extra === 1 ? '补充' : '补充' + extra) + '）', words: more.kept });
+  }
+  return resolved;
+}
+
 function chunkGroups(groups, maxPairs) {
   var parts = [];
 
@@ -20,18 +61,19 @@ function chunkGroups(groups, maxPairs) {
     if (!words.length) continue;
     var unit = groups[g].name || '';
 
+    var groupParts = [];
     if (maxPairs <= 0 || words.length <= maxPairs) {
-      parts.push({ unit: unit, words: words });
-      continue;
+      groupParts.push({ unit: unit, words: words });
+    } else {
+      var count = Math.ceil(words.length / maxPairs);
+      for (var i = 0; i < count; i++) {
+        groupParts.push({
+          unit: unit + '（' + (i + 1) + '/' + count + '）',
+          words: words.slice(i * maxPairs, (i + 1) * maxPairs)
+        });
+      }
     }
-
-    var count = Math.ceil(words.length / maxPairs);
-    for (var i = 0; i < count; i++) {
-      parts.push({
-        unit: unit + '（' + (i + 1) + '/' + count + '）',
-        words: words.slice(i * maxPairs, (i + 1) * maxPairs)
-      });
-    }
+    parts = parts.concat(resolveDuplicates(groupParts, unit, maxPairs));
   }
 
   var pool = [];
@@ -39,20 +81,6 @@ function chunkGroups(groups, maxPairs) {
 
   for (var p = 0; p < parts.length; p++) {
     var part = parts[p];
-
-    /* 同一关里英文或中文重复会让配对变得含糊（两张卡片看起来都对），
-       所以先做一次去重，再做复习补齐。 */
-    var seenEn = {};
-    var seenCn = {};
-    var kept = [];
-    for (var d = 0; d < part.words.length; d++) {
-      var item = part.words[d];
-      if (seenEn[item.en] || seenCn[item.cn]) continue;
-      seenEn[item.en] = 1;
-      seenCn[item.cn] = 1;
-      kept.push(item);
-    }
-    part.words = kept;
 
     var usedEn = {};
     var usedCn = {};

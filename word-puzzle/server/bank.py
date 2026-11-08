@@ -140,6 +140,46 @@ def build_words(units: list[dict]) -> list[dict]:
     return out
 
 
+def _unique_take(candidates: list[dict], max_pairs: int) -> tuple[list[dict], list[dict]]:
+    """从 candidates 里按顺序取出一关的词：英文、中文都不能重复，也不超过 max_pairs。
+
+    取不进来的词原样返回，调用方把它们顺延到下一关，而不是丢掉。
+    """
+    kept: list[dict] = []
+    rest: list[dict] = []
+    seen_en: set[str] = set()
+    seen_cn: set[str] = set()
+    for word in candidates:
+        en = word.get("en", "")
+        cn = word.get("cn", "")
+        full = max_pairs > 0 and len(kept) >= max_pairs
+        if full or en in seen_en or cn in seen_cn:
+            rest.append(word)
+            continue
+        seen_en.add(en)
+        seen_cn.add(cn)
+        kept.append(word)
+    return kept, rest
+
+
+def _resolve_duplicates(parts: list[dict], unit: str, max_pairs: int) -> list[dict]:
+    """同一单元内：一关里英文或中文相同的词会让配对含糊（两张卡片看起来都对），
+    所以把重复的词顺延到本单元的下一关；到了单元末尾还有剩的，单独成一关「补充」。
+    一个词都不会丢。"""
+    resolved: list[dict] = []
+    carry: list[dict] = []
+    for part in parts:
+        kept, carry = _unique_take(carry + part["words"], max_pairs)
+        resolved.append({"unit": part["unit"], "words": kept})
+    extra = 0
+    while carry:
+        extra += 1
+        kept, carry = _unique_take(carry, max_pairs)
+        suffix = "补充" if extra == 1 else f"补充{extra}"
+        resolved.append({"unit": f"{unit}（{suffix}）", "words": kept})
+    return resolved
+
+
 def chunk_groups(groups: list[dict],
                  max_pairs: int = MAX_PAIRS_PER_LEVEL) -> list[dict]:
     """把词量大的单元拆成多个关卡，并给不足的关卡补上复习词。
@@ -161,16 +201,18 @@ def chunk_groups(groups: list[dict],
         if not words:
             continue
         unit = str(group.get("unit") or "")
+        group_parts: list[dict] = []
         if max_pairs <= 0 or len(words) <= max_pairs:
-            parts.append({"unit": unit, "words": words})
-            continue
-        parts_count = (len(words) + max_pairs - 1) // max_pairs
-        for index in range(parts_count):
-            chunk = words[index * max_pairs:(index + 1) * max_pairs]
-            parts.append({
-                "unit": f"{unit}（{index + 1}/{parts_count}）",
-                "words": chunk,
-            })
+            group_parts.append({"unit": unit, "words": words})
+        else:
+            parts_count = (len(words) + max_pairs - 1) // max_pairs
+            for index in range(parts_count):
+                chunk = words[index * max_pairs:(index + 1) * max_pairs]
+                group_parts.append({
+                    "unit": f"{unit}（{index + 1}/{parts_count}）",
+                    "words": chunk,
+                })
+        parts.extend(_resolve_duplicates(group_parts, unit, max_pairs))
 
     # 补齐：把之前出现过的词拿来复习，但本关里不重复
     pool: list[dict] = []
