@@ -342,6 +342,23 @@ class TestDeployment(unittest.TestCase):
                      "/topics/", "/word-puzzle/api/health"):
             self.assertIn(path, text)
 
+    def test_assets_are_not_cached_for_days(self):
+        """改了样式部署后必须立刻看得到：不能再缓存 7 天。"""
+        self.assertNotIn("expires 7d", NGINX)
+        self.assertNotIn("max-age=604800", NGINX)
+        for mount in ("/topics/", "/ham/", "/chemistry/", "/physics/", "/shared/"):
+            block = re.search(r"location \^~ %s \{(.*?)\n    \}" % re.escape(mount), NGINX, re.S)
+            self.assertIsNotNone(block, mount)
+            self.assertIn('Cache-Control "no-cache"', block.group(1), mount)
+        self.assertRegex(NGINX, r"location ~\* \\\.\(css\|js\)\$ \{[^}]*no-cache")
+
+    def test_hub_assets_carry_a_per_deploy_version(self):
+        for asset in ("css/hub.css", "js/config.js", "js/hub.js"):
+            self.assertIn(asset + "?v=__ASSET_VERSION__", HTML)
+        script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
+        self.assertIn("__ASSET_VERSION__", script)
+        self.assertIn('"$HUB_ROOT/index.html"', script)
+
     def test_installer_does_not_publish_physics_tests(self):
         script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
         self.assertNotIn('physics/." ', script)

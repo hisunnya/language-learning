@@ -30,7 +30,6 @@
       "stat.questions": "1375",
       "stat.questions.label": "道真题",
 
-      "projects.title": "工具",
 
       "lexica.name": "词境",
       "lexica.en": "Lexica",
@@ -108,7 +107,6 @@
       "stat.questions": "1375",
       "stat.questions.label": "questions",
 
-      "projects.title": "Tools",
 
       "lexica.name": "Lexica",
       "lexica.en": "词境",

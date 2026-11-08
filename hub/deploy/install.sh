@@ -37,6 +37,8 @@ say "部署五个前端项目"
 install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT"
 cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$HUB_ROOT/"
 cp -a "$REPO_DIR/hub/shared/." "$HUB_ROOT/shared/"
+# 每次部署给 css/js 链接打上新版本号，浏览器一定会重新取。
+sed -i "s/__ASSET_VERSION__/$(date +%Y%m%d%H%M%S)/g" "$HUB_ROOT/index.html"
 cp -a "$REPO_DIR/topic-app/topic-app/." "$TOPICS_ROOT/"
 cp -a "$REPO_DIR/ham-exam/index.html" "$REPO_DIR/ham-exam/css" \
   "$REPO_DIR/ham-exam/data" "$REPO_DIR/ham-exam/images" "$REPO_DIR/ham-exam/js" "$HAM_ROOT/"
