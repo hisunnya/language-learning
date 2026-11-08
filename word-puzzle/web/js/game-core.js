@@ -42,7 +42,10 @@
       levelStartScore: 0,
       gen: 0,
       levelStartAt: 0,
-      levelStats: []
+      paused: false,      /* 页面切到后台时暂停计时 */
+      pausedLeft: 0,
+      levelStats: [],
+      wrongLog: []        /* 每次配错：哪个英文词被配了哪个中文 */
     };
   }
 
@@ -68,7 +71,9 @@
       st.wrong = 0;
       st.timeLeft = st.limit;
       st.playing = true;
-      st.startedAt = Date.now();
+      st.paused = false;
+      /* 整局只记一次开始时间：duration 要覆盖所有关卡，不能每换一关就清零 */
+      if (!st.startedAt) st.startedAt = Date.now();
       st.levelStartAt = Date.now();
       st.levelStartScore = st.score;
       st.gen++;
@@ -100,7 +105,7 @@
      */
     pick: function (card) {
       var st = this.state;
-      if (!st.playing || !card) return null;
+      if (!st.playing || st.paused || !card) return null;
       var level = this.levels[st.lv];
       if (!level || !level.words[card.id]) return null;
 
@@ -148,6 +153,10 @@
         st.score = Math.max(0, st.score - MISS_SCORE);
         st.deadline -= MISS_TIME * 1000;
         st.timeLeft = Math.max(0, (st.deadline - Date.now()) / 1000);
+        st.wrongLog.push({
+          en: enCard.word.en, cn: cnCard.word.cn, level: st.lv,
+          levelName: (level && level.name) || ''
+        });
         this.emit({
           type: 'miss', timeLeft: st.timeLeft,
           enCard: enCard, cnCard: cnCard
@@ -166,7 +175,7 @@
 
     tick: function () {
       var st = this.state;
-      if (!st.playing) return null;
+      if (!st.playing || st.paused) return null;
       st.timeLeft = (st.deadline - Date.now()) / 1000;
       if (st.timeLeft <= 0) {
         st.timeLeft = 0;
@@ -217,9 +226,29 @@
       return true;
     },
 
-    /** 重玩当前关 */
+    /** 重玩当前关：这一关里已经拿到的分要收回，否则「拿几分、认输、重玩」可以无限刷分 */
     replay: function () {
+      var st = this.state;
+      st.score = st.levelStartScore || 0;
       this.buildBoard();
+    },
+
+    /** 暂停计时（页面被切到后台）：剩余时间冻结，期间不能点牌 */
+    pause: function () {
+      var st = this.state;
+      if (!st.playing || st.paused) return false;
+      st.paused = true;
+      st.pausedLeft = Math.max(0, (st.deadline - Date.now()) / 1000);
+      return true;
+    },
+
+    /** 恢复计时：用冻结时的剩余时间重新算截止点 */
+    resume: function () {
+      var st = this.state;
+      if (!st.paused) return false;
+      st.paused = false;
+      st.deadline = Date.now() + st.pausedLeft * 1000;
+      return true;
     },
 
     /** 全部重置 */
@@ -229,6 +258,8 @@
       st.score = 0;
       st.best = 0;
       st.levelStats = [];
+      st.wrongLog = [];
+      st.startedAt = 0;
       st.limit = this.levelTime;
       this.buildBoard();
     },
@@ -273,7 +304,8 @@
         best_combo: st.best,
         duration: Math.round((Date.now() - st.startedAt) / 1000),
         level_count: detail.length,
-        detail: detail
+        detail: detail,
+        wrong_log: st.wrongLog.slice()
       };
     },
 
