@@ -48,7 +48,13 @@ miniprogram/
 │   └── build-data.js                 # 从网站版词库生成 data/grade9.js
 ├── tests/                            # 静态规范 + 行为测试（含一个假的 wx 运行环境）
 └── design/
-    └── icon.svg / icon-1024.png      # 小程序图标（上传到微信后台用）
+    ├── icon.svg                      # 图标（字形已转曲线，不依赖字体安装）
+    ├── icon-param.svg                # 同款可调版，颜色走 CSS 变量
+    ├── icon-144.png                  # 上传微信后台用（官方建议尺寸）
+    ├── icon-1024.png                 # 母版，高分屏更清楚
+    ├── make-icon.js                  # 图标生成器，参数都在文件顶部的 P 里
+    ├── glyphs-cuan.js                # 「词」「境」的字形路径数据（生成物）
+    └── ttf2path.py                   # 从 TTF 抽字形轮廓的工具
 ```
 
 ---
@@ -140,7 +146,44 @@ cd miniprogram && python3 -m unittest discover -s tests -v
 
 ---
 
-## 七、还没做
+## 七、图标
+
+微信后台「小程序头像」的要求：**PNG / JPG / BMP / GIF，不超过 2MB，官方建议 144×144**。
+每月可改 5 次，上传后会被自动裁切（后台预览是圆形，各端列表里多为圆角方形）。
+
+| 文件 | 用途 |
+| --- | --- |
+| `icon-144.png` | 首选上传，正好是官方建议尺寸 |
+| `icon-1024.png` | 母版；若后台上传不报错，用它更利于高分屏显示 |
+| `icon.svg` | 矢量源文件，任意放大不失真 |
+
+**字形已转曲线**（`ttf2path.py` 把 TTF 轮廓抽成 SVG path），所以 `icon.svg`
+在任何没装方正爨宝子碑楷书的机器上打开都一致，不会掉回黑体。
+
+改配色、字号、位置、倾斜角：编辑 `make-icon.js` 顶部的 `P`，然后
+
+```bash
+cd design && node make-icon.js
+```
+
+会重新生成 `icon.svg` / `icon-param.svg` / `icon-single.svg`。改完再用 Chrome 出 PNG：
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new \
+  --disable-gpu --hide-scrollbars --window-size=1024,1024 \
+  --screenshot="$PWD/icon-1024.png" "file://$PWD/icon.svg"
+sips -z 144 144 icon-1024.png --out icon-144.png
+```
+
+`icon-param.svg` 是同一张图的可调版：颜色放在 `<style>` 的 `:root` 里当 CSS 变量，
+改 5 个色值就能换配色，不用碰路径。兼容性最好的是 `icon.svg`（颜色写死）。
+
+换字体：`python3 ttf2path.py --js <字体.ttf> glyphs-xxx.js 词 境`，再把
+`make-icon.js` 里的 `require` 指过去。
+
+---
+
+## 八、还没做
 
 - 成绩入库与老师导出（计划走云开发 + 本地导出脚本，出多 sheet Excel）
 - 语音音频的批量生成与上传
