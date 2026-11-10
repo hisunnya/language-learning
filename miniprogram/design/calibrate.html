@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head><body>
+<div id="out">PENDING</div>
+<script>
+var FONTS = [
+  ['songti',    'Songti SC', 700, 1000],
+  ['cuan',      'FZCuanBaoZiBeiKaiShuJF', 400, 1000],
+  ['yunmo',     'ZKTYMKSJ', 400, 1000],
+  ['xiongfeng', 'ZKTXFKJ', 400, 1000],
+  ['heibian',   'FZHeiBianS-R-GB', 400, 1000],
+  ['cms',       'CMS Font', 700, 1000]
+];
+
+var cv = document.createElement('canvas');
+cv.width = cv.height = 2400;
+var ctx = cv.getContext('2d');
+
+function measure(fam, weight, size, ch) {
+  ctx.font = weight + ' ' + size + 'px "' + fam + '"';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';   /* 与 SVG 默认基线一致，不做任何基线映射假设 */
+  var m = ctx.measureText(ch);
+  return {
+    w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight,
+    h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent,
+    hOff: (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2,
+    ascent: m.actualBoundingBoxAscent,
+    descent: m.actualBoundingBoxDescent,
+    adv: m.width
+  };
+}
+
+async function run() {
+  var res = {};
+  for (var i = 0; i < FONTS.length; i++) {
+    var k = FONTS[i][0], fam = FONTS[i][1], wt = FONTS[i][2], sz = FONTS[i][3];
+    try { await document.fonts.load(wt + ' 200px "' + fam + '"', '词境'); } catch (e) {}
+    res[k] = { family: fam, weight: wt, ci: measure(fam, wt, sz, '词'), jing: measure(fam, wt, sz, '境') };
+  }
+  document.getElementById('out').textContent = 'RESULT:' + JSON.stringify(res);
+}
+run();
+</script>
+</body></html>
