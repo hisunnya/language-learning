@@ -1,0 +1,32 @@
+# 迭代过程产物，全部可由脚本重新生成，不入库
+out-*/
+_*.png
+_*.svg
+icon-[a-e].svg
+icon-[a-e]-1024.png
+f-*.svg
+f-*.png
+compare*.html
+compare*.png
+compare2*
+palettes*.*
+fonts*.*
+sheet-*.html
+sheet-*.png
+preview-*.html
+preview-*.png
+all-fonts.*
+mask-check.png
+v-*.svg
+v-*.png
+gen-fonts.js
+gen-palettes.js
+
+# 生成的 PNG 里只入库这几个尺寸，其余忽略
+icon-*.png
+!icon-144.png
+!icon-180.png
+!icon-512.png
+!icon-1024.png
+
+pick.*

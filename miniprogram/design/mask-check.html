@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:22px 24px;background:#e9ebee;font-family:-apple-system,"PingFang SC",sans-serif;color:#1c1c1e}
+  h1{font-size:15px;margin:0 0 3px}
+  .sub{font-size:11.5px;color:#7a7f88;margin-bottom:18px;line-height:1.6}
+  .card{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:12px}
+  .ttl{font-size:12px;color:#6b7079;margin-bottom:12px;letter-spacing:.5px}
+  .r{display:flex;align-items:flex-end;gap:26px}
+  .c{text-align:center}
+  .c img{display:block;margin:0 auto;background:#dfe3e8}
+  .n{font-size:10.5px;color:#9aa0a8;margin-top:7px}
+  .warn{font-size:11.5px;color:#b4472e;margin-top:10px;line-height:1.6}
+  .ok{color:#2a7a58}
+</style></head><body>
+<h1>不同遮罩下的实际观感</h1>
+<div class="sub">微信后台上传后会自动裁切，具体是圆角方形还是正圆，各端表现不一。下面把三种遮罩都过一遍，看设计扛不扛得住。</div>
+
+<div class="card">
+  <div class="ttl">正方形原图（不上遮罩）</div>
+  <div class="r">
+    <div class="c"><img src="icon.svg" style="width:144px;height:144px"><div class="n">144 原图</div></div>
+    <div class="c"><img src="icon.svg" style="width:96px;height:96px"><div class="n">96</div></div>
+    <div class="c"><img src="icon.svg" style="width:56px;height:56px"><div class="n">56</div></div>
+    <div class="c"><img src="icon.svg" style="width:40px;height:40px"><div class="n">40</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ttl">圆角方形遮罩（22.5%，接近 iOS / 微信列表）</div>
+  <div class="r">
+    <div class="c"><img src="icon.svg" style="width:144px;height:144px;border-radius:32px"><div class="n">144</div></div>
+    <div class="c"><img src="icon.svg" style="width:96px;height:96px;border-radius:22px"><div class="n">96</div></div>
+    <div class="c"><img src="icon.svg" style="width:56px;height:56px;border-radius:13px"><div class="n">56</div></div>
+    <div class="c"><img src="icon.svg" style="width:40px;height:40px;border-radius:9px"><div class="n">40</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ttl">正圆遮罩（后台上传预览的裁切方式）</div>
+  <div class="r">
+    <div class="c"><img src="icon.svg" style="width:144px;height:144px;border-radius:50%"><div class="n">144</div></div>
+    <div class="c"><img src="icon.svg" style="width:96px;height:96px;border-radius:50%"><div class="n">96</div></div>
+    <div class="c"><img src="icon.svg" style="width:56px;height:56px;border-radius:50%"><div class="n">56</div></div>
+    <div class="c"><img src="icon.svg" style="width:40px;height:40px;border-radius:50%"><div class="n">40</div></div>
+  </div>
+  <div class="warn">正圆遮罩会吃掉四角 —— 而四角正是笔画溢出最多的地方。「词」左上与「境」右下会各缺一块。</div>
+</div>
+</body></html>
