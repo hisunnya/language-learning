@@ -135,7 +135,8 @@ wp-family-admin import /tmp/名单.xlsx --out /tmp/初始密码.csv
 - [ ] `ss -ltnp` 里除了 tailscaled，只有 `127.0.0.1:8081`（nginx）和 `127.0.0.1:8766`（后端）在监听
 - [ ] `curl http://127.0.0.1:8081/word-puzzle/api/banks` 返回 401
 - [ ] 管理员已创建，能登录并看到「账号管理」
-- [ ] Machines 页里 `lexica` 显示 **Key expiry disabled**
+- [ ] Machines 页里 `lexica` 显示 **Key expiry disabled**，并且已取消「Auto-generate from OS hostname」（第九节）
+- [ ] `bash /srv/word-puzzle-family/deploy/family/check-url.sh` 输出 `OK 网址一致`，并把网址记在第九节的记录表里
 
 ```bash
 tailscale funnel --bg 8081              # 具体参数以 tailscale funnel --help 为准
@@ -169,12 +170,74 @@ apt-get -y remove tailscale
   备份里有学生的学号、姓名、成绩和密码哈希，**也包含这台机器在 Tailscale 里的身份**，要妥善保管；
   还原到别处时，不要让原容器和还原出来的副本同时在线（两个同身份的节点会互相抢）。
   数据库本身也可以在容器里 `sqlite3 /var/lib/word-puzzle-family/app.db ".backup '/tmp/app.db'"` 单独备份。
-- **更新程序：** 宿主机 `git pull` → 重新打包推进去 → 容器里重新运行第五节的安装命令。数据库不会被覆盖。
-- **更新系统和 Tailscale：** 容器里定期 `apt-get update && apt-get -y upgrade`。
+- **更新程序：** 宿主机 `git pull` → 重新打包推进去 → 容器里重新运行第五节的安装命令。数据库不会被覆盖，网址不变。
+- **更新系统和 Tailscale：** 容器里定期 `apt-get update && apt-get -y upgrade`，**不要为了升级去重装或重建容器**。
+  升级、重启之后按第九节第 4 条检查一遍。
 - **日志：** `journalctl -u word-puzzle-family`；nginx 的在 `/var/log/nginx/word-puzzle-family.*.log`。
 - **资源：** 100 多个学生，1 核 1 GB 足够；上课时同时在线的人多了再看 `top`。
 
-## 九、常见问题
+## 九、网址会不会变，怎样让它不变
+
+网址 = `机器名.tailnet名.ts.net`，例如 `lexica.tail705ad2.ts.net`。发给学生的链接和二维码都依赖它，所以要尽量不变。
+
+**1. 什么操作会让它变**
+
+| 操作 | 网址 |
+|---|---|
+| 重启容器、重启宿主机、`apt upgrade`、升级 Tailscale、重新运行安装脚本 | **不变**（Tailscale 的身份存在容器里的 `/var/lib/tailscale`） |
+| 用 vzdump 还原到同一个容器（原容器已停掉并删除） | **不变**（沿用原来的身份） |
+| 容器被销毁后重建，而管理后台里旧的 `lexica` 记录还在 | **会变**：新机器被命名为 `lexica-1` |
+| 改了容器的系统主机名，而「按系统主机名自动生成」还勾着 | **会变**：机器名跟着系统主机名走 |
+| 在管理后台 Rename tailnet，或把机器登录到另一个 Tailscale 账号 | **会变**（中间那段） |
+
+**2. 现在就做的一次性防护**
+
+- 管理后台 → Machines → `lexica` → Edit machine name → **取消「Auto-generate from OS hostname」**，机器名就固定了，
+  系统主机名再怎么变也不影响。（命令行里 `tailscale set --hostname=lexica` 也行。）
+- **发出网址之后不再改 tailnet 名。**
+- **把网址记下来**（安装脚本会自动记在容器里的 `/var/lib/word-puzzle-family/public-url`，你自己也抄一份）：
+
+  | 项目 | 你的值 |
+  |---|---|
+  | 对外网址 | `https://lexica.____________.ts.net` |
+  | 容器编号 | `______` |
+  | 机器名 | `lexica` |
+  | tailnet 名 | `____________` |
+
+- 随时可以检查网址有没有变：`bash /srv/word-puzzle-family/deploy/family/check-url.sh`。
+  一致输出 `OK 网址一致`；不一致会告诉你原因（多了 `-1`、机器名变了、tailnet 名变了）和处理办法。
+
+**3. 必须重建容器时的顺序（不要先建新的）**
+
+优先用 vzdump **还原**，网址不会变。必须从零重建时：
+
+1. 先记下网址，并把数据库取出来备份（`pct pull CTID /var/lib/word-puzzle-family/app.db ./app.db`，或做一次 vzdump）。
+2. `pct stop` 旧容器（先别删，留着当退路）。
+3. **在管理后台 Machines 页删除旧的 `lexica` 记录。**
+4. 新建容器（`--hostname lexica`），装 Tailscale，`tailscale up --hostname=lexica`。
+5. 运行 `check-url.sh`，**看到 `OK 网址一致` 才继续**。如果出现 `lexica-1`，说明第 3 步漏了：删掉多余的记录，
+   `tailscale set --hostname=lexica`，再检查一次。
+6. 恢复数据库到 `/var/lib/word-puzzle-family/app.db`（属主 `wpfamily`），运行安装脚本，开 Funnel，用手机走流量再测一遍。
+7. 确认没问题后再销毁旧容器。
+
+备选做法：把旧容器的 `/var/lib/tailscale/` 整个目录带到新容器（先停掉 `tailscaled` 再放进去），身份完全沿用，
+不用重新登录，也不用删记录。**官方文档没有写这种迁移，我没有实测**，所以只当备选；用了以后旧容器必须永久停用。
+
+**4. 每次重启、升级之后检查三件事**
+
+- `tailscale funnel status`：应该仍然只看到 8081 这一条。如果是空的，重新运行 `tailscale funnel --bg 8081`。
+  （`--bg` 的配置能不能跨重启保留我没有实测，所以每次都看一眼。）
+- `bash /srv/word-puzzle-family/deploy/family/check-url.sh`：输出 `OK 网址一致`。
+- 用没装 Tailscale 的手机、走流量打开网址，能看到登录页。
+
+**5. 证书**：不要清空 `/var/lib/tailscale`，证书也缓存在那里。频繁重新申请证书会被 Let's Encrypt 临时限流。
+
+**6. 万一网址还是变了**：账号和成绩都在数据库里，不受影响；但浏览器的登录状态按网址保存，所以学生要用新网址重新登录。
+旧网址不会自动跳转（旧名字已经失效），需要把新网址和新二维码重新通知大家。
+
+---
+
+## 十、常见问题
 
 | 现象 | 可能原因和办法 |
 |---|---|
@@ -185,8 +248,9 @@ apt-get -y remove tailscale
 | 手机打不开，容器里 `curl http://127.0.0.1:8081/...` 正常 | `tailscale funnel status` 看有没有在开；用没装 Tailscale 的设备、走流量测试；等一两分钟（证书和 DNS 刚生效） |
 | 反复重装 / 反复开关 Funnel 后打不开 | 证书申请频率过高会被 Let's Encrypt 暂时限流（官方文档提到最长 34 小时），等一等，别再折腾 |
 | 过了几个月突然全断 | 多半是密钥过期，回第四节 4.3 |
+| 网址突然多了 `-1`，或者名字变了 | 第九节：用 `check-url.sh` 看原因 |
 
-## 十、安全要点回顾
+## 十一、安全要点回顾
 
 1. 容器是**非特权**的，里面只有本程序和 Tailscale，没有 SSH，也没有别的网页服务。
 2. 对外只有 Funnel 指向的 `127.0.0.1:8081`；后端每个接口都要登录，nginx 挡掉扫描器常探的路径。

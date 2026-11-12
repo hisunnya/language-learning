@@ -2,9 +2,13 @@
 安装脚本的前置检查与自检；有 nginx 的机器上还会真的跑一遍 nginx -t。"""
 from __future__ import annotations
 
+import json
+import os
 import re
 import shutil
+import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +22,7 @@ INSTALL = (FAMILY / "install.sh").read_text(encoding="utf-8")
 GUIDE = (FAMILY / "部署说明.md").read_text(encoding="utf-8")
 PVE = (FAMILY / "PVE容器部署.md").read_text(encoding="utf-8")
 NGINX = shutil.which("nginx")
+CHECK_URL = FAMILY / "check-url.sh"
 
 
 class TestSystemdUnit(unittest.TestCase):
@@ -175,6 +180,97 @@ class TestPveContainerGuide(unittest.TestCase):
                      "wp-family-admin import", "127.0.0.1:8081", "127.0.0.1:8766"):
             self.assertIn(text, PVE)
         self.assertIn("wp-family-admin", INSTALL)
+
+
+class TestUrlStability(unittest.TestCase):
+    """check-url.sh：用一个假的 tailscale 命令模拟各种情形。"""
+
+    def run_check(self, dns_name, *args, env_extra=None, with_tailscale=True, status_json=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            if with_tailscale:
+                payload = status_json if status_json is not None else json.dumps({"Self": {"DNSName": dns_name}})
+                fake = tmp / "tailscale"
+                fake.write_text("#!/bin/sh\ncat <<'JSON'\n%s\nJSON\n" % payload, encoding="utf-8")
+                fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+            env = {"PATH": "%s:%s:/usr/bin:/bin" % (tmp, os.path.dirname(sys.executable)),
+                   "WP_FAMILY_PUBLIC_URL_FILE": str(tmp / "none")}
+            env.update(env_extra or {})
+            proc = subprocess.run(["bash", str(CHECK_URL), *args], capture_output=True, text=True, env=env)
+            return proc.returncode, proc.stdout + proc.stderr
+
+    def test_matching_url_passes_ignoring_case_trailing_dot_scheme_and_port(self):
+        for expected in ("https://lexica.tail705ad2.ts.net", "https://LEXICA.tail705ad2.ts.net:8443/word-puzzle/",
+                         "lexica.tail705ad2.ts.net"):
+            code, out = self.run_check("lexica.tail705ad2.ts.net.", expected)
+            self.assertEqual(code, 0, out)
+            self.assertIn("OK 网址一致", out)
+
+    def test_a_dash_one_suffix_is_diagnosed_as_a_leftover_machine_record(self):
+        code, out = self.run_check("lexica-1.tail705ad2.ts.net.", "https://lexica.tail705ad2.ts.net")
+        self.assertEqual(code, 1)
+        self.assertIn("网址变了", out)
+        self.assertIn("旧的「lexica」记录", out)
+        self.assertIn("tailscale set --hostname=lexica", out)
+
+    def test_a_renamed_machine_and_a_renamed_tailnet_are_told_apart(self):
+        code, out = self.run_check("pve03.tail705ad2.ts.net.", "https://lexica.tail705ad2.ts.net")
+        self.assertEqual(code, 1)
+        self.assertIn("机器名变了", out)
+        code, out = self.run_check("lexica.cat-crocodile.ts.net.", "https://lexica.tail705ad2.ts.net")
+        self.assertEqual(code, 1)
+        self.assertIn("tailnet 名变了", out)
+
+    def test_the_recorded_url_is_used_when_no_argument_is_given(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            record = Path(tmp) / "public-url"
+            record.write_text("https://lexica.tail705ad2.ts.net\n", encoding="utf-8")
+            env = {"WP_FAMILY_PUBLIC_URL_FILE": str(record)}
+            self.assertEqual(self.run_check("lexica.tail705ad2.ts.net.", env_extra=env)[0], 0)
+            self.assertEqual(self.run_check("other.tail705ad2.ts.net.", env_extra=env)[0], 1)
+
+    def test_it_says_so_when_it_cannot_find_out(self):
+        code, out = self.run_check("", "https://lexica.x.ts.net", with_tailscale=False)
+        self.assertEqual(code, 2)
+        self.assertIn("没有 tailscale 命令", out)
+        code, out = self.run_check("", "https://lexica.x.ts.net", status_json="not json at all")
+        self.assertEqual(code, 2)
+        code, out = self.run_check("", "https://lexica.x.ts.net", status_json=json.dumps({"BackendState": "NeedsLogin"}))
+        self.assertEqual(code, 2)
+        self.assertIn("查不到本机的 Tailscale 域名", out)
+        code, out = self.run_check("lexica.x.ts.net.")                    # 既没参数也没有记录
+        self.assertEqual(code, 2)
+
+    def test_installer_records_the_url_and_runs_the_check_without_failing_the_install(self):
+        self.assertIn('printf \'%s\\n\' "$PUBLIC_URL" > "$DATA_DIR/public-url"', INSTALL)
+        self.assertIn('check-url.sh" "$PUBLIC_URL" \\', INSTALL)
+        self.assertRegex(INSTALL, r'check-url\.sh" "\$PUBLIC_URL" \\\n\s+\|\| warn ')
+
+    def test_script_is_valid_bash(self):
+        self.assertEqual(subprocess.run(["bash", "-n", str(CHECK_URL)]).returncode, 0)
+
+
+class TestUrlStabilityGuide(unittest.TestCase):
+    def test_the_guide_explains_what_changes_the_url_and_how_to_avoid_it(self):
+        for text in ("Auto-generate from OS hostname", "lexica-1", "check-url.sh", "tailscale funnel status",
+                     "删除旧的 `lexica` 记录", "Rename tailnet", "/var/lib/tailscale", "不要先建新的",
+                     "我没有实测", "重新登录"):
+            self.assertIn(text, PVE)
+
+    def test_rebuild_order_deletes_the_old_record_before_registering_the_new_node(self):
+        order = PVE[PVE.index("**3. 必须重建容器时的顺序"):PVE.index("**4. 每次重启")]
+        self.assertLess(order.index("删除旧的 `lexica` 记录"), order.index("tailscale up --hostname=lexica"))
+        self.assertLess(order.index("tailscale up --hostname=lexica"), order.index("check-url.sh"))
+        self.assertLess(order.index("check-url.sh"), order.index("销毁旧容器"))
+
+    def test_the_checklist_before_opening_funnel_includes_the_url_record(self):
+        checklist = PVE[PVE.index("## 六、上线前检查"):PVE.index("## 七、")]
+        self.assertIn("check-url.sh", checklist)
+        self.assertIn("Auto-generate from OS hostname", checklist)
+
+    def test_section_numbers_are_in_order(self):
+        numbers = re.findall(r"^## ([一二三四五六七八九十]+)、", PVE, re.M)
+        self.assertEqual(numbers, ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一"])
 
 
 if __name__ == "__main__":
