@@ -10,8 +10,16 @@ PVE 宿主机（管理界面、SSH、其他虚拟机）不在对外的路径上�
 PVE 宿主机 pve03：只负责跑这个容器，不装本程序，不开 Funnel
 ```
 
-下面的命令分两处执行：标「宿主机」的在 PVE 宿主机上（root），标「容器内」的在容器里（用 `pct enter 容器号` 进去，不需要密码，**也不要给容器开 SSH**）。
-文中 `CTID` 是容器编号（例如 120），换成你自己的。
+下面的命令分两处执行：标「宿主机」的在 PVE 宿主机上（root），标「容器内」的在容器里（用 `pct enter $CTID` 进去，不需要密码，**也不要给容器开 SSH**）。
+
+文中的 `$CTID` 是一个 shell 变量，存的是容器编号。**先在宿主机上设好它，后面的命令就可以原样复制**
+（不要把 `CTID` 这几个字母直接当成编号写进命令，会报 `vmid: type check ('integer') failed`，见第十节）：
+
+```bash
+# 宿主机：先看哪些编号已经被占用（虚拟机和容器共用一套编号）
+qm list; pct list
+CTID=120                  # 选一个没出现在上面两张表里的数字；换了新的终端窗口要重新设一次
+```
 
 > 版本说明：宿主机是 PVE 9（Debian 13）。Tailscale 官方给的容器配置针对 PVE 7 及以上（cgroup2），
 > 本文照这个写；个别命令的参数以你机器上的 `pct help create`、`tailscale funnel --help` 为准。
@@ -23,22 +31,34 @@ PVE 宿主机 pve03：只负责跑这个容器，不装本程序，不开 Funnel
 ```bash
 pveam update
 pveam available --section system | grep debian-13        # 找到 Debian 13 的模板名
-pveam download local <上一步看到的模板文件名>
+pveam download local debian-13-standard_13.6-1_amd64.tar.zst    # 模板名以上一条命令的输出为准，版本号会变
+pvesm status                                              # 看存储名：下面的 local-lvm 要换成这里有的（需要「Content 含 rootdir」）
+```
 
-pct create CTID local:vztmpl/<模板文件名> \
+确认 IP 没被占用：`ping -c 2 10.1.1.100` 应该全部丢包；同时进路由器把 `10.1.1.100` 排除出 DHCP 地址池
+（或者确认它不在池子里），否则以后某台手机可能被分到同一个地址。
+
+```bash
+TEMPLATE=debian-13-standard_13.6-1_amd64.tar.zst
+
+pct create $CTID local:vztmpl/$TEMPLATE \
   --hostname lexica \
   --unprivileged 1 \
   --features nesting=1,keyctl=1 \
   --cores 1 --memory 1024 --swap 512 \
   --rootfs local-lvm:8 \
-  --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+  --net0 name=eth0,bridge=vmbr0,ip=10.1.1.100/20,gw=10.1.1.1 \
   --onboot 1 --start 0
 ```
 
 - **一定要非特权容器**（`--unprivileged 1`）：容器里即使被攻破，也只是宿主机上一个没有权限的普通用户。
-- `--rootfs local-lvm:8` 里的存储名换成你自己的（`pvesm status` 能看到），8 GB 足够。
-- `--net0` 用 DHCP 即可；想固定地址就写 `ip=10.1.1.xx/24,gw=10.1.1.1`。
-- 不用设 root 密码，也不要装 SSH，需要进去时在宿主机上 `pct enter CTID`。
+- 网络：静态地址 `10.1.1.100`，掩码 `/20`（255.255.240.0），网关 `10.1.1.1`，桥接 `vmbr0`（和宿主机 `10.1.1.93` 同一个网络）。
+  换地址就改 `ip=` 和 `gw=` 两处。
+- DNS 不写就继承宿主机的设置。如果以后容器里能 ping 通 IP 却解析不了域名，再加一条
+  `pct set $CTID --nameserver 10.1.1.1`（路由器做 DNS 转发）或者你家实际在用的 DNS 服务器。
+- `--rootfs local-lvm:8` 的存储名按 `pvesm status` 的结果改，8 GB 足够。
+- 不用设 root 密码，也不要装 SSH，需要进去时在宿主机上 `pct enter $CTID`。
+- 创建完查看一下：`pct config $CTID`，应该能看到 `unprivileged: 1`、`net0: ...ip=10.1.1.100/20,gw=10.1.1.1`。
 
 ## 二、给容器放行 TUN 设备（宿主机）
 
@@ -46,18 +66,19 @@ Tailscale 需要 `/dev/net/tun`。官方给了两种办法，二选一：
 
 ```bash
 # 办法 A：pct 的设备直通（官方也列为可选方式）
-pct set CTID --dev0 /dev/net/tun
+pct set $CTID --dev0 /dev/net/tun
 ```
 
 ```bash
 # 办法 B：直接改配置文件（PVE 7 及以上）
-cat >> /etc/pve/lxc/CTID.conf <<'CONF'
+cat >> /etc/pve/lxc/$CTID.conf <<'CONF'
 lxc.cgroup2.devices.allow: c 10:200 rwm
 lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
 CONF
 ```
 
-然后启动容器：`pct start CTID`，进去确认设备在：`pct enter CTID` → `ls -l /dev/net/tun`。
+然后启动容器：`pct start $CTID`，进去确认设备在：`pct enter $CTID` → `ls -l /dev/net/tun`。
+再确认网络通：在容器里 `ip -4 addr show eth0`（应该是 10.1.1.100/20）、`ping -c 2 10.1.1.1`、`ping -c 2 debian.org`。
 
 > 如果不想给容器 TUN 设备，官方还提到一种「用户态网络」模式（不需要设备权限）。
 > **Funnel 在这个模式下能不能用我没有实测**，所以本文不用它；真遇到 TUN 放不通，改用虚拟机（VM）最省事。
@@ -90,8 +111,16 @@ tailscale status                        # 看到本机即可
 **Disable key expiry**。新设备的密钥默认 180 天过期，过期后这台机器的连接会停止工作，
 学生就打不开了，而且容易被忘记。
 
-**4.4 记下完整网址：** 形如 `https://lexica.<你的tailnet名>.ts.net`（管理后台的 Machines 页或
-`tailscale status --json` 里的 `DNSName`，去掉末尾的点）。下面叫它 `WP_PUBLIC_URL`。
+**4.4 记下完整网址：** 形如 `https://lexica.xxxx.ts.net`（也能在管理后台的 Machines 页看到）。
+下面叫它 `WP_PUBLIC_URL`。可以让命令自己读出来，省得手抄：
+
+```bash
+# 容器内
+WP_PUBLIC_URL="https://$(tailscale status --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))')"
+echo "$WP_PUBLIC_URL"          # 应该是 https://lexica.你的tailnet名.ts.net，不对就手工写：WP_PUBLIC_URL=https://...
+```
+
+（换了新终端要重新设一次；这条命令读的字段是按 Tailscale 的状态输出写的，我没有在真机上跑过，出错就手写。）
 
 ## 五、把代码放进容器并安装（宿主机 + 容器内）
 
@@ -102,9 +131,9 @@ tailscale status                        # 看到本机即可
 cd /root/language-learning && git pull
 tar czf /tmp/lexica-src.tgz --exclude='word-puzzle/var' --exclude='__pycache__' --exclude='.DS_Store' \
     word-puzzle hub/shared
-pct push CTID /tmp/lexica-src.tgz /root/lexica-src.tgz
-pct exec CTID -- mkdir -p /root/language-learning
-pct exec CTID -- tar xzf /root/lexica-src.tgz -C /root/language-learning
+pct push $CTID /tmp/lexica-src.tgz /root/lexica-src.tgz
+pct exec $CTID -- mkdir -p /root/language-learning
+pct exec $CTID -- tar xzf /root/lexica-src.tgz -C /root/language-learning
 ```
 
 然后在容器里安装（会装 nginx、Python 环境、语音等依赖，要几分钟）：
@@ -112,7 +141,7 @@ pct exec CTID -- tar xzf /root/lexica-src.tgz -C /root/language-learning
 ```bash
 # 容器内
 cd /root/language-learning
-env WP_PUBLIC_URL=https://lexica.<你的tailnet名>.ts.net bash word-puzzle/deploy/family/install.sh
+env WP_PUBLIC_URL="$WP_PUBLIC_URL" bash word-puzzle/deploy/family/install.sh
 ```
 
 脚本最后会自检：未登录访问接口必须返回 401，不通过就报错退出。
@@ -121,10 +150,10 @@ env WP_PUBLIC_URL=https://lexica.<你的tailnet名>.ts.net bash word-puzzle/depl
 
 ```bash
 wp-family-admin create-admin 你的工号 --name 你的名字
-# 名单文件从宿主机推进来：pct push CTID /路径/名单.xlsx /tmp/名单.xlsx
+# 名单文件从宿主机推进来：pct push $CTID /路径/名单.xlsx /tmp/名单.xlsx
 wp-family-admin import /tmp/名单.xlsx --out /tmp/初始密码.csv
 # 把初始密码清单取出来发给学生，然后删掉（明文）：
-#   宿主机： pct pull CTID /tmp/初始密码.csv ./初始密码.csv
+#   宿主机： pct pull $CTID /tmp/初始密码.csv ./初始密码.csv
 #   容器内： rm /tmp/初始密码.csv /tmp/名单.xlsx
 ```
 
@@ -166,7 +195,7 @@ apt-get -y remove tailscale
 ## 八、备份、更新、监控
 
 - **备份：** 在 PVE 管理界面 Datacenter → Backup 给这个容器建定时任务，或手动：
-  `vzdump CTID --storage <备份存储> --mode snapshot --compress zstd`。
+  `vzdump $CTID --storage <备份存储> --mode snapshot --compress zstd`。
   备份里有学生的学号、姓名、成绩和密码哈希，**也包含这台机器在 Tailscale 里的身份**，要妥善保管；
   还原到别处时，不要让原容器和还原出来的副本同时在线（两个同身份的节点会互相抢）。
   数据库本身也可以在容器里 `sqlite3 /var/lib/word-puzzle-family/app.db ".backup '/tmp/app.db'"` 单独备份。
@@ -211,7 +240,7 @@ apt-get -y remove tailscale
 
 优先用 vzdump **还原**，网址不会变。必须从零重建时：
 
-1. 先记下网址，并把数据库取出来备份（`pct pull CTID /var/lib/word-puzzle-family/app.db ./app.db`，或做一次 vzdump）。
+1. 先记下网址，并把数据库取出来备份（`pct pull $CTID /var/lib/word-puzzle-family/app.db ./app.db`，或做一次 vzdump）。
 2. `pct stop` 旧容器（先别删，留着当退路）。
 3. **在管理后台 Machines 页删除旧的 `lexica` 记录。**
 4. 新建容器（`--hostname lexica`），装 Tailscale，`tailscale up --hostname=lexica`。
@@ -241,7 +270,12 @@ apt-get -y remove tailscale
 
 | 现象 | 可能原因和办法 |
 |---|---|
-| `tailscale up` 报 `/dev/net/tun` 打不开 | 第二节没生效：确认配置后**重启容器**（`pct reboot CTID`），再 `ls -l /dev/net/tun` |
+| `pct create` 报 `vmid: type check ('integer') failed - got 'CTID'` | 把 `CTID` 这几个字母当成编号写进了命令。先 `CTID=120`（一个没被占用的数字），命令里写 `$CTID`，见开头 |
+| `pct create` 报编号已存在 | 这个编号被虚拟机或容器占了：`qm list; pct list`，换一个 |
+| `pct create` 报存储不存在 / 不支持 rootdir | `pvesm status` 看实际的存储名，把 `--rootfs local-lvm:8` 里的 `local-lvm` 换掉；这个存储的 Content 要包含 Container（rootdir） |
+| 容器起来了，但 `ping 10.1.1.1` 不通 | 看 `pct config $CTID` 里 `net0` 的 `ip=`、`gw=` 有没有写对，桥是不是 `vmbr0`；地址被别的设备占了会时通时断（`ping` 它看看） |
+| 容器里 ping IP 通，ping 域名不通 | 没有 DNS：`pct set $CTID --nameserver 10.1.1.1` 后 `pct reboot $CTID` |
+| `tailscale up` 报 `/dev/net/tun` 打不开 | 第二节没生效：确认配置后**重启容器**（`pct reboot $CTID`），再 `ls -l /dev/net/tun` |
 | `tailscale up` 一直卡着不出网址 | 容器出不了网：`curl -I https://login.tailscale.com`；检查 `--net0` 的网关和 DNS |
 | `tailscale funnel` 提示 Funnel 没开 | 按它给的网址在管理后台批准一次；或者 ACL 里缺 `funnel` 属性 |
 | 提示要开 HTTPS | 管理后台 DNS 页开启 HTTPS Certificates |

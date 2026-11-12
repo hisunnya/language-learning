@@ -328,6 +328,9 @@ separate instance of the same code and is *not* part of `deploy-all`:
 127.0.0.1:8766 and nginx on 127.0.0.1:8081, and never touches the LAN edition or
 Tailscale. Install it in its own container or VM, not on the PVE host
 (`word-puzzle/deploy/family/部署说明.md`).
+Planned container: unprivileged LXC, hostname `lexica`, static address
+10.1.1.100/20 via gateway 10.1.1.1 on `vmbr0` (the PVE host is 10.1.1.93; guests
+100, 101 and 102 already exist, so pick a free id with `qm list; pct list`).
 
 **Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
 previous one with `git mv` to the new timestamp (never keep two side by side),

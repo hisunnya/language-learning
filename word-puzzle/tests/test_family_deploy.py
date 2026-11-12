@@ -158,7 +158,7 @@ class TestPveContainerGuide(unittest.TestCase):
         self.assertIn("PVE容器部署.md", GUIDE)
 
     def test_the_container_is_unprivileged_and_has_the_tun_device(self):
-        for text in ("--unprivileged 1", "nesting=1,keyctl=1", "pct set CTID --dev0 /dev/net/tun",
+        for text in ("--unprivileged 1", "nesting=1,keyctl=1", "pct set $CTID --dev0 /dev/net/tun",
                      "lxc.cgroup2.devices.allow: c 10:200 rwm",
                      "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file"):
             self.assertIn(text, PVE)
@@ -180,6 +180,52 @@ class TestPveContainerGuide(unittest.TestCase):
                      "wp-family-admin import", "127.0.0.1:8081", "127.0.0.1:8766"):
             self.assertIn(text, PVE)
         self.assertIn("wp-family-admin", INSTALL)
+
+
+def code_blocks(markdown: str) -> list[str]:
+    return re.findall(r"```[a-z]*\n(.*?)```", markdown, re.S)
+
+
+class TestPveCommandsCanBePasted(unittest.TestCase):
+    """第一次实际使用时，有人把占位符 CTID 原样粘进了命令（报 vmid type check failed）：
+    文档里所有命令都必须能直接复制，不能留需要手工替换的字样。"""
+
+    def test_no_code_block_contains_a_bare_placeholder(self):
+        for block in code_blocks(PVE):
+            for line in block.splitlines():
+                code = line.split("#", 1)[0]
+                self.assertIsNone(re.search(r"(?<![$A-Za-z_])CTID(?![A-Za-z_=])", code), line)
+                self.assertNotRegex(code, r"<[^>\n]*(模板|文件名|备份存储|你的)[^>\n]*>", line)
+
+    def test_the_variable_is_defined_before_its_first_use_and_the_id_is_checked_for_conflicts(self):
+        commands = "\n".join(code_blocks(PVE))
+        self.assertLess(commands.index("qm list; pct list"), commands.index("CTID=120"))
+        self.assertLess(commands.index("CTID=120"), commands.index("$CTID"))
+
+    def test_the_public_url_is_read_from_tailscale_instead_of_being_retyped(self):
+        commands = "\n".join(code_blocks(PVE))
+        self.assertIn('WP_PUBLIC_URL="https://$(tailscale status --json', commands)
+        self.assertIn('env WP_PUBLIC_URL="$WP_PUBLIC_URL" bash word-puzzle/deploy/family/install.sh', commands)
+        self.assertLess(commands.index('WP_PUBLIC_URL="https://$(tailscale'), commands.index('env WP_PUBLIC_URL="$WP_PUBLIC_URL"'))
+
+    def test_the_static_network_for_this_house_is_written_out(self):
+        self.assertIn("--net0 name=eth0,bridge=vmbr0,ip=10.1.1.100/20,gw=10.1.1.1", PVE)
+        self.assertIn("pct config $CTID", PVE)
+        self.assertIn("ping -c 2 10.1.1.100", PVE)
+        self.assertIn("DHCP 地址池", PVE)
+
+    def test_the_template_and_storage_steps_come_before_creation(self):
+        self.assertLess(PVE.index("pveam download local"), PVE.index("pct create"))
+        self.assertLess(PVE.index("pvesm status"), PVE.index("pct create"))
+
+    def test_the_errors_people_actually_hit_are_in_the_troubleshooting_table(self):
+        table = PVE[PVE.index("## 十、常见问题"):PVE.index("## 十一、")]
+        for text in ("type check ('integer') failed", "编号已存在", "存储不存在", "ping 10.1.1.1",
+                     "--nameserver", "/dev/net/tun"):
+            self.assertIn(text, table)
+
+    def test_the_container_is_checked_for_network_before_tailscale(self):
+        self.assertLess(PVE.index("ping -c 2 debian.org"), PVE.index("## 三、"))
 
 
 class TestUrlStability(unittest.TestCase):
