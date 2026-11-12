@@ -6,6 +6,7 @@
 <meta name="wp-base" content="/word-puzzle">
 <title>词境 Lexica · 首页</title>
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261112-auth">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261104-compact2">
 </head>
 <body>
@@ -52,8 +53,8 @@
     <div class="msg info" id="selInfo"></div>
     <div class="actions">
       <button class="btn lg gold" id="btnMake">生成题库并开始</button>
-      <button class="btn lg ghost" id="btnUpload">上传题库</button>
-      <button class="btn lg ghost" id="btnOffline">生成离线测试</button>
+      <button class="btn lg ghost admin-only" id="btnUpload">上传题库</button>
+      <button class="btn lg ghost admin-only" id="btnOffline">生成离线测试</button>
     </div>
   </div>
 
@@ -72,6 +73,7 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
 <script src="/word-puzzle/js/selector.js?v=20261104-volumes"></script>
 <script src="/word-puzzle/js/page-home.js?v=20261107-default12"></script>
 <script src="/shared/module-header.js"></script>

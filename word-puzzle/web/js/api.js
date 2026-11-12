@@ -37,7 +37,14 @@
       opt.headers['Content-Type'] = 'application/json';
       opt.body = JSON.stringify(body);
     }
-    var res = await fetch(url(path), opt);
+    var res;
+    try {
+      res = await fetch(url(path), opt);
+    } catch (e) {
+      var neterr = new Error('网络不通');
+      neterr.network = true;
+      throw neterr;
+    }
     var text = await res.text();
     var data;
     try {
@@ -46,7 +53,13 @@
       throw new Error('服务器返回了非 JSON 内容（HTTP ' + res.status + '）');
     }
     if (!res.ok || data.ok === false) {
-      throw new Error(data.error || ('请求失败（HTTP ' + res.status + '）'));
+      // 家庭版：登录失效 / 还没改初始密码，统一跳转，页面不用各自处理（也不弹错误）
+      if (data.code === 'login_required' && global.AuthUI) { AuthUI.go('login.html', true); return new Promise(function () {}); }
+      if (data.code === 'password_change_required' && global.AuthUI) { AuthUI.go('change-password.html', true); return new Promise(function () {}); }
+      var err = new Error(data.error || ('请求失败（HTTP ' + res.status + '）'));
+      err.code = data.code || '';
+      err.status = res.status;
+      throw err;
     }
     return data;
   }

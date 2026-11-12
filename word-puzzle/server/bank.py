@@ -273,8 +273,8 @@ def resolve_pairs_per_level(payload: dict) -> int:
     return value
 
 
-def create_bank(db: Database, payload: dict) -> dict:
-    """生成并落库一个题库，返回题库元信息。"""
+def create_bank(db: Database, payload: dict, owner_id: int | None = None) -> dict:
+    """生成并落库一个题库，返回题库元信息。owner_id 是创建者（家庭版里用来区分各人的题库）。"""
     names = resolve_levels(payload)
     mode = str(payload.get("unit_mode") or "all")
     if mode not in UNIT_MODE_LABELS:
@@ -305,6 +305,7 @@ def create_bank(db: Database, payload: dict) -> dict:
         "unit_from": int(payload.get("unit_from") or 0),
         "unit_to": int(payload.get("unit_to") or 0),
         "pairs_per_level": resolve_pairs_per_level(payload),
+        "owner_id": owner_id,
     }
     bid = db.insert_bank(meta, words)
     bank = db.get_bank(bid)

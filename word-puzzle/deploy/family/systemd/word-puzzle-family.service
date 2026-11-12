@@ -1,0 +1,38 @@
+[Unit]
+Description=词境 Lexica 家庭版 / 班级版后端（带登录）
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+WorkingDirectory=@INSTALL_DIR@
+Environment=WP_HOST=127.0.0.1
+Environment=WP_PORT=@PORT@
+Environment=WP_DB=@DATA_DIR@/app.db
+Environment=WP_QUIET=1
+# 登录功能和安全相关设置：站点只通过 HTTPS 对外（Tailscale Funnel），所以 Cookie 必须带 Secure
+Environment=WP_AUTH=1
+Environment=WP_COOKIE_SECURE=1
+Environment=WP_SESSION_DAYS=14
+# 对外地址由配置决定，不信客户端传来的 Host / X-Forwarded-Host（离线页里「返回主页」链接用它）
+Environment=WP_PUBLIC_HOME_URL=@PUBLIC_URL@
+Environment=WP_EDGE_TTS=@TTS_VENV@/bin/edge-tts
+Environment=WP_TTS_VOICE=en-US-AriaNeural
+ExecStart=/usr/bin/python3 -m server.app
+Restart=on-failure
+RestartSec=3
+
+# 安全加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=@DATA_DIR@ @INSTALL_DIR@/var
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

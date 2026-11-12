@@ -152,6 +152,7 @@ page in the repository that implements all of §3 today, and the hub test
 | `word-puzzle/web/*.html` | — | — | — | ⚠️ to be brought up to §3 |
 | `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
 | `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
+| `word-puzzle/web/{login,change-password,admin}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
 | `miniprogram/` (WeChat) | `utils/i18n.js` | 5 (same names) | top-right, square swatches (tap, name shown below) | ✅ adapted, see 3.4.1 |
 
 The three ⚠️ pages predate this convention. When you touch one of them, bring
@@ -320,6 +321,14 @@ titles, headers, README and the hub.
 target host: on production the flow is `git pull`, then run the script, which
 copies the files into the paths above.
 
+The **family / class edition** of Lexica (login required, `WP_AUTH=1`) is a
+separate instance of the same code and is *not* part of `deploy-all`:
+`word-puzzle/deploy/family/install.sh` installs it under `/srv/word-puzzle-family`,
+`/var/lib/word-puzzle-family`, systemd unit `word-puzzle-family`, backend on
+127.0.0.1:8766 and nginx on 127.0.0.1:8081, and never touches the LAN edition or
+Tailscale. Install it in its own container or VM, not on the PVE host
+(`word-puzzle/deploy/family/部署说明.md`).
+
 **Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
 previous one with `git mv` to the new timestamp (never keep two side by side),
 keep its file checks, smoke checks and printed URLs in step with the code — a
@@ -342,6 +351,14 @@ The household LAN is **10.0.0.0/20**.
   resumable so a dropped connection does not cost the whole file.
 - When a download fails, report **which URL failed and how** ("GitHub reset
   after 90 s" is an answer; "it timed out" is not).
+
+- **The home broadband is behind carrier-grade NAT** (router WAN address
+  10.23.x.x, the ISP no longer hands out public IPs, IPv6 is not used), so router
+  port forwarding cannot work. Public access goes through **Tailscale Funnel**
+  (`https://<name>.<tailnet>.ts.net`, HTTPS certificate handled by Tailscale, no
+  domain needed); it was tested from the company network and from a phone on
+  mobile data. Funnel's bandwidth is limited and its reachability from China is
+  not guaranteed.
 
 ### 6.2 The production server
 
@@ -408,3 +425,29 @@ This is a product requirement, not a preference.
   female-named local voice.
 
 See `/memories/repo/word-puzzle-website.md` for the implementation details.
+
+---
+
+## 8. Public exposure and student data
+
+Anything reachable through Funnel is **public**: the `*.ts.net` name appears in
+certificate-transparency logs, and within a minute of turning Funnel on, scanners
+were requesting `/.env`, `/AGENTS.md`, `/CLAUDE.md`, `/config.js` (observed).
+
+- Never point Funnel at a directory listing or a throw-away file server
+  (`python3 -m http.server` serves every file in its working directory, dotfiles
+  included — a test that ran it in `/root` exposed `/root` until it was stopped).
+  Funnel points only at the family nginx (127.0.0.1:8081), which sits in front of a
+  backend that requires login for every API call.
+- Funnel hides the client address (everything arrives from 127.0.0.1), so there is
+  no per-IP rate limit; login is protected by per-account lockout (5 failures →
+  15 min) and per-student / site-wide attempt limits in the backend.
+- Student data is minimised: **student number, name, class, college, department
+  and game results only. Phone numbers are never stored** — the roster importer
+  recognises such columns and drops them. Passwords are stored as scrypt hashes;
+  initial passwords exist in clear only in the one-off credentials list handed to
+  the administrator.
+- Browser-facing text that comes from a roster (names, classes) is untrusted:
+  escape it on output, and prefix `= + - @` cells in every CSV export.
+- Client-supplied `Host` / `X-Forwarded-Host` must not decide any link the
+  server generates: set `WP_PUBLIC_HOME_URL`, and let nginx overwrite the headers.

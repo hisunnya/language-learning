@@ -101,6 +101,34 @@ CREATE TABLE IF NOT EXISTS scores (
     created_at   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_scores_created ON scores(created_at DESC);
+
+-- 家庭版（WP_AUTH=1）才会用到的账号表；局域网版里这两张表是空的
+CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_no    TEXT NOT NULL UNIQUE,      -- 学号，同时是登录名
+    name          TEXT NOT NULL DEFAULT '',
+    class_name    TEXT NOT NULL DEFAULT '',  -- 班级
+    college       TEXT NOT NULL DEFAULT '',  -- 学院
+    department    TEXT NOT NULL DEFAULT '',  -- 院系
+    role          TEXT NOT NULL DEFAULT 'student',   -- student | admin
+    pw_hash       TEXT NOT NULL,
+    must_change   INTEGER NOT NULL DEFAULT 1,        -- 1 = 下次登录必须先改密码
+    disabled      INTEGER NOT NULL DEFAULT 0,
+    failed_count  INTEGER NOT NULL DEFAULT 0,
+    locked_until  REAL NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL,
+    last_login_at TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ix_users_class ON users(class_name);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    token_hash TEXT PRIMARY KEY,             -- 只存令牌的哈希，库泄露也拿不到可用的令牌
+    user_id    INTEGER NOT NULL,
+    created_at REAL NOT NULL,
+    expires_at REAL NOT NULL,
+    last_seen  REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS ix_scores_bank ON scores(bank_id);
 """
 
@@ -133,6 +161,13 @@ class Database:
         if "pairs_per_level" not in columns:
             self.execute("ALTER TABLE banks ADD COLUMN "
                          "pairs_per_level INTEGER DEFAULT 12")
+        if "owner_id" not in columns:
+            # NULL = 系统题库（所有人可见）；否则是创建者的用户 id
+            self.execute("ALTER TABLE banks ADD COLUMN owner_id INTEGER")
+        score_columns = {row["name"] for row in self.query("PRAGMA table_info(scores)")}
+        if "user_id" not in score_columns:
+            self.execute("ALTER TABLE scores ADD COLUMN user_id INTEGER")
+            self.execute("CREATE INDEX IF NOT EXISTS ix_scores_user ON scores(user_id)")
 
     # ---------------- 基础操作 ----------------
 
@@ -221,14 +256,14 @@ class Database:
             cur = conn.execute(
                 "INSERT INTO banks(title, level1, level2, level3, level4, source, "
                 "material_id, unit_mode, unit_from, unit_to, pairs_per_level, "
-                "word_count, unit_count, created_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "word_count, unit_count, created_at, owner_id) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (meta["title"], meta["level1"], meta["level2"], meta["level3"],
                  meta["level4"], meta["source"], meta.get("material_id"),
                  meta.get("unit_mode", "all"), meta.get("unit_from", 0),
                  meta.get("unit_to", 0),
                  int(meta.get("pairs_per_level") or 12), len(words),
-                 len({w["unit"] for w in words}), ts),
+                 len({w["unit"] for w in words}), ts, meta.get("owner_id")),
             )
             bid = cur.lastrowid
             conn.executemany(
@@ -239,8 +274,14 @@ class Database:
             )
         return bid
 
-    def list_banks(self) -> list[dict]:
-        rows = self.query("SELECT * FROM banks ORDER BY id DESC")
+    def list_banks(self, visible_to: int | None = None) -> list[dict]:
+        """visible_to=None 返回全部；给了用户 id 就只返回系统题库和他自己的。"""
+        if visible_to is None:
+            rows = self.query("SELECT * FROM banks ORDER BY id DESC")
+        else:
+            rows = self.query(
+                "SELECT * FROM banks WHERE owner_id IS NULL OR owner_id=? ORDER BY id DESC",
+                (visible_to,))
         return [dict(r) for r in rows]
 
     def get_bank(self, bid: int) -> dict | None:
@@ -263,7 +304,7 @@ class Database:
 
     # ---------------- scores ----------------
 
-    def insert_score(self, rec: dict) -> int:
+    def insert_score(self, rec: dict, user_id: int | None = None) -> int:
         ts = now_iso()
         detail = rec.get("detail")
         if not isinstance(detail, str):
@@ -272,25 +313,31 @@ class Database:
             cur = conn.execute(
                 "INSERT INTO scores(bank_id, bank_title, device, nickname, mode, "
                 "score, matched, total_pairs, wrong, best_combo, duration, "
-                "level_count, detail, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "level_count, detail, created_at, user_id) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (rec.get("bank_id"), rec.get("bank_title", ""),
                  rec.get("device", ""), rec.get("nickname", ""),
                  rec.get("mode", "online"), int(rec.get("score", 0)),
                  int(rec.get("matched", 0)), int(rec.get("total_pairs", 0)),
                  int(rec.get("wrong", 0)), int(rec.get("best_combo", 0)),
                  int(rec.get("duration", 0)), int(rec.get("level_count", 0)),
-                 detail, ts),
+                 detail, ts, user_id),
             )
         return int(cur.lastrowid)
 
-    def list_scores(self, limit: int = 200, bank_id: int | None = None) -> list[dict]:
-        if bank_id is None:
-            rows = self.query(
-                "SELECT * FROM scores ORDER BY id DESC LIMIT ?", (limit,))
-        else:
-            rows = self.query(
-                "SELECT * FROM scores WHERE bank_id=? ORDER BY id DESC LIMIT ?",
-                (bank_id, limit))
+    def list_scores(self, limit: int = 200, bank_id: int | None = None,
+                    user_id: int | None = None) -> list[dict]:
+        where, args = [], []
+        if bank_id is not None:
+            where.append("bank_id=?")
+            args.append(bank_id)
+        if user_id is not None:
+            where.append("user_id=?")
+            args.append(user_id)
+        sql = "SELECT * FROM scores"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        rows = self.query(sql + " ORDER BY id DESC LIMIT ?", (*args, limit))
         out = []
         for r in rows:
             d = dict(r)
@@ -301,15 +348,16 @@ class Database:
             out.append(d)
         return out
 
-    def score_stats(self) -> dict:
+    def score_stats(self, user_id: int | None = None) -> dict:
+        cond, args = ("WHERE user_id=?", (user_id,)) if user_id is not None else ("", ())
         row = self.one(
             "SELECT COUNT(*) AS n, COALESCE(SUM(score),0) AS total, "
             "COALESCE(MAX(score),0) AS best, COALESCE(AVG(score),0) AS avg "
-            "FROM scores")
+            "FROM scores " + cond, args)
         by_bank = self.query(
             "SELECT bank_title, COUNT(*) AS n, MAX(score) AS best, "
-            "COALESCE(SUM(score),0) AS total FROM scores "
-            "GROUP BY bank_title ORDER BY total DESC LIMIT 20")
+            "COALESCE(SUM(score),0) AS total FROM scores " + cond +
+            " GROUP BY bank_title ORDER BY total DESC LIMIT 20", args)
         return {
             "count": row["n"] if row else 0,
             "total": row["total"] if row else 0,

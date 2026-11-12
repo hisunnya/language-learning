@@ -106,7 +106,7 @@ p.lead { margin: 0 0 18px; color: var(--ink2); font-size: 14px; line-height: 1.7
   background: color-mix(in srgb, var(--blue) 18%, var(--card));
   color: var(--blue); font-size: 11px; margin-right: 6px;
 }
-input[type=text], input[type=number], input[type=file], select, textarea {
+input[type=text], input[type=number], input[type=password], input[type=file], select, textarea {
   width: 100%; border: 1.5px solid var(--line); border-radius: 11px;
   padding: 9px 11px; font-size: 14px; font-family: inherit;
   color: var(--field-ink);
