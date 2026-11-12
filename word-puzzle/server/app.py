@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import csv
+import io
 import json
 import mimetypes
 import os
@@ -20,6 +22,7 @@ import sys
 import threading
 import time
 import traceback
+from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -29,7 +32,8 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
     __package__ = "server"
 
 from server import bank as bank_mod           # noqa: E402
-from server import hierarchy, ipa, materials, offline, pdf, tts  # noqa: E402
+from server import auth as auth_mod            # noqa: E402
+from server import hierarchy, ipa, materials, offline, pdf, roster, tts  # noqa: E402
 from server.db import Database                 # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -44,10 +48,11 @@ mimetypes.add_type("application/json", ".json")
 # ---------------------------------------------------------------- 工具
 
 class HttpError(Exception):
-    def __init__(self, status: int, message: str):
+    def __init__(self, status: int, message: str, code: str = ""):
         super().__init__(message)
         self.status = status
         self.message = message
+        self.code = code
 
 
 def parse_multipart(body: bytes, content_type: str) -> dict:
@@ -109,6 +114,8 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "WordPuzzle/2.0"
     protocol_version = "HTTP/1.1"
     db: Database = None            # type: ignore[assignment]
+    auth: "auth_mod.AuthService | None" = None     # None = 局域网版，不需要登录
+    user: dict | None = None
     _body_read = False
 
     # ---------------- 基础响应 ----------------
@@ -125,6 +132,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "same-origin")
+        if self.auth is not None and self.auth.cookie_secure:
+            self.send_header("Strict-Transport-Security", "max-age=31536000")
+        if self.auth is not None and ctype.startswith(("application/json", "text/csv")):
+            self.send_header("Cache-Control", "no-store")     # 带个人信息的响应不要被缓存
         if self.close_connection:
             self.send_header("Connection", "close")
         for k, v in (extra or {}).items():
@@ -136,8 +149,11 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self, obj, status: int = 200) -> None:
         self._send(status, json_bytes(obj), "application/json; charset=utf-8")
 
-    def send_error_json(self, status: int, message: str) -> None:
-        self.send_json({"ok": False, "error": message}, status=status)
+    def send_error_json(self, status: int, message: str, code: str = "") -> None:
+        body = {"ok": False, "error": message}
+        if code:
+            body["code"] = code
+        self.send_json(body, status=status)
 
     def read_body(self) -> bytes:
         try:
@@ -216,13 +232,14 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if method != "GET" and not self._same_origin():
                 raise HttpError(403, "跨站请求被拒绝")
+            self.user = self._load_user()
             if path.startswith("/api/"):
                 self.handle_api(method, path, query)
             else:
                 self.handle_static(path)
         except HttpError as exc:
             self._close_if_body_unread()
-            self.send_error_json(exc.status, exc.message)
+            self.send_error_json(exc.status, exc.message, exc.code)
         except Exception as exc:  # pragma: no cover - 兜底
             traceback.print_exc()
             self._close_if_body_unread()
@@ -233,6 +250,51 @@ class Handler(BaseHTTPRequestHandler):
         而 nginx 会复用到后端的长连接，污染别人的请求。"""
         if self._has_unread_body():
             self.close_connection = True
+
+    # ---------------- 登录态 ----------------
+
+    def _session_token(self) -> str | None:
+        raw = self.headers.get("Cookie")
+        if not raw:
+            return None
+        try:
+            jar = SimpleCookie(raw)
+        except Exception:
+            return None
+        morsel = jar.get(auth_mod.SESSION_COOKIE)
+        return morsel.value if morsel else None
+
+    def _load_user(self) -> dict | None:
+        if self.auth is None:
+            return None
+        return self.auth.user_for_token(self._session_token())
+
+    def _is_admin(self) -> bool:
+        """局域网版没有账号体系，等同管理员（行为和以前一样）。"""
+        return self.auth is None or bool(self.user and self.user["role"] == "admin")
+
+    def _need_admin(self) -> None:
+        if not self._is_admin():
+            raise HttpError(403, "需要管理员权限", "forbidden")
+
+    def _uid(self) -> int | None:
+        return self.user["id"] if (self.auth is not None and self.user) else None
+
+    def _bank_visible(self, bank: dict | None) -> bool:
+        if not bank:
+            return False
+        if self._is_admin() or bank.get("owner_id") is None:
+            return True
+        return bank["owner_id"] == self._uid()
+
+    def _gate(self, path: str) -> None:
+        """家庭版：除了健康检查和登录相关接口，一律要先登录；还没改初始密码就只能去改密码。"""
+        if self.auth is None or path == "/api/health" or path.startswith("/api/auth/"):
+            return
+        if not self.user:
+            raise HttpError(401, "请先登录", "login_required")
+        if self.user["must_change"]:
+            raise HttpError(403, "请先修改初始密码", "password_change_required")
 
     # ---------------- 静态文件 ----------------
 
@@ -270,6 +332,21 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, "time": time.strftime("%Y-%m-%d %H:%M:%S")})
             return
 
+        # ---- 登录相关（不需要已登录） ----
+        if path.startswith("/api/auth/"):
+            self.handle_auth(method, path)
+            return
+
+        self._gate(path)
+
+        # ---- 管理员接口 ----
+        if path.startswith("/api/admin/"):
+            self._need_admin()
+            if self.auth is None:
+                raise HttpError(404, "局域网版没有账号管理")
+            self.handle_admin(method, path, query)
+            return
+
         # ---- 层级元数据 ----
         if path == "/api/meta" and method == "GET":
             self.send_json({"ok": True, **hierarchy.describe(),
@@ -296,6 +373,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         # ---- 资料 ----
+        if path.startswith("/api/materials"):
+            self._need_admin()
         if path == "/api/materials":
             if method == "GET":
                 self.send_json({"ok": True, "materials": db.list_materials()})
@@ -316,12 +395,15 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 题库 ----
         if path == "/api/banks":
             if method == "GET":
-                self.send_json({"ok": True, "banks": db.list_banks()})
+                visible = None if self._is_admin() else self._uid()
+                self.send_json({"ok": True, "banks": db.list_banks(visible)})
                 return
             if method == "POST":
                 payload = self.read_json()
+                if not self._is_admin() and payload.get("source", "seed") != "seed":
+                    raise HttpError(403, "只有管理员可以用上传的资料出题库", "forbidden")
                 try:
-                    created = bank_mod.create_bank(db, payload)
+                    created = bank_mod.create_bank(db, payload, owner_id=self._uid())
                 except bank_mod.BankError as exc:
                     raise HttpError(400, str(exc)) from exc
                 self.send_json({"ok": True, "bank": created}, status=201)
@@ -330,6 +412,8 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"/api/banks/(\d+)", path)
         if m and method == "GET":
             bid = int(m.group(1))
+            if not self._bank_visible(db.get_bank(bid)):
+                raise HttpError(404, "题库不存在")
             try:
                 self.send_json({"ok": True, **bank_mod.bank_payload(db, bid)})
             except bank_mod.BankError as exc:
@@ -338,13 +422,20 @@ class Handler(BaseHTTPRequestHandler):
 
         m = re.fullmatch(r"/api/banks/(\d+)", path)
         if m and method == "DELETE":
+            bank = db.get_bank(int(m.group(1)))
+            if not self._bank_visible(bank):
+                raise HttpError(404, "题库不存在")
+            if not self._is_admin() and bank.get("owner_id") != self._uid():
+                raise HttpError(403, "系统题库不能删除", "forbidden")
             ok = db.delete_bank(int(m.group(1)))
             if not ok:
                 raise HttpError(404, "题库不存在")
             self.send_json({"ok": True})
             return
 
-        # ---- 生成离线测试页 ----
+        # ---- 生成离线测试页（很吃资源，家庭版只给管理员） ----
+        if path.startswith("/api/offline") or path.endswith("/offline"):
+            self._need_admin()
         m = re.fullmatch(r"/api/banks/(\d+)/offline", path)
         if m and method == "POST":
             self.read_json()
@@ -378,24 +469,152 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET":
                 limit = int_param(query.get("limit"), "limit", 100, 1, 500)
                 bank_id = int_param(query.get("bank_id"), "bank_id")
-                scores = db.list_scores(limit=limit, bank_id=bank_id)
+                # 家庭版：学生只能看自己的成绩，管理员看全部
+                only = None if self._is_admin() else self._uid()
+                scores = db.list_scores(limit=limit, bank_id=bank_id, user_id=only)
                 self.send_json({"ok": True, "scores": scores,
-                                "stats": db.score_stats()})
+                                "stats": db.score_stats(only)})
                 return
             if method == "POST":
                 rec = self.read_json()
+                uid = self._uid()
+                if uid is not None:
+                    # 身份以登录态为准，不信客户端自己报的设备号和昵称
+                    rec["device"] = "u%d" % uid
+                    rec["nickname"] = self.user["name"]
                 try:
-                    sid = db.insert_score(rec)
+                    sid = db.insert_score(rec, user_id=uid)
                 except Exception as exc:
                     raise HttpError(400, f"成绩保存失败：{exc}") from exc
                 self.send_json({"ok": True, "id": sid}, status=201)
                 return
 
         if path == "/api/stats" and method == "GET":
-            self.send_json({"ok": True, **db.score_stats()})
+            only = None if self._is_admin() else self._uid()
+            self.send_json({"ok": True, **db.score_stats(only)})
             return
 
         raise HttpError(404, f"未知接口 {path}")
+
+    # ---------------- 登录 / 账号 ----------------
+
+    def handle_auth(self, method: str, path: str) -> None:
+        if path == "/api/auth/me" and method == "GET":
+            self.send_json({"ok": True, "auth_enabled": self.auth is not None,
+                            "user": auth_mod.AuthService.public(self.user)})
+            return
+        if self.auth is None:
+            raise HttpError(404, "局域网版没有登录功能")
+        try:
+            if path == "/api/auth/login" and method == "POST":
+                body = self.read_json()
+                user, token = self.auth.login(body.get("student_no", ""), body.get("password", ""))
+                self.send_json_with_cookie({"ok": True, "user": self.auth.public(user)},
+                                           self.auth.cookie_header(token))
+                return
+            if path == "/api/auth/logout" and method == "POST":
+                self.read_body()
+                self.auth.logout(self._session_token())
+                self.send_json_with_cookie({"ok": True}, self.auth.clear_cookie_header())
+                return
+            if path == "/api/auth/change-password" and method == "POST":
+                body = self.read_json()
+                if not self.user:
+                    raise HttpError(401, "请先登录", "login_required")
+                token = self.auth.change_password(self.user, body.get("old_password", ""),
+                                                  body.get("new_password", ""), self._session_token())
+                fresh = self.auth.get_by_id(self.user["id"])
+                self.send_json_with_cookie({"ok": True, "user": self.auth.public(fresh)},
+                                           self.auth.cookie_header(token))
+                return
+        except auth_mod.AuthError as exc:
+            raise HttpError(exc.status, exc.message, exc.code) from exc
+        raise HttpError(404, f"未知接口 {path}")
+
+    def send_json_with_cookie(self, obj, cookie: str, status: int = 200) -> None:
+        self._send(status, json_bytes(obj), "application/json; charset=utf-8", {"Set-Cookie": cookie})
+
+    def handle_admin(self, method: str, path: str, query: dict) -> None:
+        auth = self.auth
+        try:
+            if path == "/api/admin/users" and method == "GET":
+                users = auth.list_users(class_name=query.get("class_name", ""),
+                                        college=query.get("college", ""),
+                                        department=query.get("department", ""),
+                                        q=query.get("q", "").strip())
+                self.send_json({"ok": True, "users": users})
+                return
+
+            if path == "/api/admin/import" and method == "POST":
+                body = self.read_body()
+                ctype = self.headers.get("Content-Type", "")
+                if "multipart/form-data" not in ctype:
+                    raise HttpError(400, "请用 multipart/form-data 上传名单文件")
+                fields = parse_multipart(body, ctype)
+                upload = fields.get("file")
+                if not upload or not upload["data"]:
+                    raise HttpError(400, "没有收到名单文件")
+                try:
+                    table = roster.parse_roster(upload["filename"], upload["data"])
+                except roster.RosterError as exc:
+                    raise HttpError(400, str(exc)) from exc
+                reset = fields.get("reset_existing", {}).get("data", b"").decode("utf-8", "ignore").strip() in ("1", "true", "on")
+                report = auth.import_roster(table["rows"], reset_existing=reset)
+                report["ignored_columns"] = table["ignored_columns"]
+                self.send_json({"ok": True, **report})
+                return
+
+            m = re.fullmatch(r"/api/admin/users/(\d+)/(reset-password|disabled|unlock)", path)
+            if m and method == "POST":
+                uid, action = int(m.group(1)), m.group(2)
+                payload = self.read_json()
+                target = auth.get_by_id(uid)
+                if not target:
+                    raise HttpError(404, "没有这个用户")
+                if action == "reset-password":
+                    plain = auth.reset_password(uid)
+                    self.send_json({"ok": True, "student_no": target["student_no"], "password": plain})
+                elif action == "disabled":
+                    if uid == self.user["id"]:
+                        raise HttpError(400, "不能停用自己的账号")
+                    auth.set_disabled(uid, bool(payload.get("disabled", True)))
+                    self.send_json({"ok": True})
+                else:
+                    auth.unlock(uid)
+                    self.send_json({"ok": True})
+                return
+
+            if path == "/api/admin/export/scores.csv" and method == "GET":
+                data = self._scores_csv(query)
+                self._send(200, data, "text/csv; charset=utf-8", {
+                    "Content-Disposition": 'attachment; filename="lexica-scores.csv"'})
+                return
+        except auth_mod.AuthError as exc:
+            raise HttpError(exc.status, exc.message, exc.code) from exc
+        raise HttpError(404, f"未知接口 {path}")
+
+    def _scores_csv(self, query: dict) -> bytes:
+        where, args = [], []
+        for column, key in (("u.class_name", "class_name"), ("u.college", "college"),
+                            ("u.department", "department")):
+            if query.get(key):
+                where.append(column + "=?")
+                args.append(query[key])
+        sql = ("SELECT u.student_no, u.name, u.class_name, u.college, u.department, s.bank_title, "
+               "s.score, s.matched, s.total_pairs, s.wrong, s.best_combo, s.duration, "
+               "s.level_count, s.created_at FROM scores s JOIN users u ON u.id=s.user_id")
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY u.class_name, u.student_no, s.id"
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(["学号", "姓名", "班级", "学院", "院系", "题库", "得分", "配对数", "总对数",
+                         "错误次数", "最高连击", "用时(秒)", "关数", "时间"])
+        for row in self.db.query(sql, args):
+            # 以 = + - @ 开头的单元格在 Excel 里会被当成公式，前面补一个单引号
+            writer.writerow([("'" + str(v)) if isinstance(v, str) and v[:1] in "=+-@" else v
+                             for v in tuple(row)])
+        return ("\ufeff" + out.getvalue()).encode("utf-8")      # BOM：Excel 直接打开不乱码
 
     # ---------------- 具体处理 ----------------
 
@@ -513,9 +732,15 @@ def urllib_quote(text: str) -> str:
 # ---------------------------------------------------------------- 入口
 
 def build_server(host: str = "127.0.0.1", port: int = 8000,
-                 db_path: str | None = None) -> ThreadingHTTPServer:
+                 db_path: str | None = None, auth: "bool | dict | None" = None) -> ThreadingHTTPServer:
+    """auth: None = 看环境变量 WP_AUTH；True / dict = 启用登录（dict 是 AuthService 的参数）；False = 关闭。"""
     db = Database(db_path)
     Handler.db = db
+    if auth is None:
+        enabled = os.environ.get("WP_AUTH", "").strip().lower() in ("1", "true", "yes", "on")
+        auth = ({"cookie_secure": os.environ.get("WP_COOKIE_SECURE", "").strip().lower() in ("1", "true", "yes", "on"),
+                 "session_days": float(os.environ.get("WP_SESSION_DAYS", "14"))} if enabled else False)
+    Handler.auth = auth_mod.AuthService(db, **(auth if isinstance(auth, dict) else {})) if auth else None
     try:
         default_id = bank_mod.seed_default_bank(db)
         bank_mod.seed_curriculum_banks(db)
@@ -541,6 +766,7 @@ def main(argv: list[str] | None = None) -> int:
     print("  word-puzzle 服务已启动")
     print(f"  地址：http://{args.host}:{args.port}/")
     print(f"  数据库：{Handler.db.path}")
+    print("  登录：" + ("已启用（家庭版 / 班级版）" if Handler.auth else "未启用（局域网版）"))
     print(f"  内置词库：{meta.get('word_total', 0)} 词条 / "
           f"{meta.get('unit_total', 0)} 单元")
     print("  Ctrl-C 退出")

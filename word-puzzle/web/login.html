@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
+<meta name="robots" content="noindex">
+<title>登录 · 词境 Lexica</title>
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261112-auth">
+<link rel="stylesheet" href="/shared/module-header.css?v=20261104-compact2">
+</head>
+<body data-auth="public">
+<div class="wrap">
+
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/word-puzzle/" aria-label="词境 Lexica">
+      <span class="portal-brand-mark" aria-hidden="true">词</span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="English vocabulary practice">英语词汇练习</small></span>
+    </a>
+    <nav class="portal-nav"></nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <div class="card auth-card">
+    <h2 data-module-zh="登录" data-module-en="Sign in">登录</h2>
+    <p class="sub" data-module-zh="用学号登录。第一次登录用老师发的初始密码，登录后要先改成自己的密码。" data-module-en="Sign in with your student number. The first time, use the initial password from your teacher; you will be asked to choose your own.">用学号登录。第一次登录用老师发的初始密码，登录后要先改成自己的密码。</p>
+    <form id="loginForm" autocomplete="on" novalidate>
+      <div class="field">
+        <label for="studentNo" data-module-zh="学号" data-module-en="Student number">学号</label>
+        <input type="text" id="studentNo" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="64" required>
+      </div>
+      <div class="field">
+        <label for="password" data-module-zh="密码" data-module-en="Password">密码</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" maxlength="128" required>
+      </div>
+      <div class="msg" id="loginMsg" role="alert"></div>
+      <div class="actions">
+        <button class="btn lg gold" type="submit" id="btnLogin" data-module-zh="登录" data-module-en="Sign in">登录</button>
+      </div>
+    </form>
+    <p class="hint" data-module-zh="忘记密码？请联系老师重置。连续输错 5 次会临时锁定 15 分钟。" data-module-en="Forgot your password? Ask your teacher to reset it. Five wrong tries in a row lock the account for 15 minutes.">忘记密码？请联系老师重置。连续输错 5 次会临时锁定 15 分钟。</p>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/api.js?v=20261112-auth"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
+<script src="/word-puzzle/js/page-login.js?v=20261112-auth"></script>
+<script src="/shared/module-header.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
+<meta name="robots" content="noindex">
+<title>账号管理 · 词境 Lexica</title>
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261112-auth">
+<link rel="stylesheet" href="/shared/module-header.css?v=20261104-compact2">
+</head>
+<body data-auth="admin">
+<div class="wrap">
+
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/word-puzzle/" aria-label="词境 Lexica">
+      <span class="portal-brand-mark" aria-hidden="true">词</span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="English vocabulary practice">英语词汇练习</small></span>
+    </a>
+    <nav class="portal-nav">
+      <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
+      <a href="/word-puzzle/bank.html" data-module-zh="题库工作台" data-module-en="Banks">题库工作台</a>
+      <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <h1 class="page" data-module-zh="账号管理" data-module-en="Accounts">账号管理</h1>
+  <p class="lead" data-module-zh="没有自助注册：账号都由你导入名单创建。学生第一次登录用初始密码，登录后必须先改成自己的密码。" data-module-en="There is no self-registration: you create accounts by importing a roster. Students sign in with the initial password and must replace it right away.">没有自助注册：账号都由你导入名单创建。学生第一次登录用初始密码，登录后必须先改成自己的密码。</p>
+
+  <div class="card">
+    <h2 data-module-zh="导入名单" data-module-en="Import roster">导入名单</h2>
+    <p class="sub" data-module-zh="支持 Excel（.xlsx）或 CSV。必须有「学号」「姓名」两列；可选「班级」「学院」「院系」「初始密码」。手机号等其他列不会被保存。" data-module-en="Excel (.xlsx) or CSV. Required columns: student number and name; optional: class, college, department, initial password. Phone numbers and other columns are not stored.">支持 Excel（.xlsx）或 CSV。必须有「学号」「姓名」两列；可选「班级」「学院」「院系」「初始密码」。手机号等其他列不会被保存。</p>
+    <div class="row">
+      <div class="field">
+        <label for="rosterFile" data-module-zh="名单文件" data-module-en="Roster file">名单文件</label>
+        <input type="file" id="rosterFile" accept=".xlsx,.csv,.tsv,.txt">
+      </div>
+    </div>
+    <label class="hint" style="display:block;margin:10px 0">
+      <input type="checkbox" id="resetExisting">
+      <span data-module-zh="名单里已有的学号也重新生成初始密码（会让他们退出登录）" data-module-en="Also issue new initial passwords to students who already exist (signs them out)">名单里已有的学号也重新生成初始密码（会让他们退出登录）</span>
+    </label>
+    <div class="actions"><button class="btn lg gold" id="btnImport" data-module-zh="导入名单" data-module-en="Import roster">导入名单</button></div>
+    <div class="import-report" id="importReport" aria-live="polite"></div>
+  </div>
+
+  <div class="card">
+    <h2 data-module-zh="学生账号" data-module-en="Student accounts">学生账号</h2>
+    <p class="sub" id="usersCount"></p>
+    <div class="admin-filters">
+      <div class="field"><label for="fClass" data-module-zh="班级" data-module-en="Class">班级</label><select id="fClass"></select></div>
+      <div class="field"><label for="fCollege" data-module-zh="学院" data-module-en="College">学院</label><select id="fCollege"></select></div>
+      <div class="field"><label for="fDept" data-module-zh="院系" data-module-en="Department">院系</label><select id="fDept"></select></div>
+      <div class="field"><label for="fSearch" data-module-zh="搜索学号或姓名" data-module-en="Search number or name">搜索学号或姓名</label><input type="text" id="fSearch" maxlength="40"></div>
+      <a class="btn ghost" id="btnExport" href="#" data-module-zh="导出成绩 CSV" data-module-en="Export scores CSV">导出成绩 CSV</a>
+    </div>
+    <div class="msg" id="userMsg" role="status"></div>
+    <div class="secret-box" id="secretBox" hidden></div>
+    <div class="scroll"><table class="tbl" id="userTable">
+      <thead><tr>
+        <th data-module-zh="学号" data-module-en="No.">学号</th>
+        <th data-module-zh="姓名" data-module-en="Name">姓名</th>
+        <th data-module-zh="班级" data-module-en="Class">班级</th>
+        <th data-module-zh="学院" data-module-en="College">学院</th>
+        <th data-module-zh="院系" data-module-en="Department">院系</th>
+        <th data-module-zh="状态" data-module-en="Status">状态</th>
+        <th data-module-zh="局数" data-module-en="Games">局数</th>
+        <th data-module-zh="最高分" data-module-en="Best">最高分</th>
+        <th data-module-zh="最近登录" data-module-en="Last sign-in">最近登录</th>
+        <th data-module-zh="操作" data-module-en="Actions">操作</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/api.js?v=20261112-auth"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
+<script src="/word-puzzle/js/page-admin.js?v=20261112-auth"></script>
+<script src="/shared/module-header.js"></script>
+</body>
+</html>

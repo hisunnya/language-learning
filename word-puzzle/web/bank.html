@@ -6,6 +6,7 @@
 <meta name="wp-base" content="/word-puzzle">
 <title>题库工作台 · 词境 Lexica</title>
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261112-auth">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261104-compact2">
 </head>
 <body>
@@ -25,7 +26,7 @@
   </header>
 
   <!-- 两个主按钮 -->
-  <div class="card">
+  <div class="card admin-only">
     <h2>主要操作</h2>
     <p class="sub">上传自己的词表，或把当前选好的层级直接导出成离线测试网页</p>
     <div class="actions">
@@ -49,7 +50,7 @@
     <p class="sub">第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称</p>
 
     <div class="row" style="margin-bottom:12px">
-      <div class="field">
+      <div class="field admin-only">
         <label>题源</label>
         <select id="sourceSel">
           <option value="seed">内置课程词库</option>
@@ -78,7 +79,7 @@
   </div>
 
   <!-- 资料列表 -->
-  <div class="card">
+  <div class="card admin-only">
     <h2>已上传的资料</h2>
     <p class="sub">支持 TXT / CSV / TSV / JSON；JSON、CSV 会自动识别单元字段</p>
     <div class="list" id="matList"><div class="empty">还没有上传资料</div></div>
@@ -92,7 +93,7 @@
   </div>
 
   <!-- 离线文件 -->
-  <div class="card">
+  <div class="card admin-only">
     <h2>已生成的离线测试页</h2>
     <p class="sub">文件名规则：层级 + 日期 + 时间.html</p>
     <div class="list" id="fileList"><div class="empty">还没有生成过</div></div>
@@ -106,6 +107,7 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
 <script src="/word-puzzle/js/selector.js?v=20261104-volumes"></script>
 <script src="/word-puzzle/js/page-bank.js?v=20261107-default12"></script>
 <script src="/shared/module-header.js"></script>

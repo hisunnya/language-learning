@@ -276,8 +276,10 @@
       });
     };
 
-    loadMaterials();
     loadBanks();
-    loadFiles();
+    // 资料和离线页只有管理员能用；学生的账号调这两个接口会被拒绝，所以不去调
+    AuthUI.ready.then(function () {
+      if (AuthUI.isAdmin()) { loadMaterials(); loadFiles(); }
+    });
   });
 })();
