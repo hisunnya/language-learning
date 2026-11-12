@@ -16,6 +16,7 @@ CONF = (FAMILY / "nginx" / "word-puzzle-family.conf").read_text(encoding="utf-8"
 PROXY = (FAMILY / "nginx" / "proxy.inc").read_text(encoding="utf-8")
 INSTALL = (FAMILY / "install.sh").read_text(encoding="utf-8")
 GUIDE = (FAMILY / "部署说明.md").read_text(encoding="utf-8")
+PVE = (FAMILY / "PVE容器部署.md").read_text(encoding="utf-8")
 NGINX = shutil.which("nginx")
 
 
@@ -145,6 +146,35 @@ class TestGuide(unittest.TestCase):
         for text in ("不要装在 PVE 宿主机上", "主机名别叫", "没装 Tailscale 的手机", "funnel reset",
                      "wp-family-admin", "/.env", "初始密码", "备份", "连续输错 5 次"):
             self.assertIn(text, GUIDE)
+
+
+class TestPveContainerGuide(unittest.TestCase):
+    def test_guide_is_linked_from_the_main_guide(self):
+        self.assertIn("PVE容器部署.md", GUIDE)
+
+    def test_the_container_is_unprivileged_and_has_the_tun_device(self):
+        for text in ("--unprivileged 1", "nesting=1,keyctl=1", "pct set CTID --dev0 /dev/net/tun",
+                     "lxc.cgroup2.devices.allow: c 10:200 rwm",
+                     "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file"):
+            self.assertIn(text, PVE)
+
+    def test_the_operational_traps_are_covered(self):
+        for text in ("Disable key expiry", "180 天", "Rename tailnet", "HTTPS Certificates",
+                     "tailscale funnel reset", "vzdump", "pct push", "pct enter",
+                     "没装 Tailscale 的手机", "python3 -m http.server", "不要给容器开 SSH"):
+            self.assertIn(text, PVE)
+
+    def test_it_is_ordered_so_the_public_url_is_known_before_installing(self):
+        self.assertLess(PVE.index("四、先装 Tailscale"), PVE.index("五、把代码放进容器并安装"))
+        self.assertLess(PVE.index("五、把代码放进容器并安装"), PVE.index("六、上线前检查，然后开 Funnel"))
+        # 开 Funnel 的命令只出现在「开 Funnel」那一节之后
+        self.assertGreater(PVE.index("tailscale funnel --bg 8081"), PVE.index("六、上线前检查"))
+
+    def test_the_commands_match_the_installer(self):
+        for text in ("word-puzzle/deploy/family/install.sh", "WP_PUBLIC_URL=", "wp-family-admin create-admin",
+                     "wp-family-admin import", "127.0.0.1:8081", "127.0.0.1:8766"):
+            self.assertIn(text, PVE)
+        self.assertIn("wp-family-admin", INSTALL)
 
 
 if __name__ == "__main__":
