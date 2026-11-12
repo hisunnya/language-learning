@@ -120,6 +120,16 @@ exec runuser -u $RUN_USER -- env WP_DB="$DATA_DIR/app.db" python3 -m server.admi
 ADMIN
 chmod 0755 /usr/local/sbin/wp-family-admin
 
+say "记录对外网址，并和 Tailscale 里的比对"
+printf '%s\n' "$PUBLIC_URL" > "$DATA_DIR/public-url"
+chown "$RUN_USER:$RUN_USER" "$DATA_DIR/public-url"
+if command -v tailscale >/dev/null 2>&1; then
+  bash "$INSTALL_DIR/deploy/family/check-url.sh" "$PUBLIC_URL" \
+    || warn "对外网址和 Tailscale 里的不一致（见上），请先弄清楚再把网址发给学生"
+else
+  echo "    这台机器上还没有 Tailscale，先记下网址；装好 Tailscale 后运行 bash $INSTALL_DIR/deploy/family/check-url.sh"
+fi
+
 say "自检"
 ok=0
 for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
@@ -150,5 +160,6 @@ cat <<EOF2
   2) 导入名单：    sudo wp-family-admin import /tmp/名单.xlsx --out /tmp/初始密码.csv
      （或者登录后在「账号管理」页面上传名单）
   3) 开 Funnel：   tailscale funnel --bg $NGINX_PORT      （确认过再开，见 部署说明.md 的检查清单）
+  4) 网址会不会变： bash $INSTALL_DIR/deploy/family/check-url.sh   （重建容器、改名之后都要跑）
 
 EOF2
