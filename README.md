@@ -128,13 +128,13 @@ language-learning/
 在生产服务器执行 `git pull` 后，从仓库根目录运行：
 
 ```bash
-sudo bash ./deploy-all-20261113_213242.sh
+sudo bash ./deploy-all-20261113_213646.sh
 ```
 
 脚本默认部署到 `10.1.1.93`，会更新词境后端、语林门户、每日话题、无线电执照和 nginx 统一入口（配置写入 `/etc/nginx/conf.d/lingua-grove.conf`），并检查四个页面及词境 API。缺少 `conf.d` 时会自动创建；词境现有数据库会保留。目标地址不同时可覆盖：
 
 ```bash
-sudo env LINGUA_SERVER_NAME=服务器IP或域名 bash ./deploy-all-20261113_213242.sh
+sudo env LINGUA_SERVER_NAME=服务器IP或域名 bash ./deploy-all-20261113_213646.sh
 ```
 
 ---
