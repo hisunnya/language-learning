@@ -231,3 +231,24 @@ if (bad.length) { console.error('FAIL ' + bad.join(' ')); process.exit(1); }
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestFavicon(unittest.TestCase):
+    """词境的 logo 来自 miniprogram/design/icon.svg；网站每个页面都要引用它，标签页和手机桌面才有图标。"""
+
+    def test_every_page_links_the_icons_and_the_files_exist(self):
+        web = WEB
+        for page in sorted(p.name for p in web.glob("*.html")):
+            html = read(page)
+            for href in ("/word-puzzle/img/icon.svg", "/word-puzzle/img/icon-512.png",
+                         "/word-puzzle/img/apple-touch-icon.png"):
+                self.assertIn('href="%s"' % href, html, page)
+        for name in ("icon.svg", "icon-512.png", "apple-touch-icon.png"):
+            self.assertGreater((web / "img" / name).stat().st_size, 1000, name)
+
+    def test_the_png_icons_have_the_expected_size(self):
+        import struct
+        for name, size in (("icon-512.png", 512), ("apple-touch-icon.png", 180)):
+            head = (ROOT / "web" / "img" / name).read_bytes()[:24]
+            self.assertEqual(head[:8], b"\x89PNG\r\n\x1a\n", name)
+            self.assertEqual(struct.unpack(">II", head[16:24]), (size, size), name)
