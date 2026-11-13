@@ -252,3 +252,19 @@ class TestFavicon(unittest.TestCase):
             head = (ROOT / "web" / "img" / name).read_bytes()[:24]
             self.assertEqual(head[:8], b"\x89PNG\r\n\x1a\n", name)
             self.assertEqual(struct.unpack(">II", head[16:24]), (size, size), name)
+
+
+class TestBrandLogo(unittest.TestCase):
+    """页头左上角的品牌方块用词境 logo 图片，不再是文字“词”。"""
+
+    def test_every_page_header_uses_the_logo_image(self):
+        for page in sorted(p.name for p in WEB.glob("*.html")):
+            html = read(page)
+            self.assertIn("portal-brand-mark--logo", html, page)
+            self.assertIn('src="/word-puzzle/img/icon.svg"', html, page)
+            self.assertNotIn('aria-hidden="true">词</span>', html, page)
+            self.assertIn("module-header.css?v=20261113-logo", html, page)   # 改了共享样式，要换版本号绕开缓存
+
+    def test_the_modifier_exists_in_the_shared_stylesheet(self):
+        css = (ROOT.parent / "hub" / "shared" / "module-header.css").read_text(encoding="utf-8")
+        self.assertIn(".portal-brand-mark--logo img", css)

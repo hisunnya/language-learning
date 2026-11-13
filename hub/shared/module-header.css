@@ -59,6 +59,9 @@
   font-size: 19px;
   font-weight: 800;
 }
+/* 用图片 logo 代替文字块（词境）：圆角和阴影保留，渐变底色去掉 */
+.portal-brand-mark--logo { background: none; overflow: hidden; }
+.portal-brand-mark--logo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .portal-brand-copy { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .portal-brand-copy strong { font-size: 16px; font-weight: 800; }
 .portal-brand-copy em { margin-left: 4px; color: var(--mh-accent); font-size: 10px; font-style: normal; letter-spacing: 1px; }
