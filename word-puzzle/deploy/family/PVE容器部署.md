@@ -12,8 +12,10 @@ PVE 宿主机 pve03：只负责跑这个容器，不装本程序，不开 Funnel
 
 下面的命令分两处执行：标「宿主机」的在 PVE 宿主机上（root），标「容器内」的在容器里（用 `pct enter $CTID` 进去，不需要密码，**也不要给容器开 SSH**）。
 
-文中的 `$CTID` 是一个 shell 变量，存的是容器编号。**先在宿主机上设好它，后面的命令就可以原样复制**
-（不要把 `CTID` 这几个字母直接当成编号写进命令，会报 `vmid: type check ('integer') failed`，见第十节）：
+文中的 `$CTID` 是一个 shell 变量，存的是容器编号。**先在宿主机上设好它，后面的命令就可以原样复制**。
+变量只在**当前这个终端窗口**里有效：重新登录、换了窗口，它就是空的，需要重新设一次。
+用到它的每个命令块开头都有一行检查，没设置时会直接提示「先设置容器编号」，不会闷头往下跑。
+（也不要把 `CTID` 这几个字母直接当成编号写进命令，会报 `vmid: type check ('integer') failed`，见第十节。）
 
 ```bash
 # 宿主机：先看哪些编号已经被占用（虚拟机和容器共用一套编号）
@@ -39,6 +41,7 @@ pvesm status                                              # 看存储名：下�
 （或者确认它不在池子里），否则以后某台手机可能被分到同一个地址。
 
 ```bash
+: "${CTID:?先设置容器编号，例如 CTID=120}"
 TEMPLATE=debian-13-standard_13.6-1_amd64.tar.zst
 
 pct create $CTID local:vztmpl/$TEMPLATE \
@@ -65,11 +68,13 @@ pct create $CTID local:vztmpl/$TEMPLATE \
 Tailscale 需要 `/dev/net/tun`。官方给了两种办法，二选一：
 
 ```bash
+: "${CTID:?先设置容器编号，例如 CTID=120}"
 # 办法 A：pct 的设备直通（官方也列为可选方式）
 pct set $CTID --dev0 /dev/net/tun
 ```
 
 ```bash
+: "${CTID:?先设置容器编号，例如 CTID=120}"
 # 办法 B：直接改配置文件（PVE 7 及以上）
 cat >> /etc/pve/lxc/$CTID.conf <<'CONF'
 lxc.cgroup2.devices.allow: c 10:200 rwm
@@ -127,6 +132,7 @@ echo "$WP_PUBLIC_URL"          # 应该是 https://lexica.你的tailnet名.ts.ne
 容器里没有仓库时，从宿主机上的检出目录（`/root/language-learning`）推进去，只需要两个目录：
 
 ```bash
+: "${CTID:?先设置容器编号，例如 CTID=120}"
 # 宿主机
 cd /root/language-learning && git pull
 tar czf /tmp/lexica-src.tgz --exclude='word-puzzle/var' --exclude='__pycache__' --exclude='.DS_Store' \
@@ -149,6 +155,7 @@ env WP_PUBLIC_URL="$WP_PUBLIC_URL" bash word-puzzle/deploy/family/install.sh
 创建管理员、导入名单（容器内）：
 
 ```bash
+: "${CTID:?先设置容器编号，例如 CTID=120}"
 wp-family-admin create-admin 你的工号 --name 你的名字
 # 名单文件从宿主机推进来：pct push $CTID /路径/名单.xlsx /tmp/名单.xlsx
 wp-family-admin import /tmp/名单.xlsx --out /tmp/初始密码.csv
@@ -270,6 +277,7 @@ apt-get -y remove tailscale
 
 | 现象 | 可能原因和办法 |
 |---|---|
+| `pct create` 报 `400 not enough arguments` | `$CTID` 是空的（重新登录或换了终端窗口，变量没了）：`echo $CTID` 看一下，空的就重新 `CTID=120`，再运行命令 |
 | `pct create` 报 `vmid: type check ('integer') failed - got 'CTID'` | 把 `CTID` 这几个字母当成编号写进了命令。先 `CTID=120`（一个没被占用的数字），命令里写 `$CTID`，见开头 |
 | `pct create` 报编号已存在 | 这个编号被虚拟机或容器占了：`qm list; pct list`，换一个 |
 | `pct create` 报存储不存在 / 不支持 rootdir | `pvesm status` 看实际的存储名，把 `--rootfs local-lvm:8` 里的 `local-lvm` 换掉；这个存储的 Content 要包含 Container（rootdir） |
