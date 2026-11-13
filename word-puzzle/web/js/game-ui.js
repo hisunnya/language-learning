@@ -193,6 +193,60 @@
     return fallbackSpeak(en);
   }
 
+  /* ---------------- 预取发音（在线版） ----------------
+     第一次点英文词时，后端才开始合成，要等几秒。所以选了关就把这一关所有词的
+     音频在后台取回来，存成本地 blob；点词时直接播放，不再等服务器。
+     * 只在线上版（有 serverAudioBase）才做；离线页的音频已经内嵌。
+     * 并发 3 个：后端每个词起一个 edge-tts 进程，容器只有 1 GB，不能一下子全发出去。
+     * 换了关就丢掉没开始的队列，只取最新选的那一关；已经在取的让它取完。
+     * 失败只忽略：点词时 speak() 会走原来的路径再试一次，提示也在那里。 */
+  var PREFETCH_PARALLEL = 3;
+  var prefetchQueue = [], prefetchActive = 0, prefetchPending = {};
+
+  function audioKey(en) { return String(en || '').toLowerCase(); }
+
+  function prefetchPump() {
+    var win = global;
+    while (prefetchActive < PREFETCH_PARALLEL && prefetchQueue.length) {
+      var en = prefetchQueue.shift();
+      var key = audioKey(en);
+      if (audioCache[key] || prefetchPending[key]) continue;
+      prefetchPending[key] = true;
+      prefetchActive++;
+      (function (en, key) {
+        win.fetch(serverAudioBase + encodeURIComponent(en), { credentials: 'same-origin' })
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.blob();
+          })
+          .then(function (blob) {
+            if (audioCache[key]) return;      /* 等的时候用户已经点过，别覆盖正在播的 */
+            var a = new win.Audio(win.URL.createObjectURL(blob));
+            a.preload = 'auto';
+            a.addEventListener('error', function () { audioCache[key] = null; });
+            audioCache[key] = a;
+          })
+          .catch(function () { })
+          .then(function () {
+            delete prefetchPending[key];
+            prefetchActive--;
+            prefetchPump();
+          });
+      })(en, key);
+    }
+  }
+
+  function prefetchWords(words) {
+    if (!serverAudioBase || !global.fetch || !global.Audio ||
+        !global.URL || !global.URL.createObjectURL) return;
+    prefetchQueue = [];
+    (words || []).forEach(function (w) {
+      var key = audioKey(w && w.en);
+      if (key && !audioCache[key] && !prefetchPending[key]) prefetchQueue.push(w.en);
+    });
+    prefetchPump();
+  }
+
   /* ---------------- 特效 ---------------- */
   var fx = null, toastTimer = null;
 
@@ -258,6 +312,16 @@
     game: null,
     timer: null,
     started: false,
+
+    /* 预取第 index 关的发音；这一关排在前面，下一关紧跟其后（只在线上版有效）。 */
+    prefetchLevel: function (index) {
+      var levels = (this.game && this.game.levels) || [];
+      var words = [];
+      [index, index + 1].forEach(function (i) {
+        if (levels[i] && levels[i].words) words = words.concat(levels[i].words);
+      });
+      prefetchWords(words);
+    },
 
     init: function (cfg) {
       this.cfg = cfg;
@@ -365,6 +429,7 @@
         var b2 = ev.target.closest('button');
         if (!b2) return;
         picked = +b2.getAttribute('data-l');
+        self.prefetchLevel(picked);
         Array.prototype.forEach.call(lp.children, function (x) { x.classList.remove('on'); });
         b2.classList.add('on');
       };
@@ -373,6 +438,7 @@
         self.finished = false;
         g.state.score = 0; g.state.best = 0; g.state.levelStats = [];
         g.state.limit = g.levelTime;
+        self.prefetchLevel(picked);
         g.start(picked);
       };
       $('ov-list').onclick = function () { self.showList(); };
@@ -587,6 +653,7 @@
       var self = this;
       if (evt.type === 'board') {
         this.finished = false;         /* 新的一局开始，允许重新记分 */
+        this.prefetchLevel(evt.level);  /* 下一关也顺手取，过关后不用再等 */
         this.renderBoard();
         this.startTimer();
         this.render();
@@ -655,5 +722,11 @@
     }
   };
 
+  /* 给测试用：不经过 init（它要整页 DOM），直接设音频地址、喂词、看缓存 */
+  UI._test = {
+    setBase: function (b) { serverAudioBase = b; },
+    prefetch: prefetchWords,
+    cache: audioCache
+  };
   global.WPGameUI = UI;
 })(window);
