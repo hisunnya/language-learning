@@ -194,6 +194,8 @@ class TestPveCommandsCanBePasted(unittest.TestCase):
         for block in code_blocks(PVE):
             for line in block.splitlines():
                 code = line.split("#", 1)[0]
+                if code.startswith(': "${CTID:?'):       # 检查变量是否已设置的那一行，本身会写到 CTID
+                    continue
                 self.assertIsNone(re.search(r"(?<![$A-Za-z_])CTID(?![A-Za-z_=])", code), line)
                 self.assertNotRegex(code, r"<[^>\n]*(模板|文件名|备份存储|你的)[^>\n]*>", line)
 
@@ -201,6 +203,31 @@ class TestPveCommandsCanBePasted(unittest.TestCase):
         commands = "\n".join(code_blocks(PVE))
         self.assertLess(commands.index("qm list; pct list"), commands.index("CTID=120"))
         self.assertLess(commands.index("CTID=120"), commands.index("$CTID"))
+
+    def test_every_block_using_the_variable_checks_that_it_is_set(self):
+        """变量只在当前终端有效：重新登录后它是空的，命令会变成缺编号的 pct create（400 not enough arguments）。
+        用到 $CTID 的块要么自己赋值，要么开头带检查，没设置时给出明确提示。"""
+        guard = ': "${CTID:?先设置容器编号，例如 CTID=120}"'
+        blocks = [b for b in code_blocks(PVE) if "$CTID" in b]
+        self.assertGreaterEqual(len(blocks), 4)
+        for block in blocks:
+            self.assertTrue("CTID=" in block or block.lstrip().startswith(guard), block.splitlines()[0])
+
+    def test_the_guard_really_stops_a_command_when_the_variable_is_empty(self):
+        guard = ': "${CTID:?先设置容器编号，例如 CTID=120}"'
+        script = guard + '\necho "should not run: pct create $CTID"\n'
+        proc = subprocess.run(["bash", "-c", script], capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"})
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("先设置容器编号", proc.stderr)
+        self.assertNotIn("should not run", proc.stdout)
+        proc = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                              env={"PATH": "/usr/bin:/bin", "CTID": "120"})
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("pct create 120", proc.stdout)
+
+    def test_the_troubleshooting_table_has_the_empty_variable_case(self):
+        self.assertIn("400 not enough arguments", PVE)
+        self.assertIn("echo $CTID", PVE)
 
     def test_the_public_url_is_read_from_tailscale_instead_of_being_retyped(self):
         commands = "\n".join(code_blocks(PVE))
