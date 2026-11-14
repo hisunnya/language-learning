@@ -313,6 +313,37 @@ class TestProjectLinks(unittest.TestCase):
 class TestDeployment(unittest.TestCase):
     """The portal is the port-80 entry point for all three projects."""
 
+    def test_other_projects_can_add_locations_through_tv_inc_files(self):
+        """tv-m3u 这类独立项目把自己的 location 放在 conf.d/tv-*.inc 里，由这个入口 include。
+        这一行如果不在仓库模板里，下次 deploy-all 会把生产上手工加的那行覆盖掉，/tv/ 就失效了。"""
+        self.assertEqual(NGINX.count("include /etc/nginx/conf.d/tv-*.inc;"), 1)
+        server = NGINX[NGINX.index("\nserver {"):]
+        self.assertLess(server.index("server_name"), server.index("tv-*.inc"), "include 要在 server 块里、server_name 之后")
+        self.assertLess(server.index("tv-*.inc"), server.index("location "), "include 要在第一个 location 之前")
+
+    def test_the_installer_never_deletes_inc_files_from_conf_d(self):
+        install = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
+        for line in install.splitlines():
+            if re.search(r"\brm\b", line):
+                self.assertNotIn("*.inc", line, line)
+                self.assertNotIn("conf.d/*", line, line)
+                self.assertNotIn("tv-", line, line)
+
+    def test_nginx_accepts_the_include_when_no_tv_file_exists(self):
+        import shutil, subprocess, tempfile
+        nginx = shutil.which("nginx")
+        if not nginx:
+            self.skipTest("本机没有 nginx")
+        with tempfile.TemporaryDirectory() as tmp:
+            conf = Path(tmp) / "nginx.conf"
+            conf.write_text("pid %s/n.pid;\nerror_log %s/e.log;\nevents {}\nhttp {\n"
+                            "  client_body_temp_path %s/b; proxy_temp_path %s/p; fastcgi_temp_path %s/f;\n"
+                            "  uwsgi_temp_path %s/u; scgi_temp_path %s/s;\n  access_log off;\n"
+                            "  server {\n    listen 127.0.0.1:18099;\n    include %s/no-such-dir/tv-*.inc;\n"
+                            "    location / { return 200 ok; }\n  }\n}\n" % ((tmp,) * 8), encoding="utf-8")
+            proc = subprocess.run([nginx, "-t", "-c", str(conf), "-p", tmp], capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
     def test_port_80_serves_the_hub_for_a_configured_host(self):
         self.assertIn("listen 80;", NGINX)
         self.assertIn("server_name __LINGUA_SERVER_NAME__;", NGINX)
