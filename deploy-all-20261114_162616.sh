@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261114_160823.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261114_162616.sh
 # 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
 set -euo pipefail
 
@@ -17,6 +17,8 @@ command -v curl >/dev/null 2>&1 || die "缺少 curl，请先安装 curl"
 for path in \
   word-puzzle/deploy/install.sh \
   word-puzzle/web/img/icon.svg \
+  word-puzzle/web/js/i18n.js \
+  word-puzzle/web/js/i18n-lexica.js \
   hub/deploy/install.sh \
   hub/deploy/lingua-grove.conf \
   topic-app/topic-app/index.html \
@@ -81,6 +83,8 @@ check_path /physics/js/physics.js
 check_path /word-puzzle/
 check_path /word-puzzle/css/app.css
 check_path /word-puzzle/img/icon.svg
+check_path /word-puzzle/js/i18n.js
+check_path /word-puzzle/js/i18n-lexica.js
 
 retry "词境 API 健康检查失败或返回异常" health_ok
 printf '    OK /word-puzzle/api/health\n'

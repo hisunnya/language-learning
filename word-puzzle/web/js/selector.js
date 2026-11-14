@@ -14,14 +14,14 @@
 (function (global) {
   'use strict';
 
+  /* 「自定义」既是下拉框里的值（和后端约定好的），也是显示文字；值不能翻译，显示文字用 t('sel_custom') */
   var CUSTOM = '自定义';
   var _seq = 0;
 
-  var UNIT_MODE_NAMES = {
-    'all': '全部单元',
-    'per-unit': '分单元',
-    'range': '第 N 至第 M 单元'
-  };
+  function t(key, params) { return WPI18N.t(key, params); }
+
+  var MODE_KEYS = { 'all': 'sel_mode_all', 'per-unit': 'sel_mode_perunit', 'range': 'sel_mode_range' };
+  function modeName(key) { return MODE_KEYS[key] ? t(MODE_KEYS[key]) : ''; }
 
   function Selector(mount, opts) {
     this.opts = opts || {};
@@ -34,20 +34,21 @@
 
   Selector.prototype.render = function () {
     var id = this.id;
-    function box(n, label, ph) {
-      return '<div class="field"><label><span class="n">' + n + '</span>' + label +
+    /* 文字都带 data-k / data-ph，切换语言时由 refreshText() 统一换 */
+    function box(n, labelKey, phKey) {
+      return '<div class="field"><label><span class="n">' + n + '</span><span data-k="' + labelKey + '"></span>' +
         '</label>' +
         '<select id="' + id + '-l' + n + '"></select>' +
         '<input type="text" class="custombox" id="' + id + '-c' + n +
-        '" placeholder="' + ph + '">' +
+        '" data-ph="' + phKey + '">' +
         '<div class="hint" id="' + id + '-h' + n + '"></div></div>';
     }
     this.el.innerHTML =
-      '<div class="row">' + box(1, '学段', '自定义学段名称') + box(2, '年级', '自定义年级名称') + '</div>' +
-      '<div class="row" style="margin-top:12px">' + box(3, '册别', '自定义册别名称') + box(4, '单元', '自定义单元名称') + '</div>' +
+      '<div class="row">' + box(1, 'sel_stage', 'sel_phStage') + box(2, 'sel_grade', 'sel_phGrade') + '</div>' +
+      '<div class="row" style="margin-top:12px">' + box(3, 'sel_term', 'sel_phTerm') + box(4, 'sel_unit', 'sel_phUnit') + '</div>' +
       '<div class="row" id="' + id + '-range" style="margin-top:12px;display:none">' +
-      '  <div class="field"><label>起始单元</label><select id="' + id + '-from"></select></div>' +
-      '  <div class="field"><label>结束单元</label><select id="' + id + '-to"></select></div>' +
+      '  <div class="field"><label data-k="sel_from"></label><select id="' + id + '-from"></select></div>' +
+      '  <div class="field"><label data-k="sel_to"></label><select id="' + id + '-to"></select></div>' +
       '</div>';
 
     var self = this;
@@ -80,6 +81,34 @@
     Object.keys(this.cus).forEach(function (k) {
       self.cus[k].oninput = function () { self.notify(); };
     });
+    this.refreshText();
+    WPI18N.onChange(function () { self.refreshText(); });
+  };
+
+  /* 换语言：标签、占位符、「自定义…」「（无内置内容）」「全部单元」这些显示文字。
+     下拉框里的值（后端认的）不变；学段 / 年级 / 册别的名字是教材数据，不翻译。 */
+  Selector.prototype.refreshText = function () {
+    var self = this;
+    Array.prototype.forEach.call(this.el.querySelectorAll('[data-k]'), function (el) {
+      el.textContent = t(el.getAttribute('data-k'));
+    });
+    Array.prototype.forEach.call(this.el.querySelectorAll('[data-ph]'), function (el) {
+      el.setAttribute('placeholder', t(el.getAttribute('data-ph')));
+    });
+    [this.l1, this.l2, this.l3, this.l4].forEach(function (sel) {
+      Array.prototype.forEach.call(sel.options, function (o) {
+        if (o.value === CUSTOM) o.textContent = t('sel_custom') + '…';
+        else if (o.getAttribute('data-base') !== null) {
+          o.textContent = o.getAttribute('data-base') + (o.getAttribute('data-na') ? t('sel_unavailable') : '');
+        }
+      });
+    });
+    if (this.l4) {
+      Array.prototype.forEach.call(this.l4.options, function (o) {
+        if (MODE_KEYS[o.value]) o.textContent = modeName(o.value);
+      });
+    }
+    if (this.units && this.units.length && this.l4.value === 'range') this.fillRange();
   };
 
   Selector.prototype.fill = function (sel, items, keepValue, noCustom) {
@@ -89,12 +118,16 @@
       var o = document.createElement('option');
       o.value = it.key;
       o.textContent = it.name;
+      if (it.base !== undefined) {          /* 带「（无内置内容）」后缀的选项：记下原名，换语言时重新拼 */
+        o.setAttribute('data-base', it.base);
+        if (it.na) o.setAttribute('data-na', '1');
+      }
       sel.appendChild(o);
     });
     if (!noCustom) {
       var c = document.createElement('option');
       c.value = CUSTOM;
-      c.textContent = CUSTOM + '…';
+      c.textContent = t('sel_custom') + '…';
       sel.appendChild(c);
     }
     if (old) {
@@ -140,7 +173,8 @@
     return API.get('/api/terms?' + q).then(function (res) {
       var opts = res.options || [];
       self.fill(self.l3, opts.map(function (o) {
-        return { key: o.key, name: o.name + (o.available ? '' : '（无内置内容）') };
+        return { key: o.key, name: o.name + (o.available ? '' : t('sel_unavailable')),
+                 base: o.name, na: !o.available };
       }));
       var def = (self.meta && self.meta.default_term) || '整学年';
       for (var i = 0; i < self.l3.options.length; i++) {
@@ -159,7 +193,7 @@
     return API.get('/api/units?' + q).then(function (res) {
       self.units = res.units || [];
       var modes = (res.modes || []).map(function (m) {
-        return { key: m.key, name: m.name };
+        return { key: m.key, name: modeName(m.key) || m.name };
       });
       self.fill(self.l4, modes);
       self.syncCustom();
@@ -179,8 +213,7 @@
     this.rangeBox.style.display = isRange ? '' : 'none';
     if (!isRange) return;
     var opts = this.units.map(function (u) {
-      return { key: String(u.index), name: '第 ' + u.index + ' 单元 · ' +
-               u.name + '（' + u.count + ' 词）' };
+      return { key: String(u.index), name: t('sel_unitOption', { index: u.index, name: u.name, count: u.count }) };
     });
     this.fill(this.from, opts, true, true);
     this.fill(this.to, opts, true, true);
@@ -226,7 +259,7 @@
     var s = this.get();
     var labels = (this.meta && this.meta.term_labels) || {};
     var names = [s.level1, s.level2, labels[s.level3] || s.level3,
-                 UNIT_MODE_NAMES[s.unit_mode] || s.level4];
+                 modeName(s.unit_mode) || s.level4];
     var keys = ['level1', 'level2', 'level3', 'level4'];
     for (var i = 0; i < 4; i++) {
       if (s.custom[keys[i]]) names[i] = s.custom[keys[i]];
@@ -244,7 +277,7 @@
       units: count,
       words: total,
       unit_mode: s.unit_mode,
-      unit_mode_name: UNIT_MODE_NAMES[s.unit_mode] || ''
+      unit_mode_name: modeName(s.unit_mode)
     };
   };
 

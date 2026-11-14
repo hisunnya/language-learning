@@ -7,14 +7,18 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const UI_FILE = path.join(__dirname, '..', '..', 'web', 'js', 'game-ui.js');
+const JS_DIR = path.join(__dirname, '..', '..', 'web', 'js');
+const UI_FILE = path.join(JS_DIR, 'game-ui.js');
+const I18N_FILE = path.join(JS_DIR, 'i18n.js');
 let passed = 0;
 const failures = [];
 
 function load(extra) {
   const calls = [], resolvers = [];
   const win = Object.assign({
-    document: {},
+    /* game-ui.js 一加载就要用 WPI18N，所以先装上 i18n.js；它只用到 lang 属性和事件监听 */
+    document: { documentElement: { getAttribute: () => 'zh-CN' }, addEventListener() {} },
+    addEventListener() {},
     fetch(url) {
       calls.push(url);
       return new Promise((resolve, reject) => resolvers.push({ url, resolve, reject }));
@@ -23,7 +27,9 @@ function load(extra) {
     URL: { createObjectURL: (b) => 'blob:' + b.id },
   }, extra || {});
   win.window = win;
-  vm.runInNewContext(fs.readFileSync(UI_FILE, 'utf8'), win, { filename: 'game-ui.js' });
+  vm.createContext(win);
+  vm.runInContext(fs.readFileSync(I18N_FILE, 'utf8'), win, { filename: 'i18n.js' });
+  vm.runInContext(fs.readFileSync(UI_FILE, 'utf8'), win, { filename: 'game-ui.js' });
   return { win, calls, resolvers, T: win.WPGameUI._test };
 }
 
@@ -117,6 +123,15 @@ function eq(a, b, note) {
     T.setBase('/api/audio/');
     T.prefetch(words('a'));
     eq(Object.keys(T.cache), []);
+  });
+
+  await check('英文界面里关卡名的中文标记换成英文，中文界面原样', async () => {
+    const { win, T } = load();
+    win.WPI18N.add({ g_withReview: '含复习' }, { g_withReview: 'incl. review' });
+    eq(T.levelName('Unit 1（2/6） · 含复习'), 'Unit 1（2/6） · 含复习', '中文不动');
+    win.document.documentElement.getAttribute = () => 'en';
+    eq(T.levelName('Unit 1（2/6） · 含复习'), 'Unit 1 (2/6) · incl. review');
+    eq(T.levelName(null), '');
   });
 
   if (failures.length) {

@@ -79,7 +79,7 @@ class TestGameplayCopy(unittest.TestCase):
     def test_home_and_help_share_the_same_rules(self):
         """首页速览和「玩法」面板都走 rulesHtml()。"""
         source = self._ui()
-        self.assertEqual(source.count("this.rulesHtml()"), 2)
+        self.assertEqual(len(re.findall(r"\.rulesHtml\(\)", source)), 2)
 
     def test_rules_stay_short(self):
         """四行以内，多了学生就不看了。"""
@@ -91,8 +91,12 @@ class TestGameplayCopy(unittest.TestCase):
     def test_rules_mention_the_four_essentials(self):
         """目标、怎么点、怎么算分、时间 —— 缺一个都会有人问。"""
         body = self._rules_body()
-        for key in ("目标", "怎么点", "怎么算分", "时间"):
-            self.assertIn(key, body, "玩法说明少了「%s」" % key)
+        text = (ROOT / "web" / "js" / "i18n-lexica.js").read_text(encoding="utf-8")
+        zh = text[text.index("add({"):text.index("}, {")]
+        for key, word in (("g_ruleGoalLabel", "目标"), ("g_ruleTapLabel", "怎么点"),
+                          ("g_ruleScoreLabel", "怎么算分"), ("g_ruleTimeLabel", "时间")):
+            self.assertIn(key, body, "玩法说明少了「%s」" % word)
+            self.assertIn("%s: '%s'" % (key, word), zh)
 
     def test_only_english_cards_trigger_word_pronunciation(self):
         source = self._ui()

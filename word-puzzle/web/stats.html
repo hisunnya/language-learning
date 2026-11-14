@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="wp-base" content="/word-puzzle">
-<title>成绩记录 · 词境 Lexica</title>
+<title data-module-zh="成绩记录 · 词境 Lexica" data-module-en="Scores · Lexica">成绩记录 · 词境 Lexica</title>
 <link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
@@ -29,40 +29,42 @@
   </header>
 
   <div class="stats" id="statCards">
-    <div class="stat"><div class="k">总场次</div><div class="v blue" id="sCount">—</div></div>
-    <div class="stat"><div class="k">最高分</div><div class="v orange" id="sBest">—</div></div>
-    <div class="stat"><div class="k">平均分</div><div class="v" id="sAvg">—</div></div>
-    <div class="stat"><div class="k">累计得分</div><div class="v green" id="sTotal">—</div></div>
+    <div class="stat"><div class="k" data-module-zh="总场次" data-module-en="Games played">总场次</div><div class="v blue" id="sCount">—</div></div>
+    <div class="stat"><div class="k" data-module-zh="最高分" data-module-en="Best score">最高分</div><div class="v orange" id="sBest">—</div></div>
+    <div class="stat"><div class="k" data-module-zh="平均分" data-module-en="Average score">平均分</div><div class="v" id="sAvg">—</div></div>
+    <div class="stat"><div class="k" data-module-zh="累计得分" data-module-en="Total score">累计得分</div><div class="v green" id="sTotal">—</div></div>
   </div>
 
   <div class="card">
-    <h2>按题库统计</h2>
-    <p class="sub">每个题库玩了多少次、最高多少分</p>
+    <h2 data-module-zh="按题库统计" data-module-en="By bank">按题库统计</h2>
+    <p class="sub" data-module-zh="每个题库玩了多少次、最高多少分" data-module-en="How many times each bank was played and the best score">每个题库玩了多少次、最高多少分</p>
     <div class="scroll"><table class="tbl" id="byBankTable">
-      <thead><tr><th>题库</th><th>次数</th><th>最高分</th><th>累计</th></tr></thead>
-      <tbody><tr><td colspan="4" class="empty">加载中…</td></tr></tbody>
+      <thead><tr><th data-module-zh="题库" data-module-en="Bank">题库</th><th data-module-zh="次数" data-module-en="Games">次数</th><th data-module-zh="最高分" data-module-en="Best">最高分</th><th data-module-zh="累计" data-module-en="Total">累计</th></tr></thead>
+      <tbody><tr><td colspan="4" class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</td></tr></tbody>
     </table></div>
   </div>
 
   <div class="card">
-    <h2>成绩明细</h2>
-    <p class="sub">最近 200 条</p>
+    <h2 data-module-zh="成绩明细" data-module-en="Score details">成绩明细</h2>
+    <p class="sub" data-module-zh="最近 200 条" data-module-en="The latest 200">最近 200 条</p>
     <div class="scroll"><table class="tbl" id="scoreTable">
       <thead><tr>
-        <th>时间</th><th>题库</th><th>得分</th><th>配对</th>
-        <th>答错</th><th>最高连击</th><th>用时</th><th>关数</th>
+        <th data-module-zh="时间" data-module-en="Time">时间</th><th data-module-zh="题库" data-module-en="Bank">题库</th><th data-module-zh="得分" data-module-en="Score">得分</th><th data-module-zh="配对" data-module-en="Matched">配对</th>
+        <th data-module-zh="答错" data-module-en="Wrong">答错</th><th data-module-zh="最高连击" data-module-en="Best combo">最高连击</th><th data-module-zh="用时" data-module-en="Duration">用时</th><th data-module-zh="关数" data-module-en="Levels">关数</th>
       </tr></thead>
-      <tbody><tr><td colspan="8" class="empty">加载中…</td></tr></tbody>
+      <tbody><tr><td colspan="8" class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</td></tr></tbody>
     </table></div>
   </div>
 
   <footer class="foot">
-    离线测试页的成绩存在浏览器本地（localStorage），不会出现在这里；<br>
-    同一台设备上重复玩，排名按最高分计。
+    <span data-module-zh="离线测试页的成绩存在浏览器本地（localStorage），不会出现在这里；" data-module-en="Scores from offline test pages are kept in the browser (localStorage) and do not appear here;">离线测试页的成绩存在浏览器本地（localStorage），不会出现在这里；</span><br>
+    <span data-module-zh="同一台设备上重复玩，排名按最高分计。" data-module-en="playing repeatedly on the same device is ranked by the best score.">同一台设备上重复玩，排名按最高分计。</span>
   </footer>
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261114-i18n"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
 <script src="/word-puzzle/js/page-stats.js?v=20261104-base"></script>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="wp-base" content="/word-puzzle">
-<title>词境 Lexica · 首页</title>
+<title data-module-zh="词境 Lexica · 首页" data-module-en="Lexica · Home">词境 Lexica · 首页</title>
 <link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
@@ -28,55 +28,59 @@
     <div class="portal-topbar-right" id="portalHeaderControls"></div>
   </header>
 
-  <h1 class="page">选个题库，开始闯关</h1>
+  <h1 class="page" data-module-zh="选个题库，开始闯关" data-module-en="Pick a bank and start playing">选个题库，开始闯关</h1>
   <p class="lead">
-    练习英语词汇，听美式发音并完成中英配对。<span class="admin-only">课程词库包含 <span id="curTotal">—</span> 个词条、
-    <span id="curUnits">—</span> 个单元，也可以上传自己的资料做成题库。</span>
+    <span data-module-zh="练习英语词汇，听美式发音并完成中英配对。" data-module-en="Practise English vocabulary: listen to the American pronunciation and match each word with its Chinese meaning.">练习英语词汇，听美式发音并完成中英配对。</span>
+    <span class="admin-only"><span data-module-zh="课程词库包含" data-module-en="The curriculum bank has">课程词库包含</span>
+    <span id="curTotal">—</span> <span data-module-zh="个词条、" data-module-en="words in">个词条、</span>
+    <span id="curUnits">—</span> <span data-module-zh="个单元，也可以上传自己的资料做成题库。" data-module-en="units; you can also upload your own material to make a bank.">个单元，也可以上传自己的资料做成题库。</span></span>
   </p>
 
   <!-- 默认题库 -->
   <div class="card admin-only" id="defaultCard" hidden>
-    <h2>默认题库</h2>
-    <p class="sub">系统内置，开箱即用</p>
+    <h2 data-module-zh="默认题库" data-module-en="Default bank">默认题库</h2>
+    <p class="sub" data-module-zh="系统内置，开箱即用" data-module-en="Built in and ready to use">系统内置，开箱即用</p>
     <div class="list" id="defaultList"></div>
   </div>
 
   <!-- 层级选择 -->
   <div class="card admin-only">
-    <h2>按层级生成题库</h2>
-    <p class="sub">第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称</p>
+    <h2 data-module-zh="按层级生成题库" data-module-en="Generate a bank by level">按层级生成题库</h2>
+    <p class="sub" data-module-zh="第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称" data-module-en="Level 1 stage → level 2 grade → level 3 volume → level 4 unit; every level can have a custom name">第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称</p>
     <div id="levelBox"></div>
     <div class="row" style="margin-top:12px">
       <div class="field" style="flex:0 0 200px">
-        <label>每关词数</label>
+        <label for="pairsPerLevel" data-module-zh="每关词数" data-module-en="Words per level">每关词数</label>
         <input type="number" id="pairsPerLevel" min="4" max="40" step="1" value="12">
-        <div class="hint">一关最多多少个词；词多的单元会拆成多关（默认 12）</div>
+        <div class="hint" data-module-zh="一关最多多少个词；词多的单元会拆成多关（默认 12）" data-module-en="The most words in one level; units with more words are split into several levels (default 12)">一关最多多少个词；词多的单元会拆成多关（默认 12）</div>
       </div>
     </div>
     <div class="msg info" id="selInfo"></div>
     <div class="actions">
-      <button class="btn lg gold" id="btnMake">生成题库并开始</button>
-      <button class="btn lg ghost admin-only" id="btnUpload">上传题库</button>
-      <button class="btn lg ghost admin-only" id="btnOffline">生成离线测试</button>
+      <button class="btn lg gold" id="btnMake" data-module-zh="生成题库并开始" data-module-en="Generate and start">生成题库并开始</button>
+      <button class="btn lg ghost admin-only" id="btnUpload" data-module-zh="上传题库" data-module-en="Upload a bank">上传题库</button>
+      <button class="btn lg ghost admin-only" id="btnOffline" data-module-zh="生成离线测试" data-module-en="Make offline test">生成离线测试</button>
     </div>
   </div>
 
   <!-- 题库列表 -->
   <div class="card">
-    <h2 class="admin-only">题库</h2>
-    <p class="sub admin-only">所有题库都在这里，可以直接玩，也可以下载成离线网页；点「分类和标签」设置哪些学生能看到。</p>
-    <h2 class="student-only">选个题库</h2>
-    <p class="sub student-only">老师开放给你的题库都在这里，点「开始游戏」就能玩</p>
-    <div class="list" id="bankList"><div class="empty">加载中…</div></div>
+    <h2 class="admin-only" data-module-zh="题库" data-module-en="Banks">题库</h2>
+    <p class="sub admin-only" data-module-zh="所有题库都在这里，可以直接玩，也可以下载成离线网页；点「分类和标签」设置哪些学生能看到。" data-module-en="All banks are here. Play them directly or download them as an offline page; use “Category &amp; tags” to choose which students can see a bank.">所有题库都在这里，可以直接玩，也可以下载成离线网页；点「分类和标签」设置哪些学生能看到。</p>
+    <h2 class="student-only" data-module-zh="选个题库" data-module-en="Pick a bank">选个题库</h2>
+    <p class="sub student-only" data-module-zh="老师开放给你的题库都在这里，点「开始游戏」就能玩" data-module-en="The banks your teacher has opened for you are here. Press “Play” to start.">老师开放给你的题库都在这里，点「开始游戏」就能玩</p>
+    <div class="list" id="bankList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
   </div>
 
   <footer class="foot">
-    玩法：点英文卡片听发音，再点中文卡片配对；也可以先选中文（不播放语音） · 配对 +100 分，连击额外加分，答错扣 3 秒。<br>
-    <span class="admin-only">离线测试页是单个 HTML 文件，双击即可在没网的电脑上玩。</span>
+    <span data-module-zh="玩法：点英文卡片听发音，再点中文卡片配对；也可以先选中文（不播放语音） · 配对 +100 分，连击额外加分，答错扣 3 秒。" data-module-en="How to play: tap an English card to hear it, then tap its Chinese card to match; you can also pick the Chinese card first (no audio) · +100 per match, bonus for combos, a wrong match costs 3 seconds.">玩法：点英文卡片听发音，再点中文卡片配对；也可以先选中文（不播放语音） · 配对 +100 分，连击额外加分，答错扣 3 秒。</span><br>
+    <span class="admin-only" data-module-zh="离线测试页是单个 HTML 文件，双击即可在没网的电脑上玩。" data-module-en="An offline test page is a single HTML file: double-click it to play on a computer without internet.">离线测试页是单个 HTML 文件，双击即可在没网的电脑上玩。</span>
   </footer>
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261114-i18n"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
 <script src="/word-puzzle/js/selector.js?v=20261104-volumes"></script>

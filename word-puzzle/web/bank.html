@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="wp-base" content="/word-puzzle">
-<title>题库工作台 · 词境 Lexica</title>
+<title data-module-zh="题库工作台 · 词境 Lexica" data-module-en="Question banks · Lexica">题库工作台 · 词境 Lexica</title>
 <link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
@@ -30,85 +30,83 @@
 
   <!-- 两个主按钮 -->
   <div class="card admin-only">
-    <h2>主要操作</h2>
-    <p class="sub">上传自己的词表，或把当前选好的层级直接导出成离线测试网页</p>
+    <h2 data-module-zh="主要操作" data-module-en="Main actions">主要操作</h2>
+    <p class="sub" data-module-zh="上传自己的词表，或把当前选好的层级直接导出成离线测试网页" data-module-en="Upload your own word list, or export the selected level straight to an offline test page">上传自己的词表，或把当前选好的层级直接导出成离线测试网页</p>
     <div class="actions">
-      <button class="btn lg gold" id="btnUpload">📁 上传题库</button>
-      <button class="btn lg green" id="btnOffline">🧪 生成离线测试</button>
+      <button class="btn lg gold" id="btnUpload" data-module-zh="📁 上传题库" data-module-en="📁 Upload a bank">📁 上传题库</button>
+      <button class="btn lg green" id="btnOffline" data-module-zh="🧪 生成离线测试" data-module-en="🧪 Make offline test">🧪 生成离线测试</button>
     </div>
     <input type="file" id="fileInput"
            accept=".txt,.csv,.tsv,.json,.md,.docx,.docm,.pdf" hidden>
     <div class="msg" id="upMsg"></div>
-    <p class="hint">
-      支持 <b>Word (.docx)</b>、<b>PDF</b>、TXT、CSV、JSON。
-      Word/PDF 里只要能看出「英文 + 中文释义」就能自动提取，
-      扫描件（图片版 PDF）会走 OCR 识别。
-      老式 <code>.doc</code> 请先在 Word 里另存为 <code>.docx</code>。
+    <p class="hint" data-module-zh="支持 Word (.docx)、PDF、TXT、CSV、JSON。Word/PDF 里只要能看出「英文 + 中文释义」就能自动提取，扫描件（图片版 PDF）会走 OCR 识别。老式 .doc 请先在 Word 里另存为 .docx。" data-module-en="Supports Word (.docx), PDF, TXT, CSV and JSON. Word/PDF files are read automatically as long as each entry shows an English word and its Chinese meaning; scanned PDFs go through OCR. For an old .doc file, save it as .docx in Word first.">
+      支持 Word (.docx)、PDF、TXT、CSV、JSON。Word/PDF 里只要能看出「英文 + 中文释义」就能自动提取，扫描件（图片版 PDF）会走 OCR 识别。老式 .doc 请先在 Word 里另存为 .docx。
     </p>
   </div>
 
   <!-- 层级选择 -->
   <div class="card">
-    <h2>题源与层级</h2>
-    <p class="sub">第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称</p>
+    <h2 data-module-zh="题源与层级" data-module-en="Source and level">题源与层级</h2>
+    <p class="sub" data-module-zh="第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称" data-module-en="Level 1 stage → level 2 grade → level 3 volume → level 4 unit; every level can have a custom name">第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称</p>
 
     <div class="row" style="margin-bottom:12px">
       <div class="field admin-only">
-        <label>题源</label>
+        <label for="sourceSel" data-module-zh="题源" data-module-en="Source">题源</label>
         <select id="sourceSel">
-          <option value="seed">内置课程词库</option>
-          <option value="material">使用上传的资料</option>
+          <option value="seed" data-module-zh="内置课程词库" data-module-en="Built-in curriculum bank">内置课程词库</option>
+          <option value="material" data-module-zh="使用上传的资料" data-module-en="Use uploaded material">使用上传的资料</option>
         </select>
       </div>
       <div class="field" id="matField" style="display:none">
-        <label>选择资料</label>
+        <label for="matSel" data-module-zh="选择资料" data-module-en="Material">选择资料</label>
         <select id="matSel"></select>
-        <div class="hint">每次生成只使用一份资料并生成独立题库；不会自动合并已上传资料，也不会检查缺少的单元。需要合并时，请先把多册整理进同一份文件并标好单元。</div>
+        <div class="hint" data-module-zh="每次生成只使用一份资料并生成独立题库；不会自动合并已上传资料，也不会检查缺少的单元。需要合并时，请先把多册整理进同一份文件并标好单元。" data-module-en="Each run uses one material and makes a separate bank; uploaded materials are not merged and missing units are not checked. To combine several volumes, put them into one file with the units marked.">每次生成只使用一份资料并生成独立题库；不会自动合并已上传资料，也不会检查缺少的单元。需要合并时，请先把多册整理进同一份文件并标好单元。</div>
       </div>
     </div>
 
     <div id="levelBox"></div>
     <div class="row" style="margin-top:12px">
       <div class="field" style="flex:0 0 200px">
-        <label>每关词数</label>
+        <label for="pairsPerLevel" data-module-zh="每关词数" data-module-en="Words per level">每关词数</label>
         <input type="number" id="pairsPerLevel" min="4" max="40" step="1" value="12">
-        <div class="hint">一关最多多少个词；词多的单元会拆成多关（默认 12）</div>
+        <div class="hint" data-module-zh="一关最多多少个词；词多的单元会拆成多关（默认 12）" data-module-en="The most words in one level; units with more words are split into several levels (default 12)">一关最多多少个词；词多的单元会拆成多关（默认 12）</div>
       </div>
     </div>
     <div class="msg info" id="selInfo"></div>
     <div class="actions">
-      <button class="btn" id="btnMake">生成题库</button>
+      <button class="btn" id="btnMake" data-module-zh="生成题库" data-module-en="Generate bank">生成题库</button>
     </div>
   </div>
 
   <!-- 资料列表 -->
   <div class="card admin-only">
-    <h2>已上传的资料</h2>
-    <p class="sub">支持 TXT / CSV / TSV / JSON；JSON、CSV 会自动识别单元字段</p>
-    <div class="list" id="matList"><div class="empty">还没有上传资料</div></div>
+    <h2 data-module-zh="已上传的资料" data-module-en="Uploaded materials">已上传的资料</h2>
+    <p class="sub" data-module-zh="支持 TXT / CSV / TSV / JSON；JSON、CSV 会自动识别单元字段" data-module-en="TXT / CSV / TSV / JSON; unit fields in JSON and CSV are detected automatically">支持 TXT / CSV / TSV / JSON；JSON、CSV 会自动识别单元字段</p>
+    <div class="list" id="matList"><div class="empty" data-module-zh="还没有上传资料" data-module-en="No material uploaded yet">还没有上传资料</div></div>
   </div>
 
   <!-- 题库列表 -->
   <div class="card">
-    <h2>已生成的题库</h2>
-    <p class="sub">可以直接玩，也可以导出成离线单文件网页</p>
-    <div class="list" id="bankList"><div class="empty">加载中…</div></div>
+    <h2 data-module-zh="已生成的题库" data-module-en="Generated banks">已生成的题库</h2>
+    <p class="sub" data-module-zh="可以直接玩，也可以导出成离线单文件网页" data-module-en="Play them directly, or export them as a single-file offline page">可以直接玩，也可以导出成离线单文件网页</p>
+    <div class="list" id="bankList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
   </div>
 
   <!-- 离线文件 -->
   <div class="card admin-only">
-    <h2>已生成的离线测试页</h2>
-    <p class="sub">文件名规则：层级 + 日期 + 时间.html</p>
-    <div class="list" id="fileList"><div class="empty">还没有生成过</div></div>
+    <h2 data-module-zh="已生成的离线测试页" data-module-en="Generated offline test pages">已生成的离线测试页</h2>
+    <p class="sub" data-module-zh="文件名规则：层级 + 日期 + 时间.html" data-module-en="File name: level + date + time.html">文件名规则：层级 + 日期 + 时间.html</p>
+    <div class="list" id="fileList"><div class="empty" data-module-zh="还没有生成过" data-module-en="None generated yet">还没有生成过</div></div>
   </div>
 
-  <footer class="foot">
-    离线测试页是<b>单个 HTML 文件</b>，词表、样式、脚本全部内嵌，双击即可在没网的电脑上玩，
-    成绩存在浏览器本地。
+  <footer class="foot" data-module-zh="离线测试页是单个 HTML 文件，词表、样式、脚本全部内嵌，双击即可在没网的电脑上玩，成绩存在浏览器本地。" data-module-en="An offline test page is a single HTML file with the word list, styles and scripts all built in: double-click it to play on a computer without internet. Scores are kept in the browser.">
+    离线测试页是单个 HTML 文件，词表、样式、脚本全部内嵌，双击即可在没网的电脑上玩，成绩存在浏览器本地。
   </footer>
 </div>
 
 <div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261114-i18n"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
 <script src="/word-puzzle/js/selector.js?v=20261104-volumes"></script>

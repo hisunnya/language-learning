@@ -13,9 +13,14 @@
     return base + (path.charAt(0) === '/' ? path : '/' + path);
   }
 
+  /* 页面加载了 i18n.js 就按当前语言取词，没加载（登录、账号管理页用自己的词表）就用中文 */
+  function tr(key, params, fallback) {
+    return global.WPI18N ? WPI18N.t(key, params) : fallback;
+  }
+
   function download(path, filename) {
     return fetch(url(path)).then(function (res) {
-      if (!res.ok) throw new Error('下载失败（HTTP ' + res.status + '）');
+      if (!res.ok) throw new Error(tr('api_downloadFailed', { status: res.status }, '下载失败（HTTP ' + res.status + '）'));
       return res.blob();
     }).then(function (blob) {
       var objectUrl = URL.createObjectURL(blob);
@@ -41,7 +46,7 @@
     try {
       res = await fetch(url(path), opt);
     } catch (e) {
-      var neterr = new Error('网络不通');
+      var neterr = new Error(tr('api_network', null, '网络不通'));
       neterr.network = true;
       throw neterr;
     }
@@ -50,13 +55,13 @@
     try {
       data = text ? JSON.parse(text) : {};
     } catch (e) {
-      throw new Error('服务器返回了非 JSON 内容（HTTP ' + res.status + '）');
+      throw new Error(tr('api_notJson', { status: res.status }, '服务器返回了非 JSON 内容（HTTP ' + res.status + '）'));
     }
     if (!res.ok || data.ok === false) {
       // 家庭版：登录失效 / 还没改初始密码，统一跳转，页面不用各自处理（也不弹错误）
       if (data.code === 'login_required' && global.AuthUI) { AuthUI.go('login.html', true); return new Promise(function () {}); }
       if (data.code === 'password_change_required' && global.AuthUI) { AuthUI.go('change-password.html', true); return new Promise(function () {}); }
-      var err = new Error(data.error || ('请求失败（HTTP ' + res.status + '）'));
+      var err = new Error(data.error || tr('api_requestFailed', { status: res.status }, '请求失败（HTTP ' + res.status + '）'));
       err.code = data.code || '';
       err.status = res.status;
       throw err;

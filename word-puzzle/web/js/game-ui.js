@@ -8,6 +8,15 @@
   'use strict';
 
   function $(id) { return document.getElementById(id); }
+  function t(key, params) { return WPI18N.t(key, params); }
+
+  /* 后端给关卡起的名字里带中文标记（「Unit 1（2/6） · 含复习」）。中文界面原样显示，
+     英文界面把「含复习」和全角括号换成英文写法；单元名本身是教材数据，不翻译。 */
+  function levelName(name) {
+    name = String(name == null ? '' : name);
+    if (WPI18N.lang() !== 'en') return name;
+    return name.replace(/含复习/g, t('g_withReview')).replace(/（/g, ' (').replace(/）/g, ')').replace(/\s+/g, ' ').trim();
+  }
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -156,7 +165,7 @@
           var a = new Audio(embedded);
           a.preload = 'auto';
           a.addEventListener('error', function () {
-            audioCache[key] = null; toast('内嵌单词音频无法播放');
+            audioCache[key] = null; toast(t('g_audioEmbeddedFail'));
           });
           audioCache[key] = a;
         }
@@ -164,7 +173,7 @@
         if (au) {
           au.pause(); au.currentTime = 0;
           var pr = au.play();
-          if (pr && pr.catch) pr.catch(function () { toast('内嵌单词音频无法播放'); });
+          if (pr && pr.catch) pr.catch(function () { toast(t('g_audioEmbeddedFail')); });
           return true;
         }
       } catch (e) { }
@@ -176,7 +185,7 @@
           var sa = new Audio(serverAudioBase + encodeURIComponent(en));
           sa.preload = 'auto';
           sa.addEventListener('error', function () {
-            audioCache[key] = null; toast('服务器语音暂时不可用，请稍后重试');
+            audioCache[key] = null; toast(t('g_audioServerFail'));
           });
           audioCache[key] = sa;
         }
@@ -184,7 +193,7 @@
         if (sau) {
           sau.pause(); sau.currentTime = 0;
           var spr = sau.play();
-          if (spr && spr.catch) spr.catch(function () { toast('服务器语音暂时不可用，请稍后重试'); });
+          if (spr && spr.catch) spr.catch(function () { toast(t('g_audioServerFail')); });
           return true;
         }
       } catch (e) { }
@@ -292,7 +301,7 @@
   function showCombo(n) {
     if (!fx) return;
     var s = document.createElement('div');
-    s.className = 'combo'; s.textContent = '连击 x' + n;
+    s.className = 'combo'; s.textContent = t('g_combo', { n: n });
     fx.appendChild(s); setTimeout(function () { s.remove(); }, 1050);
   }
 
@@ -304,6 +313,12 @@
   }
   function hidePanel() {
     var o = $('overlay'); if (o) o.classList.remove('on');
+    UI.panelBuild = null; UI.panelBind = null;
+  }
+  /* 面板 = 生成 HTML 的函数 + 绑定事件的函数；切换语言时用同一对函数重画开着的面板 */
+  function openPanel(ui, build, bind) {
+    ui.panelBuild = build; ui.panelBind = bind;
+    showPanel(build()); bind();
   }
 
   /* ---------------- 主对象 ---------------- */
@@ -365,10 +380,10 @@
           var rq = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
           if (rq) { rq.call(el); return; }
         } catch (e) { }
-        toast('请用浏览器菜单选择"全屏"');
+        toast(t('g_fullscreenHint'));
       });
       b('btn-replay', function () {
-        self.game.replay(); toast('本关已重置');
+        self.game.replay(); toast(t('g_levelReset'));
       });
       b('btn-restart', function () {
         self.finish();                 /* 先把这一局的成绩存下来 */
@@ -395,55 +410,57 @@
       var cfg = this.cfg;
       var g = this.game;
       g.state.gen++;
-      /* 词条数按题库里的真实词数算（关卡里的「复习」词不重复计入） */
-      var total = cfg.wordTotal || g.levels.reduce(function (n, l) { return n + l.words.length; }, 0);
+      var picked = 0, touched = false;
 
-      var btns = '';
-      g.levels.forEach(function (L, i) {
-        btns += '<button data-l="' + i + '">第 ' + (i + 1) + ' 关 · ' +
-          esc(L.name) + ' · ' + L.words.length + ' 词</button>';
-      });
-
-      var html = '<h1>' + esc(cfg.title || '词境 Lexica') + '</h1>' +
-        '<p>' + esc(cfg.subtitle || '') + '<br>共 ' + total + ' 个词条 · ' +
-        g.levels.length + ' 关</p>' +
-        this.rulesHtml() +
-        '<div class="lvhead" style="text-align:center">' +
-        (cfg.pickUnit ? '选择单元开始' : '选择关卡') + '</div>' +
-        '<div class="lvbtn" id="lvpick">' + btns + '</div>' +
-        (cfg.homeExtra || '') +
-        '<button class="btn gold" id="ov-start" style="margin-top:14px">开始游戏</button>' +
-        '<div style="display:flex;gap:8px;margin-top:8px">' +
-        '<button class="btn ghost" id="ov-list">查看全部词表</button>';
-
-      if (cfg.backHref) {
-        html += '<button class="btn ghost" id="ov-back">返回网站主页</button>';
-      }
-      html += '</div>';
-
-      showPanel(html);
-
-      var picked = 0;
-      var lp = $('lvpick');
-      lp.onclick = function (ev) {
-        var b2 = ev.target.closest('button');
-        if (!b2) return;
-        picked = +b2.getAttribute('data-l');
-        self.prefetchLevel(picked);
-        Array.prototype.forEach.call(lp.children, function (x) { x.classList.remove('on'); });
-        b2.classList.add('on');
+      var build = function () {
+        /* 词条数按题库里的真实词数算（关卡里的「复习」词不重复计入） */
+        var total = cfg.wordTotal || g.levels.reduce(function (n, l) { return n + l.words.length; }, 0);
+        var btns = '';
+        g.levels.forEach(function (L, i) {
+          btns += '<button data-l="' + i + '"' + (touched && i === picked ? ' class="on"' : '') + '>' +
+            esc(t('g_levelBtn', { n: i + 1, name: levelName(L.name), words: L.words.length })) + '</button>';
+        });
+        var html = '<h1>' + esc(cfg.title || t('g_defaultTitle')) + '</h1>' +
+          '<p>' + esc(cfg.subtitle || '') + '<br>' + esc(t('g_totals', { total: total, levels: g.levels.length })) + '</p>' +
+          self.rulesHtml() +
+          '<div class="lvhead" style="text-align:center">' +
+          esc(t(cfg.pickUnit ? 'g_pickUnit' : 'g_pickLevel')) + '</div>' +
+          '<div class="lvbtn" id="lvpick">' + btns + '</div>' +
+          (cfg.homeExtra || '') +
+          '<button class="btn gold" id="ov-start" style="margin-top:14px">' + esc(t('g_start')) + '</button>' +
+          '<div style="display:flex;gap:8px;margin-top:8px">' +
+          '<button class="btn ghost" id="ov-list">' + esc(t('g_wordList')) + '</button>';
+        if (cfg.backHref) {
+          html += '<button class="btn ghost" id="ov-back">' + esc(t('g_back')) + '</button>';
+        }
+        return html + '</div>';
       };
-      $('ov-start').onclick = function () {
-        hidePanel();
-        self.finished = false;
-        g.state.score = 0; g.state.best = 0; g.state.levelStats = [];
-        g.state.limit = g.levelTime;
-        self.prefetchLevel(picked);
-        g.start(picked);
+
+      var bind = function () {
+        var lp = $('lvpick');
+        lp.onclick = function (ev) {
+          var b2 = ev.target.closest('button');
+          if (!b2) return;
+          picked = +b2.getAttribute('data-l');
+          touched = true;
+          self.prefetchLevel(picked);
+          Array.prototype.forEach.call(lp.children, function (x) { x.classList.remove('on'); });
+          b2.classList.add('on');
+        };
+        $('ov-start').onclick = function () {
+          hidePanel();
+          self.finished = false;
+          g.state.score = 0; g.state.best = 0; g.state.levelStats = [];
+          g.state.limit = g.levelTime;
+          self.prefetchLevel(picked);
+          g.start(picked);
+        };
+        $('ov-list').onclick = function () { self.showList(); };
+        var back = $('ov-back');
+        if (back) back.onclick = function () { location.href = cfg.backHref; };
       };
-      $('ov-list').onclick = function () { self.showList(); };
-      var back = $('ov-back');
-      if (back) back.onclick = function () { location.href = cfg.backHref; };
+
+      openPanel(this, build, bind);
     },
 
     /* ---- 玩法 / 词表 ---- */
@@ -452,45 +469,49 @@
        首页速览和「玩法」面板共用这一份文案，改一处就够了。 */
     rulesHtml: function () {
       return '<div class="rule">' +
-        '<div><b>目标</b>：把英文卡片和中文意思配成一对</div>' +
-        '<div><b>怎么点</b>：点英文卡听发音；中文卡可先选，不会播放语音</div>' +
-        '<div><b>怎么算分</b>：配对 +100，连击额外加分；答错扣 3 秒、扣 20 分</div>' +
-        '<div><b>时间</b>：每关 ' + this.game.levelTime + ' 秒，剩余时间折算成分数，下一关时间更长</div>' +
+        '<div><b>' + esc(t('g_ruleGoalLabel')) + '</b>: ' + esc(t('g_ruleGoal')) + '</div>' +
+        '<div><b>' + esc(t('g_ruleTapLabel')) + '</b>: ' + esc(t('g_ruleTap')) + '</div>' +
+        '<div><b>' + esc(t('g_ruleScoreLabel')) + '</b>: ' + esc(t('g_ruleScore')) + '</div>' +
+        '<div><b>' + esc(t('g_ruleTimeLabel')) + '</b>: ' + esc(t('g_ruleTime', { sec: this.game.levelTime })) + '</div>' +
         '</div>';
     },
 
     showHelp: function () {
       var self = this;
-      showPanel('<h2>玩法说明</h2>' +
-        this.rulesHtml() +
-        '<div style="display:flex;gap:8px;margin-top:12px">' +
-        '<button class="btn ghost" id="ov-close">知道了</button>' +
-        '<button class="btn" id="ov-list">查看全部词表</button></div>');
-      $('ov-close').onclick = hidePanel;
-      $('ov-list').onclick = function () { self.showList(); };
+      openPanel(this, function () {
+        return '<h2>' + esc(t('g_helpTitle')) + '</h2>' +
+          self.rulesHtml() +
+          '<div style="display:flex;gap:8px;margin-top:12px">' +
+          '<button class="btn ghost" id="ov-close">' + esc(t('g_gotIt')) + '</button>' +
+          '<button class="btn" id="ov-list">' + esc(t('g_wordList')) + '</button></div>';
+      }, function () {
+        $('ov-close').onclick = hidePanel;
+        $('ov-list').onclick = function () { self.showList(); };
+      });
     },
 
     showList: function () {
-      var self = this;
       var g = this.game;
-      var html = '<h2>词汇表</h2><p style="font-size:12.5px">点任意一行可朗读该词</p><div class="list">';
-      g.levels.forEach(function (L, i) {
-        html += '<div class="lvhead">第 ' + (i + 1) + ' 关 · ' + esc(L.name) + '</div>';
-        L.words.forEach(function (w) {
-          html += '<div class="item" data-en="' + esc(w.en) + '">' +
-            '<span class="e">' + esc(w.en) + '</span>' +
-            (w.ipa ? '<span class="i">' + esc(w.ipa) + '</span>' : '') +
-            '<span class="c">' + esc(w.cn) + '</span></div>';
+      openPanel(this, function () {
+        var html = '<h2>' + esc(t('g_listTitle')) + '</h2><p style="font-size:12.5px">' + esc(t('g_listHint')) + '</p><div class="list">';
+        g.levels.forEach(function (L, i) {
+          html += '<div class="lvhead">' + esc(t('g_levelHead', { n: i + 1, name: levelName(L.name) })) + '</div>';
+          L.words.forEach(function (w) {
+            html += '<div class="item" data-en="' + esc(w.en) + '">' +
+              '<span class="e">' + esc(w.en) + '</span>' +
+              (w.ipa ? '<span class="i">' + esc(w.ipa) + '</span>' : '') +
+              '<span class="c">' + esc(w.cn) + '</span></div>';
+          });
         });
+        return html + '</div><button class="btn" id="ov-close">' + esc(t('g_close')) + '</button>';
+      }, function () {
+        $('panel').onclick = function (ev) {
+          var it = ev.target.closest('.item');
+          if (!it) return;
+          speak(it.getAttribute('data-en'));
+        };
+        $('ov-close').onclick = hidePanel;
       });
-      html += '</div><button class="btn" id="ov-close">关闭</button>';
-      showPanel(html);
-      $('panel').onclick = function (ev) {
-        var it = ev.target.closest('.item');
-        if (!it) return;
-        speak(it.getAttribute('data-en'));
-      };
-      $('ov-close').onclick = hidePanel;
     },
 
     /* ---- 牌面（只把点击转交给 core，计分全在 core 里） ---- */
@@ -516,7 +537,7 @@
             '<span class="say">🔊</span></div>';
         } else {
           html += '<div class="card cn" data-id="' + c.id + '" data-t="cn">' +
-            '<span class="tag">中</span><div class="w">' + esc(w.cn) + '</div></div>';
+            '<span class="tag">' + esc(t('g_tagCn')) + '</span><div class="w">' + esc(w.cn) + '</div></div>';
         }
       });
       board.innerHTML = html;
@@ -539,15 +560,14 @@
       set('s-prog', st.matched + '/' + st.total_pairs);
       set('s-score', st.score);
       set('s-combo', st.combo);
-      set('s-total', '总分 ' + st.score);
+      set('s-total', t('g_totalScore', { n: st.score }));
       var tb = $('s-timebox');
       if (tb) tb.classList.toggle('warn', st.timeLeft <= 10 && st.playing);
       var bar = $('s-bar');
       if (bar) bar.style.width = (st.total_pairs ? st.matched / st.total_pairs * 100 : 0) + '%';
       var tip = $('s-tip');
       if (tip) {
-        tip.textContent = this.cfg.tip ||
-          '点任意一张卡片，再点另一侧配对';
+        tip.textContent = this.cfg.tip || t('g_tip');
       }
     },
 
@@ -576,40 +596,46 @@
       sfx.win();
       var self = this;
       var hasNext = evt.hasNext;
-      var homeLabel = self.cfg.backHref ? '返回网站主页' : '回到选关';
+      var lv = st.lv, total = st.total_pairs;
 
-      var html = '<h2>第 ' + (st.lv + 1) + ' 关 通关！</h2>' +
-        '<div class="big">' + evt.score + '</div>' +
-        '<div class="kv"><span>本关配对</span><b>' + st.total_pairs + ' / ' + st.total_pairs + '</b></div>' +
-        '<div class="kv"><span>剩余时间奖励</span><b>+' + evt.bonus + ' 分</b></div>' +
-        '<div class="kv"><span>最高连击</span><b>x' + evt.best + '</b></div>';
-      if (hasNext) {
-        html += '<p>下一关时间：' + evt.nextLimit + ' 秒（奖励 +' + evt.nextBonus + 's）</p>' +
-          '<button class="btn gold" id="ov-next" style="margin-top:12px">进入第 ' + (st.lv + 2) + ' 关</button>';
-      } else {
-        html += '<p style="font-size:16px;color:#f0801a;font-weight:800">全部通关！总分 ' + evt.score + '</p>' +
-          '<button class="btn gold" id="ov-next" style="margin-top:12px">再玩一次</button>';
-      }
-      html += '<div style="display:flex;gap:8px;margin-top:8px">' +
-        '<button class="btn ghost" id="ov-replay">重玩本关</button>' +
-        '<button class="btn ghost" id="ov-home">' + homeLabel + '</button></div>';
-      showPanel(html);
-
-      $('ov-next').onclick = function () {
-        hidePanel();
+      var build = function () {
+        var homeLabel = t(self.cfg.backHref ? 'g_back' : 'g_toLevels');
+        var html = '<h2>' + esc(t('g_clearTitle', { n: lv + 1 })) + '</h2>' +
+          '<div class="big">' + evt.score + '</div>' +
+          '<div class="kv"><span>' + esc(t('g_levelMatched')) + '</span><b>' + total + ' / ' + total + '</b></div>' +
+          '<div class="kv"><span>' + esc(t('g_timeBonus')) + '</span><b>' + esc(t('g_bonusPts', { n: evt.bonus })) + '</b></div>' +
+          '<div class="kv"><span>' + esc(t('g_bestCombo')) + '</span><b>x' + evt.best + '</b></div>';
         if (hasNext) {
-          g.next();
+          html += '<p>' + esc(t('g_nextTime', { limit: evt.nextLimit, bonus: evt.nextBonus })) + '</p>' +
+            '<button class="btn gold" id="ov-next" style="margin-top:12px">' + esc(t('g_nextLevel', { n: lv + 2 })) + '</button>';
         } else {
-          g.restart();
-          self.showHome();
+          html += '<p style="font-size:16px;color:#f0801a;font-weight:800">' + esc(t('g_allClear', { score: evt.score })) + '</p>' +
+            '<button class="btn gold" id="ov-next" style="margin-top:12px">' + esc(t('g_playAgain')) + '</button>';
         }
+        return html + '<div style="display:flex;gap:8px;margin-top:8px">' +
+          '<button class="btn ghost" id="ov-replay">' + esc(t('g_replay')) + '</button>' +
+          '<button class="btn ghost" id="ov-home">' + esc(homeLabel) + '</button></div>';
       };
-      $('ov-replay').onclick = function () { hidePanel(); g.replay(); };
-      $('ov-home').onclick = function () {
-        hidePanel(); self.finish();
-        if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
-        g.restart(); self.showHome();
+
+      var bind = function () {
+        $('ov-next').onclick = function () {
+          hidePanel();
+          if (hasNext) {
+            g.next();
+          } else {
+            g.restart();
+            self.showHome();
+          }
+        };
+        $('ov-replay').onclick = function () { hidePanel(); g.replay(); };
+        $('ov-home').onclick = function () {
+          hidePanel(); self.finish();
+          if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
+          g.restart(); self.showHome();
+        };
       };
+
+      openPanel(this, build, bind);
       this.render();
       if (!hasNext) this.finish();
     },
@@ -619,20 +645,28 @@
       this.stopTimer();
       sfx.lose();
       var self = this;
-      var homeLabel = self.cfg.backHref ? '返回网站主页' : '回到选关';
-      var html = '<h2>时间到！</h2><div class="big">' + evt.score + '</div>' +
-        '<div class="kv"><span>本关配对</span><b>' + st.matched + ' / ' + st.total_pairs + '</b></div>' +
-        '<div class="kv"><span>答错次数</span><b>' + st.wrong + '</b></div>' +
-        '<p>再试一次，把剩下的词都消掉！</p>' +
-        '<button class="btn gold" id="ov-retry" style="margin-top:10px">重玩本关</button>' +
-        '<div style="margin-top:8px"><button class="btn ghost" id="ov-home">' + homeLabel + '</button></div>';
-      showPanel(html);
-      $('ov-retry').onclick = function () { hidePanel(); g.replay(); };
-      $('ov-home').onclick = function () {
-        hidePanel(); self.finish();
-        if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
-        g.restart(); self.showHome();
+      var matched = st.matched, total = st.total_pairs, wrong = st.wrong;
+
+      var build = function () {
+        var homeLabel = t(self.cfg.backHref ? 'g_back' : 'g_toLevels');
+        return '<h2>' + esc(t('g_timeUp')) + '</h2><div class="big">' + evt.score + '</div>' +
+          '<div class="kv"><span>' + esc(t('g_levelMatched')) + '</span><b>' + matched + ' / ' + total + '</b></div>' +
+          '<div class="kv"><span>' + esc(t('g_wrongCount')) + '</span><b>' + wrong + '</b></div>' +
+          '<p>' + esc(t('g_tryAgain')) + '</p>' +
+          '<button class="btn gold" id="ov-retry" style="margin-top:10px">' + esc(t('g_replay')) + '</button>' +
+          '<div style="margin-top:8px"><button class="btn ghost" id="ov-home">' + esc(homeLabel) + '</button></div>';
       };
+
+      var bind = function () {
+        $('ov-retry').onclick = function () { hidePanel(); g.replay(); };
+        $('ov-home').onclick = function () {
+          hidePanel(); self.finish();
+          if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
+          g.restart(); self.showHome();
+        };
+      };
+
+      openPanel(this, build, bind);
       this.render();
       this.finish();
     },
@@ -665,7 +699,7 @@
         if (evt.side === 'en') speak(evt.word.en);
         sfx.click();
         /* 中文卡只选择，不朗读；英文卡才播放发音。 */
-        if (evt.side === 'cn') toast('先点中文也行，再点对应的英文配对');
+        if (evt.side === 'cn') toast(t('g_hintCn'));
         this.render();
       } else if (evt.type === 'switch') {
         /* 连点同一侧：换了一个选中，提示该点另一侧了 */
@@ -675,9 +709,7 @@
         if (evt.card && evt.card.el) evt.card.el.classList.add('sel');
         if (evt.side === 'en') speak(evt.word.en);
         sfx.click();
-        toast(evt.prevSide === 'en'
-          ? '刚选的是英文，再点中文配对'
-          : '刚选的是中文，再点英文配对');
+        toast(t(evt.prevSide === 'en' ? 'g_hintEn' : 'g_hintCnSwitch'));
         if (evt.card && evt.card.el) {
           evt.card.el.classList.add('hint');
           setTimeout(function () { evt.card.el.classList.remove('hint'); }, 1000);
@@ -712,7 +744,7 @@
           e.classList.remove('bad'); void e.offsetWidth; e.classList.add('bad');
         });
         if (en) en.classList.remove('sel');
-        toast('不对哦，-3 秒');
+        toast(t('g_wrong'));
         this.render();
       } else if (evt.type === 'levelClear') {
         setTimeout(function () { self.showLevelClear(evt); }, 520);
@@ -724,9 +756,25 @@
 
   /* 给测试用：不经过 init（它要整页 DOM），直接设音频地址、喂词、看缓存 */
   UI._test = {
+    levelName: levelName,
     setBase: function (b) { serverAudioBase = b; },
     prefetch: prefetchWords,
     cache: audioCache
   };
+  /* 切换语言：状态栏、牌面上的「中 / CN」标签、开着的面板（首页 / 通关 / 玩法 / 词表）都重画 */
+  WPI18N.onChange(function () {
+    if (UI.game && UI.cfg) UI.render();
+    Array.prototype.forEach.call(document.querySelectorAll('.card.cn .tag'), function (el) {
+      el.textContent = t('g_tagCn');
+    });
+    var overlay = $('overlay');
+    if (UI.panelBuild && overlay && overlay.classList.contains('on')) {
+      var keepScroll = $('panel') ? $('panel').scrollTop : 0;
+      showPanel(UI.panelBuild());
+      UI.panelBind();
+      if ($('panel')) $('panel').scrollTop = keepScroll;
+    }
+  });
+
   global.WPGameUI = UI;
 })(window);

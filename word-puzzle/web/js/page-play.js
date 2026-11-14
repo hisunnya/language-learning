@@ -12,28 +12,42 @@
     return m ? decodeURIComponent(m[1]) : '';
   }
 
-  function fail(msg) {
+  function t(key, params) { return WPI18N.t(key, params); }
+
+  /* 出错页：msg 可以是词条键（我们自己的提示，随语言重画）或后端给的原文 */
+  var failing = null;
+  function fail(msg, isKey) {
+    failing = { msg: msg, isKey: !!isKey };
+    drawFail();
+  }
+  function drawFail() {
     document.body.innerHTML =
       '<div style="padding:40px;text-align:center;font-family:sans-serif">' +
-      '<h2 style="color:#123a6b">无法开始游戏</h2>' +
-      '<p style="color:#5b6d85">' + API.esc(msg) + '</p>' +
+      '<h2 style="color:#123a6b">' + API.esc(t('play_failTitle')) + '</h2>' +
+      '<p style="color:#5b6d85">' + API.esc(failing.isKey ? t(failing.msg) : failing.msg) + '</p>' +
       '<a href="' + API.path('/') + '" style="display:inline-block;margin-top:12px;padding:10px 18px;' +
-      'background:#1f7ae0;color:#fff;border-radius:12px;font-weight:700">回到首页</a>' +
+      'background:#1f7ae0;color:#fff;border-radius:12px;font-weight:700">' + API.esc(t('play_backHome')) + '</a>' +
       '</div>';
   }
+  var bankTitle = '';
+  WPI18N.onChange(function () {
+    if (failing) drawFail();
+    else if (bankTitle) document.title = t('play_title', { title: bankTitle });
+  });
 
   document.addEventListener('DOMContentLoaded', function () {
     var bankId = qs('bank');
-    if (!bankId) { fail('缺少题库参数'); return; }
+    if (!bankId) { fail('play_noBankId', true); return; }
 
     API.get('/api/banks/' + encodeURIComponent(bankId)).then(function (res) {
       var bank = res.bank;
       var levels = res.groups.map(function (g) {
         return { name: g.unit, words: g.words };
       });
-      if (!levels.length) { fail('这个题库里没有单词'); return; }
+      if (!levels.length) { fail('play_noWords', true); return; }
 
-      document.title = bank.title + ' · 词境 Lexica';
+      bankTitle = bank.title;
+      document.title = t('play_title', { title: bankTitle });
 
       var game = new WPGame.Game({ levels: levels });
       var ui = WPGameUI.init({
@@ -47,7 +61,7 @@
         audioBase: API.path('/api/audio/'),
         onFinish: function (report) {
           WPAdapter.save(report, { bank_id: bank.id, title: bank.title });
-          API.toast('成绩已保存');
+          API.toast(t('play_saved'));
         }
       });
       /* 调试钩子：在控制台里可以直接看 game.state / ui.timer */
