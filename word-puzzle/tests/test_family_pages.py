@@ -268,3 +268,42 @@ class TestBrandLogo(unittest.TestCase):
     def test_the_modifier_exists_in_the_shared_stylesheet(self):
         css = (ROOT.parent / "hub" / "shared" / "module-header.css").read_text(encoding="utf-8")
         self.assertIn(".portal-brand-mark--logo img", css)
+
+
+class TestStudentViewIsWired(unittest.TestCase):
+    """服务端会拒绝学生的管理操作；这里保证页面也不把用不了的入口摆给学生。"""
+
+    def test_the_workbench_link_is_teacher_only_everywhere_and_the_page_is_an_admin_page(self):
+        for page in sorted(p.name for p in WEB.glob("*.html")):
+            html = read(page)
+            for link in re.findall(r'<a [^>]*href="/word-puzzle/bank\.html"[^>]*>', html):
+                self.assertIn("admin-only", link, page)
+        self.assertIn('<body data-auth="admin">', read("bank.html"))
+
+    def test_the_home_page_hides_generating_and_offline_from_students(self):
+        html = read("index.html")
+        self.assertIn('class="card admin-only" id="defaultCard"', html)
+        self.assertIn('<div class="card admin-only">\n    <h2>按层级生成题库</h2>', html)
+        self.assertIn('class="student-only"', html)
+        self.assertIn('离线测试页是单个 HTML 文件', html[html.index('<span class="admin-only">离线'):])
+
+    def test_a_student_login_switches_the_view_on(self):
+        ui = (WEB / "js" / "auth-ui.js").read_text(encoding="utf-8")
+        self.assertIn("document.body.classList.add('role-student')", ui)
+        css = (WEB / "css" / "auth.css").read_text(encoding="utf-8")
+        self.assertIn("body.role-student .admin-only { display: none !important; }", css)
+        self.assertIn("body.role-student .student-only", css)
+
+    def test_the_home_page_waits_for_the_role_and_groups_by_category(self):
+        js = (WEB / "js" / "page-home.js").read_text(encoding="utf-8")
+        self.assertIn("AuthUI.ready.then", js)
+        self.assertIn("groupByCategory", js)
+        self.assertIn("/meta", js)
+        self.assertIn("老师还没有给你开放题库", js)
+
+    def test_the_admin_page_has_a_tag_column_and_bulk_buttons(self):
+        html = read("admin.html")
+        for needle in ('id="bulkTags"', 'id="btnBulkAdd"', 'id="btnBulkRemove"', 'data-module-en="Tags"'):
+            self.assertIn(needle, html)
+        self.assertEqual(html.count("<th "), 11, "表头列数要和 page-admin.js 里的 colspan 一致")
+        self.assertIn('colspan="11"', (WEB / "js" / "page-admin.js").read_text(encoding="utf-8"))

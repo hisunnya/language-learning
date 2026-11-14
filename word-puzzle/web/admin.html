@@ -23,7 +23,7 @@
     </a>
     <nav class="portal-nav">
       <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
-      <a href="/word-puzzle/bank.html" data-module-zh="题库工作台" data-module-en="Banks">题库工作台</a>
+      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Banks">题库工作台</a>
       <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
     </nav>
     <div class="portal-topbar-right" id="portalHeaderControls"></div>
@@ -34,7 +34,7 @@
 
   <div class="card">
     <h2 data-module-zh="导入名单" data-module-en="Import roster">导入名单</h2>
-    <p class="sub" data-module-zh="支持 Excel（.xlsx）或 CSV。必须有「学号」「姓名」两列；可选「班级」「学院」「院系」「初始密码」。手机号等其他列不会被保存。" data-module-en="Excel (.xlsx) or CSV. Required columns: student number and name; optional: class, college, department, initial password. Phone numbers and other columns are not stored.">支持 Excel（.xlsx）或 CSV。必须有「学号」「姓名」两列；可选「班级」「学院」「院系」「初始密码」。手机号等其他列不会被保存。</p>
+    <p class="sub" data-module-zh="支持 Excel（.xlsx）或 CSV。必须有「学号」「姓名」两列；可选「班级」「学院」「院系」「初始密码」「标签」（多个标签用逗号隔开，决定学生能看到哪些题库）。手机号等其他列不会被保存。" data-module-en="Excel (.xlsx) or CSV. Required columns: student number and name; optional: class, college, department, initial password, tags (separate several with commas; they decide which banks a student can see). Phone numbers and other columns are not stored.">支持 Excel（.xlsx）或 CSV。必须有「学号」「姓名」两列；可选「班级」「学院」「院系」「初始密码」「标签」（多个标签用逗号隔开，决定学生能看到哪些题库）。手机号等其他列不会被保存。</p>
     <div class="row">
       <div class="field">
         <label for="rosterFile" data-module-zh="名单文件" data-module-en="Roster file">名单文件</label>
@@ -59,6 +59,14 @@
       <div class="field"><label for="fSearch" data-module-zh="搜索学号或姓名" data-module-en="Search number or name">搜索学号或姓名</label><input type="text" id="fSearch" maxlength="40"></div>
       <a class="btn ghost" id="btnExport" href="#" data-module-zh="导出成绩 CSV" data-module-en="Export scores CSV">导出成绩 CSV</a>
     </div>
+    <div class="admin-filters">
+      <div class="field">
+        <label for="bulkTags" data-module-zh="给下面列表里的学生批量改标签（用逗号隔开）" data-module-en="Change tags for all students in the list below (separate with commas)">给下面列表里的学生批量改标签（用逗号隔开）</label>
+        <input type="text" id="bulkTags" maxlength="120" placeholder="初二, 三班">
+      </div>
+      <button class="btn ghost" id="btnBulkAdd" type="button" data-module-zh="加上这些标签" data-module-en="Add these tags">加上这些标签</button>
+      <button class="btn ghost" id="btnBulkRemove" type="button" data-module-zh="去掉这些标签" data-module-en="Remove these tags">去掉这些标签</button>
+    </div>
     <div class="msg" id="userMsg" role="status"></div>
     <div class="secret-box" id="secretBox" hidden></div>
     <div class="scroll"><table class="tbl" id="userTable">
@@ -68,6 +76,7 @@
         <th data-module-zh="班级" data-module-en="Class">班级</th>
         <th data-module-zh="学院" data-module-en="College">学院</th>
         <th data-module-zh="院系" data-module-en="Department">院系</th>
+        <th data-module-zh="标签" data-module-en="Tags">标签</th>
         <th data-module-zh="状态" data-module-en="Status">状态</th>
         <th data-module-zh="局数" data-module-en="Games">局数</th>
         <th data-module-zh="最高分" data-module-en="Best">最高分</th>

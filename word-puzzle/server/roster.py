@@ -22,6 +22,7 @@ ALIASES = {
     "college": {"学院", "college", "school"},
     "department": {"院系", "系", "系别", "department", "dept"},
     "password": {"初始密码", "密码", "password", "initial_password"},
+    "tags": {"标签", "标签组", "tag", "tags"},
 }
 # 认识但不使用的列：识别出来是为了明确地丢弃，并提示调用方
 DISCARDED = {
@@ -160,7 +161,7 @@ def parse_roster(filename: str, data: bytes) -> dict:
                     break
     missing = [c for c in ("student_no", "name") if c not in mapping.values()]
     if missing:
-        raise RosterError("表头里必须有「学号」和「姓名」两列（可选：班级、学院、院系、初始密码）")
+        raise RosterError("表头里必须有「学号」和「姓名」两列（可选：班级、学院、院系、初始密码、标签）")
 
     rows, errors = [], []
     for line_no, raw in enumerate(table[1:], start=2):

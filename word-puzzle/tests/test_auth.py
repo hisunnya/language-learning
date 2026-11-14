@@ -523,31 +523,15 @@ class TestHttpAuth(HttpCase):
                              ("POST", "/api/banks/1/offline"), ("DELETE", "/api/materials/1")):
             status, body = c.json(method, path, {} if method == "POST" else None)
             self.assertEqual((status, body["code"]), (403, "forbidden"), path)
-        status, body = c.json("POST", "/api/banks", {"source": "material", "material_id": 1})
-        self.assertEqual(status, 403)
-
-    def test_bank_ownership(self):
-        _, alice = self.ready_student(name="甲")
-        _, bob = self.ready_student(name="乙")
-        admin = self.admin()
         spec = {"source": "seed", "level1": "初中", "level2": "九年级", "level3": "上册",
                 "level4": "all", "unit_mode": "all"}
-        status, body = alice.json("POST", "/api/banks", spec)
-        self.assertEqual(status, 201)
-        bid = body["bank"]["id"]
-        ids = lambda cl: {b["id"] for b in cl.json("GET", "/api/banks")[1]["banks"]}
-        self.assertIn(bid, ids(alice))
-        self.assertNotIn(bid, ids(bob), "别人的题库不能出现在我的列表里")
-        self.assertIn(bid, ids(admin))
-        self.assertEqual(bob.json("GET", "/api/banks/%d" % bid)[0], 404)
-        self.assertEqual(bob.json("DELETE", "/api/banks/%d" % bid)[0], 404)
-        self.assertEqual(alice.json("GET", "/api/banks/%d" % bid)[0], 200)
-        # 系统题库：所有人可见、可玩，但学生删不掉
-        system = [b for b in admin.json("GET", "/api/banks")[1]["banks"] if b["owner_id"] is None][0]["id"]
-        self.assertIn(system, ids(bob))
-        self.assertEqual(bob.json("GET", "/api/banks/%d" % system)[0], 200)
-        self.assertEqual(bob.json("DELETE", "/api/banks/%d" % system)[0], 403)
-        self.assertEqual(alice.json("DELETE", "/api/banks/%d" % bid)[0], 200)
+        for method, path, body_ in (("POST", "/api/banks", {"source": "material", "material_id": 1}),
+                                    ("POST", "/api/banks", spec),
+                                    ("DELETE", "/api/banks/1", None),
+                                    ("POST", "/api/banks/1/meta", {"tags": "x"}),
+                                    ("POST", "/api/admin/users/tags", {"user_ids": [1], "add": "x"}),
+                                    ("POST", "/api/admin/users/1/tags", {"tags": "x"})):
+            self.assertEqual(c.json(method, path, body_)[0], 403, (method, path))
 
     def test_scores_are_tied_to_the_login_and_private(self):
         no1, alice = self.ready_student(name="甲", class_name="一班")

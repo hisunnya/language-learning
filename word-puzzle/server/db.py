@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -121,6 +122,20 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE INDEX IF NOT EXISTS ix_users_class ON users(class_name);
 
+-- 标签：学生和题库各自带一组标签，两边至少有一个相同，学生才能看到、打开这个题库。
+-- 没打标签的题库学生看不到（老师始终看得到全部）。
+CREATE TABLE IF NOT EXISTS user_tags (
+    user_id INTEGER NOT NULL,
+    tag     TEXT NOT NULL,
+    PRIMARY KEY (user_id, tag)
+);
+CREATE TABLE IF NOT EXISTS bank_tags (
+    bank_id INTEGER NOT NULL,
+    tag     TEXT NOT NULL,
+    PRIMARY KEY (bank_id, tag)
+);
+CREATE INDEX IF NOT EXISTS ix_bank_tags_tag ON bank_tags(tag);
+
 CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,             -- 只存令牌的哈希，库泄露也拿不到可用的令牌
     user_id    INTEGER NOT NULL,
@@ -135,6 +150,45 @@ CREATE INDEX IF NOT EXISTS ix_scores_bank ON scores(bank_id);
 
 def now_iso() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S")
+
+
+MAX_TAGS = 10
+MAX_TAG_LENGTH = 20
+MAX_CATEGORY_LENGTH = 20
+_TAG_SPLIT = re.compile(r"[,，、;；\n]+")
+
+
+class TagError(ValueError):
+    """标签或分类不合法，message 直接展示给用户。"""
+
+
+def normalize_tags(value: Any) -> list[str]:
+    """把「初二, 三班」或 ["初二", "三班"] 整理成去重、去空白的标签列表（保持先后顺序）。
+
+    不合法（太长、太多）就抛 TagError，而不是悄悄截断：悄悄丢掉一个标签，
+    学生就会莫名其妙看不到题库。
+    """
+    if value is None:
+        return []
+    items = _TAG_SPLIT.split(value) if isinstance(value, str) else list(value)
+    out: list[str] = []
+    for item in items:
+        tag = re.sub(r"\s+", " ", str(item or "")).strip()
+        if not tag or tag in out:
+            continue
+        if len(tag) > MAX_TAG_LENGTH:
+            raise TagError("标签太长了（最多 %d 个字）：%s" % (MAX_TAG_LENGTH, tag[:12] + "…"))
+        out.append(tag)
+    if len(out) > MAX_TAGS:
+        raise TagError("标签太多了（最多 %d 个）" % MAX_TAGS)
+    return out
+
+
+def normalize_category(value: Any) -> str:
+    category = re.sub(r"\s+", " ", str(value or "")).strip()
+    if len(category) > MAX_CATEGORY_LENGTH:
+        raise TagError("分类名太长了（最多 %d 个字）" % MAX_CATEGORY_LENGTH)
+    return category
 
 
 class Database:
@@ -164,6 +218,9 @@ class Database:
         if "owner_id" not in columns:
             # NULL = 系统题库（所有人可见）；否则是创建者的用户 id
             self.execute("ALTER TABLE banks ADD COLUMN owner_id INTEGER")
+        if "category" not in columns:
+            # 分类：只用来整理和浏览，不参与权限（权限只看标签）
+            self.execute("ALTER TABLE banks ADD COLUMN category TEXT NOT NULL DEFAULT ''")
         score_columns = {row["name"] for row in self.query("PRAGMA table_info(scores)")}
         if "user_id" not in score_columns:
             self.execute("ALTER TABLE scores ADD COLUMN user_id INTEGER")
@@ -275,14 +332,78 @@ class Database:
         return bid
 
     def list_banks(self, visible_to: int | None = None) -> list[dict]:
-        """visible_to=None 返回全部；给了用户 id 就只返回系统题库和他自己的。"""
+        """visible_to=None 返回全部（老师）；给了用户 id 就只返回和他至少有一个相同标签的题库。
+        每个题库带上 ``tags``（列表）。"""
         if visible_to is None:
             rows = self.query("SELECT * FROM banks ORDER BY id DESC")
         else:
             rows = self.query(
-                "SELECT * FROM banks WHERE owner_id IS NULL OR owner_id=? ORDER BY id DESC",
+                "SELECT b.* FROM banks b WHERE EXISTS ("
+                "SELECT 1 FROM bank_tags bt JOIN user_tags ut ON ut.tag = bt.tag "
+                "WHERE bt.bank_id = b.id AND ut.user_id = ?) ORDER BY b.id DESC",
                 (visible_to,))
-        return [dict(r) for r in rows]
+        banks = [dict(r) for r in rows]
+        by_bank: dict[int, list[str]] = {}
+        for row in self.query("SELECT bank_id, tag FROM bank_tags ORDER BY tag"):
+            by_bank.setdefault(row["bank_id"], []).append(row["tag"])
+        for bank in banks:
+            bank["tags"] = by_bank.get(bank["id"], [])
+        return banks
+
+    def list_banks_by_id(self, bid: int) -> dict | None:
+        """单个题库（带标签），给改完分类 / 标签后回传用。"""
+        return next((b for b in self.list_banks() if b["id"] == bid), None)
+
+    def bank_visible_to(self, bid: int, user_id: int | None) -> bool:
+        """这个用户（学生）能不能看到这个题库：两边至少有一个相同标签。"""
+        if user_id is None:
+            return False
+        return self.one(
+            "SELECT 1 FROM bank_tags bt JOIN user_tags ut ON ut.tag = bt.tag "
+            "WHERE bt.bank_id = ? AND ut.user_id = ?", (bid, user_id)) is not None
+
+    # ---------------- 标签 ----------------
+
+    def bank_tags(self, bid: int) -> list[str]:
+        return [r["tag"] for r in self.query(
+            "SELECT tag FROM bank_tags WHERE bank_id=? ORDER BY tag", (bid,))]
+
+    def set_bank_meta(self, bid: int, category: str | None, tags: list[str] | None) -> bool:
+        """改题库的分类和标签；传 None 的那一项保持不变。"""
+        if not self.get_bank(bid):
+            return False
+        with self._tx() as conn:
+            if category is not None:
+                conn.execute("UPDATE banks SET category=? WHERE id=?", (category, bid))
+            if tags is not None:
+                conn.execute("DELETE FROM bank_tags WHERE bank_id=?", (bid,))
+                conn.executemany("INSERT INTO bank_tags(bank_id, tag) VALUES (?, ?)",
+                                 [(bid, t) for t in tags])
+        return True
+
+    def user_tags_map(self, user_ids: Iterable[int] | None = None) -> dict[int, list[str]]:
+        rows = self.query("SELECT user_id, tag FROM user_tags ORDER BY tag")
+        wanted = None if user_ids is None else set(user_ids)
+        out: dict[int, list[str]] = {}
+        for row in rows:
+            if wanted is None or row["user_id"] in wanted:
+                out.setdefault(row["user_id"], []).append(row["tag"])
+        return out
+
+    def set_user_tags(self, user_id: int, tags: list[str]) -> None:
+        with self._tx() as conn:
+            conn.execute("DELETE FROM user_tags WHERE user_id=?", (user_id,))
+            conn.executemany("INSERT INTO user_tags(user_id, tag) VALUES (?, ?)",
+                             [(user_id, t) for t in tags])
+
+    def change_user_tags(self, user_ids: Iterable[int], add: list[str], remove: list[str]) -> None:
+        """批量给一批用户加 / 去标签。"""
+        ids = list(user_ids)
+        with self._tx() as conn:
+            conn.executemany("INSERT OR IGNORE INTO user_tags(user_id, tag) VALUES (?, ?)",
+                             [(u, t) for u in ids for t in add])
+            conn.executemany("DELETE FROM user_tags WHERE user_id=? AND tag=?",
+                             [(u, t) for u in ids for t in remove])
 
     def get_bank(self, bid: int) -> dict | None:
         row = self.one("SELECT * FROM banks WHERE id=?", (bid,))
@@ -299,6 +420,7 @@ class Database:
             return False
         with self._tx() as conn:
             conn.execute("DELETE FROM bank_words WHERE bank_id=?", (bid,))
+            conn.execute("DELETE FROM bank_tags WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM banks WHERE id=?", (bid,))
         return True
 

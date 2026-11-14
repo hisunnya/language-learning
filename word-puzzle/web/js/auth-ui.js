@@ -62,7 +62,18 @@
       noUsers: '没有符合条件的账号',
       allOption: '全部',
       usersCount: '共 {n} 个账号',
-      never: '从未登录'
+      never: '从未登录',
+      err_bad_tags: '标签不合法：每个标签最多 20 个字，最多 10 个，用逗号隔开',
+      tagsColumn: '标签',
+      editTags: '标签',
+      noTags: '—',
+      tagsPrompt: '给「{name}」设置标签，用逗号隔开（留空表示清空）：',
+      tagsSaved: '标签已保存',
+      bulkNeedTags: '请先填写标签，用逗号隔开',
+      bulkNoUsers: '当前列表里没有可以修改的学生',
+      bulkConfirmAdd: '给当前列表里的 {n} 个学生加上标签「{tags}」吗？',
+      bulkConfirmRemove: '从当前列表里的 {n} 个学生身上去掉标签「{tags}」吗？',
+      bulkDone: '已修改 {n} 个学生'
     },
     en: {
       signOut: 'Sign out',
@@ -112,7 +123,18 @@
       noUsers: 'No matching accounts',
       allOption: 'All',
       usersCount: '{n} accounts',
-      never: 'Never signed in'
+      never: 'Never signed in',
+      err_bad_tags: 'Invalid tags: at most 20 characters each and 10 tags, separated by commas',
+      tagsColumn: 'Tags',
+      editTags: 'Tags',
+      noTags: '—',
+      tagsPrompt: 'Tags for "{name}", separated by commas (leave empty to clear):',
+      tagsSaved: 'Tags saved',
+      bulkNeedTags: 'Enter the tags first, separated by commas',
+      bulkNoUsers: 'There are no students in the current list to change',
+      bulkConfirmAdd: 'Add the tags "{tags}" to the {n} students in the current list?',
+      bulkConfirmRemove: 'Remove the tags "{tags}" from the {n} students in the current list?',
+      bulkDone: 'Changed {n} students'
     }
   };
 
@@ -182,6 +204,9 @@
       chip.appendChild(out);
       controls.parentNode.insertBefore(chip, controls);
     }
+    /* 学生只看得到选题库和玩：题库管理、生成离线页等带 admin-only 的东西都不显示。
+       服务端本来就会拒绝，这里是不让他们看到用不了的入口。 */
+    if (user.role !== 'admin') document.body.classList.add('role-student');
     var nav = document.querySelector('.portal-nav');
     if (nav && user.role === 'admin' && !document.getElementById('adminNavLink')) {
       var link = document.createElement('a');
