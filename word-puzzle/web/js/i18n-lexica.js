@@ -3,7 +3,7 @@
    ------------------------------------------------------------
    zh 和 en 必须是同一组键、同一组 {占位符}（tests/test_i18n.py 会检查）。
    用法：WPI18N.t('键', {n: 3})。
-   命名：home_ 首页 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
+   命名：home_ 首页 · rel_ 批量开放面板 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
    ============================================================ */
 (function (global) {
   'use strict';
@@ -147,6 +147,29 @@
     play_saved: '成绩已保存',
     play_title: '{title} · 词境 Lexica',
     g_withReview: '含复习',
+    rel_button: '批量开放',
+    rel_title: '批量开放：{category}',
+    rel_hint: '先写要开放给谁（班级标签），再选范围。「开放」= 给选中的单元加上这个标签，学生有同样的标签就能看到；「收回」= 去掉。',
+    rel_tagLabel: '开放给（标签）',
+    rel_tagPlaceholder: '例如：一班',
+    rel_chipTitle: '{n} 名学生',
+    rel_all: '整本书',
+    rel_firstHalf: '上半部分（上学期）',
+    rel_secondHalf: '下半部分（下学期）',
+    rel_firstN: '前 N 个单元',
+    rel_none: '清空',
+    rel_open: '开放',
+    rel_withdraw: '收回',
+    rel_cancel: '取消',
+    rel_isOpen: '已开放',
+    rel_noTag: '请先填写要开放给谁（标签）',
+    rel_noneTicked: '请先勾选要处理的单元，或点上面的预设',
+    rel_opened: '已给 {n} 个单元开放「{tag}」',
+    rel_withdrawn: '已对「{tag}」收回 {n} 个单元',
+    rel_summary: '已勾选 {n} / {total} 个单元',
+    bank_madeMany: '已按单元生成 {n} 个题库',
+    rel_words: '{n} 词',
+    rel_nothing: '所选单元已经是这个状态，没有需要改动的',
     // @@zh-end
   }, {
     home_play: 'Play',
@@ -287,6 +310,29 @@
     play_saved: 'Score saved',
     play_title: '{title} · Lexica',
     g_withReview: 'incl. review',
+    rel_button: 'Bulk release',
+    rel_title: 'Bulk release: {category}',
+    rel_hint: 'First enter who it is for (a class tag), then choose the range. “Open” adds this tag to the ticked units, so students with the same tag can see them; “Withdraw” removes it.',
+    rel_tagLabel: 'Open to (tag)',
+    rel_tagPlaceholder: 'e.g. Class 1',
+    rel_chipTitle: '{n} students',
+    rel_all: 'Whole book',
+    rel_firstHalf: 'First half (term 1)',
+    rel_secondHalf: 'Second half (term 2)',
+    rel_firstN: 'First N units',
+    rel_none: 'Clear',
+    rel_open: 'Open',
+    rel_withdraw: 'Withdraw',
+    rel_cancel: 'Cancel',
+    rel_isOpen: 'Open',
+    rel_noTag: 'Enter who to open it to (a tag) first',
+    rel_noneTicked: 'Tick some units first, or press a preset above',
+    rel_opened: 'Opened {n} units to “{tag}”',
+    rel_withdrawn: 'Withdrew {n} units from “{tag}”',
+    rel_summary: '{n} of {total} units ticked',
+    bank_madeMany: 'Generated {n} banks, one per unit',
+    rel_words: '{n} words',
+    rel_nothing: 'The ticked units are already in that state; nothing to change',
     // @@en-end
   });
 })(window);

@@ -179,6 +179,7 @@
       p.material_id = parseInt(document.getElementById('matSel').value, 10) || 0;
     }
     p.pairs_per_level = pairsPerLevel();
+    if (document.getElementById('splitNew').checked) p.split_units = true;     /* 一个单元一个题库 */
     return p;
   }
 
@@ -272,7 +273,7 @@
       var btn = this;
       btn.disabled = true;
       API.post('/api/banks', payload()).then(function (res) {
-        API.toast(t('bank_madeBank', { title: res.bank.title }));
+        API.toast(res.banks && res.banks.length > 1 ? t('bank_madeMany', { n: res.banks.length }) : t('bank_madeBank', { title: res.bank.title }));
         loadBanks();
       }).catch(function (e) {
         API.toast(e.message);

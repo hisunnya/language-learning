@@ -9,7 +9,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261112-auth">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261114-release">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
 <body data-auth="admin">
@@ -73,6 +73,10 @@
       </div>
     </div>
     <div class="msg info" id="selInfo"></div>
+    <label class="hint" style="display:block;margin:10px 0">
+      <input type="checkbox" id="splitNew">
+      <span data-module-zh="按单元拆成多个题库（一个单元一个题库，之后可以在首页批量开放给学生）" data-module-en="Split into one bank per unit (you can then release them to students in bulk on the home page)">按单元拆成多个题库（一个单元一个题库，之后可以在首页批量开放给学生）</span>
+    </label>
     <div class="actions">
       <button class="btn" id="btnMake" data-module-zh="生成题库" data-module-en="Generate bank">生成题库</button>
     </div>
@@ -106,11 +110,11 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=20261114-i18n"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261114-release"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
 <script src="/word-puzzle/js/selector.js?v=20261104-volumes"></script>
-<script src="/word-puzzle/js/page-bank.js?v=20261107-default12"></script>
+<script src="/word-puzzle/js/page-bank.js?v=20261114-release"></script>
 <script src="/shared/module-header.js"></script>
 </body>
 </html>

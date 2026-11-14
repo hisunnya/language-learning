@@ -67,7 +67,17 @@
       if (!b) return -1;
       return a < b ? -1 : a > b ? 1 : 0;
     });
-    return names.map(function (name) { return { name: name, banks: groups[name] }; });
+    return names.map(function (name) {
+      var banks = groups[name].slice();
+      /* 按单元顺序排（seq 是第几单元）；没有 seq 的老题库保持原来的先后 */
+      if (banks.some(function (b) { return b.seq > 0; })) {
+        banks = banks.map(function (b, i) { return { b: b, i: i }; }).sort(function (x, y) {
+          var a = x.b.seq > 0 ? x.b.seq : 1e9, c = y.b.seq > 0 ? y.b.seq : 1e9;
+          return a - c || x.i - y.i;
+        }).map(function (x) { return x.b; });
+      }
+      return { name: name, banks: banks };
+    });
   }
 
   function tagPills(b) {
@@ -103,13 +113,18 @@
       return;
     }
     box.innerHTML = groupByCategory(banks).map(function (g) {
-      var head = '<div class="sub" style="margin:14px 0 4px"><b>' +
-        esc(g.name || t(student ? 'home_catOther' : 'home_catNone')) + '</b></div>';
+      var canRelease = !student && tagsEnabled() && g.name && g.banks.length > 1;
+      var head = '<div class="sub" style="margin:14px 0 4px;display:flex;align-items:center;gap:10px"><b>' +
+        esc(g.name || t(student ? 'home_catOther' : 'home_catNone')) + '</b>' +
+        (canRelease ? '<button class="btn sm ghost" data-release="' + esc(g.name) + '">' + esc(t('rel_button')) + '</button>' : '') + '</div>';
       return head + g.banks.map(function (b) { return bankItem(b, student); }).join('');
     }).join('');
 
     box.querySelectorAll('[data-offline]').forEach(function (btn) {
       btn.onclick = function () { makeOffline(parseInt(btn.dataset.offline, 10), btn); };
+    });
+    box.querySelectorAll('[data-release]').forEach(function (btn) {
+      btn.onclick = function () { editRelease(btn.getAttribute('data-release')); };
     });
     box.querySelectorAll('[data-meta]').forEach(function (btn) {
       btn.onclick = function () { editMeta(parseInt(btn.dataset.meta, 10)); };
@@ -135,6 +150,106 @@
     API.post('/api/banks/' + id + '/meta', { category: category, tags: tags })
       .then(function () { API.toast(t('home_saved')); return loadBanks(); })
       .catch(function (e) { API.toast(e.message); });
+  }
+
+  /* 批量开放：对一本书（同一分类）的各个单元题库，一次给一批加上 / 去掉某个班级标签。
+     预设（整本书 / 上半部分 / 下半部分 / 前 N 个）只是帮老师勾选，勾完还能手动调整。 */
+  function editRelease(category) {
+    var units = groupByCategory(banks).filter(function (g) { return g.name === category; })[0];
+    if (!units) return;
+    units = units.banks;
+    var state = { tag: '', n: 3, ticked: {}, tags: [] };
+    var back = document.createElement('div');
+    back.className = 'modal-back';
+    back.innerHTML = '<div class="modal" role="dialog" aria-modal="true"></div>';
+    document.body.appendChild(back);
+    var box = back.querySelector('.modal');
+
+    function close() { window.removeEventListener('portal-lang-change', draw); back.remove(); }
+    function hasTag(b) { var tag = state.tag.trim(); return !!tag && (b.tags || []).indexOf(tag) >= 0; }
+    function tickedIds() { return units.filter(function (b) { return state.ticked[b.id]; }).map(function (b) { return b.id; }); }
+
+    function draw() {
+      var chips = state.tags.map(function (x) {
+        return '<button class="chip" type="button" data-chip="' + esc(x.tag) + '" title="' + esc(t('rel_chipTitle', { n: x.students })) + '">' + esc(x.tag) + '</button>';
+      }).join('');
+      var PRESET_TEXT = { all: 'rel_all', firstHalf: 'rel_firstHalf', secondHalf: 'rel_secondHalf' };
+      var presets = ['all', 'firstHalf', 'secondHalf'].map(function (k) {
+        return '<button class="btn sm ghost" type="button" data-preset="' + k + '">' + esc(t(PRESET_TEXT[k])) + '</button>';
+      }).join('') +
+        '<span class="preset-n"><button class="btn sm ghost" type="button" data-preset="firstN">' + esc(t('rel_firstN')) + '</button>' +
+        '<input type="number" min="0" max="' + units.length + '" value="' + esc(state.n) + '" data-n aria-label="N"></span>' +
+        '<button class="btn sm ghost" type="button" data-preset="none">' + esc(t('rel_none')) + '</button>';
+      var rows = units.map(function (b) {
+        return '<label class="unit-row"><input type="checkbox" data-bank="' + b.id + '"' + (state.ticked[b.id] ? ' checked' : '') + '> <span>' +
+          esc(b.level4 || b.title) + '</span> <small>' + esc(t('rel_words', { n: b.word_count })) + '</small>' +
+          '<span class="pill good rel-open"' + (hasTag(b) ? '' : ' hidden') + '>' + esc(t('rel_isOpen')) + '</span></label>';
+      }).join('');
+      box.innerHTML = '<h2>' + esc(t('rel_title', { category: category })) + '</h2><p class="sub">' + esc(t('rel_hint')) + '</p>' +
+        '<label class="rel-label">' + esc(t('rel_tagLabel')) + '<input type="text" data-tag maxlength="20" value="' + esc(state.tag) + '" placeholder="' + esc(t('rel_tagPlaceholder')) + '"></label>' +
+        '<div class="chips">' + chips + '</div><div class="presets">' + presets + '</div>' +
+        '<div class="unit-list">' + rows + '</div><p class="hint" data-summary></p>' +
+        '<div class="actions modal-actions"><button class="btn gold" type="button" data-act="open">' + esc(t('rel_open')) + '</button>' +
+        '<button class="btn" type="button" data-act="withdraw">' + esc(t('rel_withdraw')) + '</button>' +
+        '<button class="btn ghost" type="button" data-act="cancel">' + esc(t('rel_cancel')) + '</button></div>';
+      summary();
+    }
+    function summary() {
+      var el = box.querySelector('[data-summary]');
+      if (el) el.textContent = t('rel_summary', { n: tickedIds().length, total: units.length });
+    }
+    function refreshPills() {
+      Array.prototype.forEach.call(box.querySelectorAll('.unit-row'), function (row, i) {
+        row.querySelector('.rel-open').hidden = !hasTag(units[i]);
+      });
+    }
+    function applyPreset(kind) {
+      state.ticked = {};
+      WPRelease.indexes(kind, units.length, state.n).forEach(function (i) { state.ticked[units[i].id] = true; });
+      draw();
+    }
+    function run(act) {
+      var tag = state.tag.trim();
+      if (!tag) { API.toast(t('rel_noTag')); return; }
+      var ids = tickedIds();
+      if (!ids.length) { API.toast(t('rel_noneTicked')); return; }
+      /* 真正会变的单元：开放 = 还没有这个标签的；收回 = 已经有的。提示按它算，不把本来就是这个状态的也算进去 */
+      var changing = units.filter(function (b) { return state.ticked[b.id] && (act === 'open' ? !hasTag(b) : hasTag(b)); });
+      if (!changing.length) { API.toast(t('rel_nothing')); return; }
+      var body = { bank_ids: ids };
+      body[act === 'open' ? 'add' : 'remove'] = tag;
+      API.post('/api/banks/tags', body).then(function () {
+        API.toast(t(act === 'open' ? 'rel_opened' : 'rel_withdrawn', { n: changing.length, tag: tag }));
+        close();
+        return loadBanks();
+      }).catch(function (e) { API.toast(e.message); });
+    }
+
+    box.addEventListener('input', function (ev) {
+      if (ev.target.matches('[data-tag]')) { state.tag = ev.target.value; refreshPills(); }
+      else if (ev.target.matches('[data-n]')) state.n = ev.target.value;
+    });
+    box.addEventListener('change', function (ev) {
+      var c = ev.target.closest('input[data-bank]');
+      if (c) { state.ticked[c.getAttribute('data-bank')] = c.checked; summary(); }
+    });
+    box.addEventListener('click', function (ev) {
+      var chip = ev.target.closest('[data-chip]');
+      if (chip) { state.tag = chip.getAttribute('data-chip'); box.querySelector('[data-tag]').value = state.tag; refreshPills(); return; }
+      var preset = ev.target.closest('[data-preset]');
+      if (preset) { applyPreset(preset.getAttribute('data-preset')); return; }
+      var btn = ev.target.closest('[data-act]');
+      if (!btn) return;
+      var act = btn.getAttribute('data-act');
+      if (act === 'cancel') close(); else run(act);
+    });
+    back.addEventListener('click', function (ev) { if (ev.target === back) close(); });
+    window.addEventListener('portal-lang-change', draw);
+    draw();
+    API.get('/api/admin/tags').then(function (res) {
+      state.tags = (res.tags || []).filter(function (x) { return x.students > 0; });
+      draw();
+    }).catch(function () { });
   }
 
   function loadBanks() {
