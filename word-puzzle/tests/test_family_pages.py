@@ -151,8 +151,8 @@ class TestExistingPages(unittest.TestCase):
         for needle in ('class="btn lg ghost admin-only" id="btnUpload"', 'class="btn lg ghost admin-only" id="btnOffline"'):
             self.assertIn(needle, index)
         for heading in ("主要操作", "已上传的资料", "已生成的离线测试页"):
-            self.assertRegex(bank, r'<div class="card admin-only">\s*<h2>%s</h2>' % heading)
-        self.assertRegex(bank, r'<div class="field admin-only">\s*<label>题源</label>')
+            self.assertRegex(bank, r'<div class="card admin-only">\s*<h2[^>]*>%s</h2>' % heading)
+        self.assertRegex(bank, r'<div class="field admin-only">\s*<label[^>]*>题源</label>')
         self.assertIn("body.role-student .admin-only", read("css/auth.css"))
 
     def test_bank_page_only_loads_admin_data_for_admins(self):
@@ -283,9 +283,9 @@ class TestStudentViewIsWired(unittest.TestCase):
     def test_the_home_page_hides_generating_and_offline_from_students(self):
         html = read("index.html")
         self.assertIn('class="card admin-only" id="defaultCard"', html)
-        self.assertIn('<div class="card admin-only">\n    <h2>按层级生成题库</h2>', html)
+        self.assertRegex(html, r'<div class="card admin-only">\s*<h2[^>]*>按层级生成题库</h2>')
         self.assertIn('class="student-only"', html)
-        self.assertIn('离线测试页是单个 HTML 文件', html[html.index('<span class="admin-only">离线'):])
+        self.assertRegex(html, r'<span class="admin-only"[^>]*>离线测试页是单个 HTML 文件')
 
     def test_a_student_login_switches_the_view_on(self):
         ui = (WEB / "js" / "auth-ui.js").read_text(encoding="utf-8")
@@ -299,7 +299,8 @@ class TestStudentViewIsWired(unittest.TestCase):
         self.assertIn("AuthUI.ready.then", js)
         self.assertIn("groupByCategory", js)
         self.assertIn("/meta", js)
-        self.assertIn("老师还没有给你开放题库", js)
+        self.assertIn("home_emptyStudent", js)
+        self.assertIn("老师还没有给你开放题库", (WEB / "js" / "i18n-lexica.js").read_text(encoding="utf-8"))
 
     def test_the_admin_page_has_a_tag_column_and_bulk_buttons(self):
         html = read("admin.html")

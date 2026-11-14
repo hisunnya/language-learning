@@ -76,6 +76,7 @@ Two mechanisms are in use; follow the one that fits the page:
 |---|---|---|
 | `data-i18n` attributes | `hub/index.html` | `<tag data-i18n="key">`; a single `applyLang()` swaps every marked node. |
 | i18n table | (available for new pages that prefer it) | An `i18n = { zh: {...}, en: {...} }` object; `applyLang()` walks a list of element ids and writes `textContent`. |
+| `data-module-zh/en` + `WPI18N` | `word-puzzle/web/*.html` | Static text carries `data-module-zh` / `data-module-en` (the shared header swaps it). Text drawn by scripts uses `WPI18N.t('key', {n})` with the entries in `web/js/i18n-lexica.js`, and redraws on the `portal-lang-change` event. The offline single-file page embeds the same files and has its own toggle. |
 
 Whichever mechanism is used, **the language toggle belongs in the header**,
 next to the palette picker.
@@ -149,13 +150,13 @@ page in the repository that implements all of §3 today, and the hub test
 | Page | Bilingual | Palettes | Picker | Status |
 |---|---|---|---|---|
 | `hub/index.html` | `data-i18n` | 5 | top-right, square swatches | ✅ reference |
-| `word-puzzle/web/*.html` | — | — | — | ⚠️ to be brought up to §3 |
+| `word-puzzle/web/*.html` | `data-module-zh/en` + `WPI18N` | 5 (shared header) | top-right, square swatches (shared header) | ✅ every page, including the game and the offline page |
 | `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
 | `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
 | `word-puzzle/web/{login,change-password,admin}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
 | `miniprogram/` (WeChat) | `utils/i18n.js` | 5 (same names) | top-right, square swatches (tap, name shown below) | ✅ adapted, see 3.4.1 |
 
-The three ⚠️ pages predate this convention. When you touch one of them, bring
+The two ⚠️ pages predate this convention. When you touch one of them, bring
 it along: the target style is `hub/`, not the reverse. Do not "fix" the hub to
 match the older pages.
 

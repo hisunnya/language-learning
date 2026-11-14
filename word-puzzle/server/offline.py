@@ -23,6 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 CSS_FILE = WEB / "css" / "game.css"
 CORE_FILE = WEB / "js" / "game-core.js"
+I18N_FILE = WEB / "js" / "i18n.js"
+I18N_TEXT_FILE = WEB / "js" / "i18n-lexica.js"
 UI_FILE = WEB / "js" / "game-ui.js"
 ADAPTER_FILE = WEB / "js" / "game-adapter-offline.js"
 
@@ -42,21 +44,22 @@ TEMPLATE = """<!DOCTYPE html>
 <div class="app">
   <div class="hud">
     <div class="hud-row">
-      <div class="stat"><span class="k">关卡</span><span class="v" id="s-level">1/{levels}</span></div>
-      <div class="stat time" id="s-timebox"><span class="k">剩余</span><span class="v" id="s-time">60</span></div>
-      <div class="stat"><span class="k">进度</span><span class="v" id="s-prog">0/8</span></div>
-      <div class="stat score"><span class="k">得分</span><span class="v" id="s-score">0</span></div>
-      <div class="stat"><span class="k">连击</span><span class="v" id="s-combo">0</span></div>
+      <div class="stat"><span class="k" data-module-zh="关卡" data-module-en="Level">关卡</span><span class="v" id="s-level">1/{levels}</span></div>
+      <div class="stat time" id="s-timebox"><span class="k" data-module-zh="剩余" data-module-en="Time">剩余</span><span class="v" id="s-time">60</span></div>
+      <div class="stat"><span class="k" data-module-zh="进度" data-module-en="Progress">进度</span><span class="v" id="s-prog">0/8</span></div>
+      <div class="stat score"><span class="k" data-module-zh="得分" data-module-en="Score">得分</span><span class="v" id="s-score">0</span></div>
+      <div class="stat"><span class="k" data-module-zh="连击" data-module-en="Combo">连击</span><span class="v" id="s-combo">0</span></div>
     </div>
     <div class="progress"><i id="s-bar"></i></div>
-    <div class="ptext"><span id="s-tip">点任意一张卡片，再点另一侧配对</span><span id="s-total">总分 0</span></div>
+    <div class="ptext"><span id="s-tip" data-module-zh="点任意一张卡片，再点另一侧配对" data-module-en="Tap any card, then tap one on the other side to match">点任意一张卡片，再点另一侧配对</span><span id="s-total" data-module-zh="总分 0" data-module-en="Total 0">总分 0</span></div>
   </div>
   <div class="board" id="board"></div>
   <div class="bar">
-    <button class="btn ghost sm" id="btn-help">玩法</button>
-    <button class="btn ghost sm" id="btn-full">全屏</button>
-    <button class="btn warn" id="btn-replay">重玩本关</button>
-    <button class="btn" id="btn-restart">从头开始</button>
+    <button class="btn ghost sm" id="btn-help" data-module-zh="玩法" data-module-en="How to play">玩法</button>
+    <button class="btn ghost sm" id="btn-full" data-module-zh="全屏" data-module-en="Full screen">全屏</button>
+    <button class="btn warn" id="btn-replay" data-module-zh="重玩本关" data-module-en="Replay level">重玩本关</button>
+    <button class="btn" id="btn-restart" data-module-zh="从头开始" data-module-en="Start over">从头开始</button>
+    <button class="btn ghost sm" id="btn-lang" data-module-zh="English" data-module-en="中文">English</button>
   </div>
 </div>
 <div id="fx"></div>
@@ -71,6 +74,12 @@ var WP_DATA = {data};
 {core}
 </script>
 <script>
+{i18n}
+</script>
+<script>
+{i18n_text}
+</script>
+<script>
 {ui}
 </script>
 <script>
@@ -79,6 +88,10 @@ var WP_DATA = {data};
 <script>
 /* ---------------- 启动 ---------------- */
 (function () {{
+  var langButton = document.getElementById('btn-lang');
+  if (langButton) langButton.onclick = function () {{
+    WPI18N.setLang(WPI18N.lang() === 'en' ? 'zh' : 'en');
+  }};
   var game = new WPGame.Game({{ levels: WP_DATA.levels }});
   WPGameUI.init({{
     game: game,
@@ -186,6 +199,8 @@ def build_offline_html(bank: dict, groups: list[dict],
         title=_escape(title),
         css=_read(CSS_FILE),
         core=_read(CORE_FILE),
+        i18n=_read(I18N_FILE),
+        i18n_text=_read(I18N_TEXT_FILE),
         ui=_read(UI_FILE),
         adapter=_read(ADAPTER_FILE),
         data=_json_for_script(data),

@@ -54,6 +54,9 @@
       langBtn.setAttribute('data-tooltip-en', 'Switch to 中文');
     }
     write(LANG_KEY, lang);
+    /* 页面里由脚本动态画出来的内容（表格、列表、弹出的提示）监听这个事件重画；
+       静态文字靠上面的 data-module-zh / data-module-en 就够了。 */
+    window.dispatchEvent(new CustomEvent('portal-lang-change', { detail: { lang: lang } }));
   }
 
   function applyTheme(theme) {

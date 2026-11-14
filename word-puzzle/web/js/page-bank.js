@@ -10,6 +10,8 @@
   var files = [];
 
   function esc(s) { return API.esc(s); }
+  function t(key, params) { return WPI18N.t(key, params); }
+  var loaded = { materials: false, banks: false, files: false };   /* 取回来之前别把「加载中」换成「没有」 */
 
   /* ---------------- 上传 ---------------- */
 
@@ -19,27 +21,27 @@
     fd.append('file', file, file.name);
     var msg = document.getElementById('upMsg');
     msg.className = 'msg on info';
-    msg.textContent = '正在上传 ' + file.name + '…';
+    msg.textContent = t('bank_uploading', { name: file.name });
     API.upload('/api/materials', fd).then(function (res) {
       var s = res.summary || {};
       var fmtName = { docx: 'Word', pdf: 'PDF', csv: 'CSV', tsv: 'TSV',
                       txt: 'TXT', json: 'JSON', md: 'Markdown' };
       msg.className = 'msg on ok';
-      msg.textContent = '上传成功：' + res.material.name + ' · ' +
-        s.word_count + ' 个词条 · ' + s.unit_count + ' 个单元' +
-        (fmtName[res.material.fmt] ? '（' + fmtName[res.material.fmt] + '）' : '');
+      msg.textContent = t('bank_uploaded', {
+        name: res.material.name, words: s.word_count, units: s.unit_count,
+        fmt: fmtName[res.material.fmt] ? ' (' + fmtName[res.material.fmt] + ')' : ''
+      });
       if (s.units && s.units.length) {
         var preview = s.units.slice(0, 3).map(function (u) {
           return u.name + '(' + u.count + ')';
-        }).join('、');
-        msg.textContent += ' · ' + preview +
-          (s.units.length > 3 ? ' 等' : '');
+        }).join(', ');
+        msg.textContent += t('bank_uploadedMore', { preview: preview, more: s.units.length > 3 ? t('bank_etc') : '' });
       }
-      API.toast('上传成功');
+      API.toast(t('bank_uploadToast'));
       loadMaterials();
     }).catch(function (e) {
       msg.className = 'msg on err';
-      msg.textContent = '上传失败：' + e.message;
+      msg.textContent = t('bank_uploadFailed', { error: e.message });
     });
   }
 
@@ -48,17 +50,17 @@
   function renderMaterials() {
     var box = document.getElementById('matList');
     if (!materials.length) {
-      box.innerHTML = '<div class="empty">还没有上传资料，点上面的「上传题库」开始</div>';
+      box.innerHTML = '<div class="empty">' + esc(t('bank_matEmpty')) + '</div>';
       return;
     }
     box.innerHTML = materials.map(function (m) {
       return '<div class="item">' +
         '  <div class="main"><b>' + esc(m.name) + '</b>' +
-        '    <small>' + esc(m.filename) + ' · ' + m.word_count + ' 词 · ' +
-        m.unit_count + ' 单元 · ' + esc(API.fmtTime(m.created_at)) + '</small></div>' +
+        '    <small>' + esc(t('bank_matCounts', { file: m.filename, words: m.word_count, units: m.unit_count,
+                                              time: API.fmtTime(m.created_at) })) + '</small></div>' +
         '  <div class="ops">' +
-        '    <button class="btn sm" data-use="' + m.id + '">用它生成题库</button>' +
-        '    <button class="btn sm danger" data-del="' + m.id + '">删除</button>' +
+        '    <button class="btn sm" data-use="' + m.id + '">' + esc(t('bank_useMat')) + '</button>' +
+        '    <button class="btn sm danger" data-del="' + m.id + '">' + esc(t('bank_delete')) + '</button>' +
         '  </div></div>';
     }).join('');
 
@@ -67,12 +69,12 @@
         document.getElementById('sourceSel').value = 'material';
         onSourceChange();
         document.getElementById('matSel').value = b.dataset.use;
-        API.toast('已选择该资料');
+        API.toast(t('bank_matChosen'));
       };
     });
     box.querySelectorAll('[data-del]').forEach(function (b) {
       b.onclick = function () {
-        if (!confirm('确定删除这份资料？')) return;
+        if (!confirm(t('bank_confirmDelMat'))) return;
         API.del('/api/materials/' + b.dataset.del).then(loadMaterials)
           .catch(function (e) { API.toast(e.message); });
       };
@@ -82,19 +84,19 @@
   function renderBanks() {
     var box = document.getElementById('bankList');
     if (!banks.length) {
-      box.innerHTML = '<div class="empty">还没有题库</div>';
+      box.innerHTML = '<div class="empty">' + esc(t('bank_bankEmpty')) + '</div>';
       return;
     }
     box.innerHTML = banks.map(function (b) {
       return '<div class="item">' +
         '  <div class="main"><b>' + esc(b.title) + '</b>' +
-        '    <small>' + b.word_count + ' 词 · ' + b.unit_count + ' 单元 · ' +
-        (b.pairs_per_level ? '每关 ' + b.pairs_per_level + ' 词 · ' : '') +
-        esc(API.fmtTime(b.created_at)) + '</small></div>' +
+        '    <small>' + esc(t('bank_bankCounts', { words: b.word_count, units: b.unit_count,
+                                               per: b.pairs_per_level ? t('bank_perLevel', { n: b.pairs_per_level }) : '',
+                                               time: API.fmtTime(b.created_at) })) + '</small></div>' +
         '  <div class="ops">' +
-        '    <a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">开始游戏</a>' +
-        '    <button class="btn sm ghost" data-offline="' + b.id + '">生成离线测试</button>' +
-        '    <button class="btn sm danger" data-del="' + b.id + '">删除</button>' +
+        '    <a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('bank_play')) + '</a>' +
+        '    <button class="btn sm ghost" data-offline="' + b.id + '">' + esc(t('bank_offline')) + '</button>' +
+        '    <button class="btn sm danger" data-del="' + b.id + '">' + esc(t('bank_delete')) + '</button>' +
         '  </div></div>';
     }).join('');
 
@@ -103,7 +105,7 @@
     });
     box.querySelectorAll('[data-del]').forEach(function (b) {
       b.onclick = function () {
-        if (!confirm('确定删除这个题库？')) return;
+        if (!confirm(t('bank_confirmDelBank'))) return;
         API.del('/api/banks/' + b.dataset.del).then(loadBanks)
           .catch(function (e) { API.toast(e.message); });
       };
@@ -113,23 +115,23 @@
   function renderFiles() {
     var box = document.getElementById('fileList');
     if (!files.length) {
-      box.innerHTML = '<div class="empty">还没有生成过</div>';
+      box.innerHTML = '<div class="empty">' + esc(t('bank_filesEmpty')) + '</div>';
       return;
     }
     box.innerHTML = files.map(function (f) {
       return '<div class="item">' +
         '  <div class="main"><b>' + esc(f.name) + '</b>' +
-        '    <small>' + f.size + ' 字节 · ' + esc(f.created_at) + '</small></div>' +
+        '    <small>' + esc(t('bank_fileMeta', { size: f.size, time: f.created_at })) + '</small></div>' +
         '  <div class="ops">' +
-        '    <button class="btn sm" data-download="' + esc(f.url) + '" data-name="' + esc(f.name) + '">下载</button>' +
-        '    <a class="btn sm ghost" href="' + esc(API.path(f.url + '?inline=1')) + '" target="_blank" rel="noopener">打开</a>' +
+        '    <button class="btn sm" data-download="' + esc(f.url) + '" data-name="' + esc(f.name) + '">' + esc(t('bank_download')) + '</button>' +
+        '    <a class="btn sm ghost" href="' + esc(API.path(f.url + '?inline=1')) + '" target="_blank" rel="noopener">' + esc(t('bank_open')) + '</a>' +
         '  </div></div>';
     }).join('');
 
     box.querySelectorAll('[data-download]').forEach(function (b) {
       b.onclick = function () {
         API.download(b.dataset.download, b.dataset.name).catch(function () {
-          API.toast('下载被浏览器拦截了；请点“打开”后用浏览器另存。', 6000);
+          API.toast(t('bank_dlBlocked'), 6000);
         });
       };
     });
@@ -140,12 +142,13 @@
   function loadMaterials() {
     return API.get('/api/materials').then(function (res) {
       materials = res.materials || [];
+      loaded.materials = true;
       renderMaterials();
       var selBox = document.getElementById('matSel');
       var keep = selBox.value;
       selBox.innerHTML = materials.map(function (m) {
-        return '<option value="' + m.id + '">' + esc(m.name) +
-          '（' + m.word_count + ' 词）</option>';
+        return '<option value="' + m.id + '">' +
+          esc(t('bank_matOption', { name: m.name, words: m.word_count })) + '</option>';
       });
       if (keep) selBox.value = keep;
     }).catch(function (e) { API.toast(e.message); });
@@ -154,6 +157,7 @@
   function loadBanks() {
     return API.get('/api/banks').then(function (res) {
       banks = res.banks || [];
+      loaded.banks = true;
       renderBanks();
     }).catch(function (e) { API.toast(e.message); });
   }
@@ -161,6 +165,7 @@
   function loadFiles() {
     return API.get('/api/offline').then(function (res) {
       files = res.files || [];
+      loaded.files = true;
       renderFiles();
     }).catch(function () { });
   }
@@ -186,13 +191,12 @@
   }
 
   function makeOffline(bankId, button) {
-    var originalText = button ? button.textContent : '';
-    if (button) { button.disabled = true; button.textContent = '正在合成语音…'; }
-    API.toast('正在合成离线语音，可能需要几分钟，请勿关闭此页。', 600000);
+    if (button) { button.disabled = true; button.textContent = t('bank_synthesizing'); }
+    API.toast(t('bank_synthToast'), 600000);
     return API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
-      API.toast('已生成：' + res.filename);
+      API.toast(t('bank_generated', { name: res.filename }));
       API.download(res.url, res.filename).catch(function () {
-        API.toast('下载被浏览器拦截了；请在离线文件列表点“打开”后另存。', 6000);
+        API.toast(t('bank_dlBlocked2'), 6000);
       });
       loadFiles();
       return res;
@@ -200,7 +204,7 @@
       API.toast(e.message, 12000);
       throw e;
     }).finally(function () {
-      if (button) { button.disabled = false; button.textContent = originalText; }
+      if (button) { button.disabled = false; button.textContent = t('bank_offline'); }
     });
   }
 
@@ -216,18 +220,32 @@
     var s = sel.summary();
     var box = document.getElementById('selInfo');
     if (document.getElementById('sourceSel').value === 'material') {
-      box.textContent = '将使用上传的资料生成题库，层级名称可在下方自定义。';
+      box.textContent = t('bank_useMatInfo');
       return;
     }
     if (!s.units) {
-      box.textContent = '当前范围在内置词库里没有内容（小学 / 大学 / 自定义层级需要用自己的资料）。';
+      box.textContent = t('bank_noContent');
       return;
     }
     var per = pairsPerLevel();
-    box.textContent = '当前范围：' + s.path + ' · ' +
-      s.units + ' 个单元 · ' + s.words + ' 个词条 · ' +
-      '每关最多 ' + per + ' 词（约 ' + Math.ceil(s.words / per) + ' 关）';
+    box.textContent = t('bank_range', { path: s.path, units: s.units, words: s.words, per: per,
+                                        levels: Math.ceil(s.words / per) });
   }
+
+  /* 切换语言：列表和说明是脚本画的，要重画（静态文字由页眉换） */
+  WPI18N.onChange(function () {
+    if (loaded.materials) {
+      renderMaterials();
+      var selBox = document.getElementById('matSel');
+      Array.prototype.forEach.call(selBox.options, function (o, i) {
+        var m = materials[i];
+        if (m) o.textContent = t('bank_matOption', { name: m.name, words: m.word_count });
+      });
+    }
+    if (loaded.banks) renderBanks();
+    if (loaded.files) renderFiles();
+    updateInfo();
+  });
 
   /* ---------------- 启动 ---------------- */
 
@@ -254,7 +272,7 @@
       var btn = this;
       btn.disabled = true;
       API.post('/api/banks', payload()).then(function (res) {
-        API.toast('已生成题库：' + res.bank.title);
+        API.toast(t('bank_madeBank', { title: res.bank.title }));
         loadBanks();
       }).catch(function (e) {
         API.toast(e.message);
@@ -264,14 +282,14 @@
     document.getElementById('btnOffline').onclick = function () {
       var btn = this;
       btn.disabled = true;
-      btn.textContent = '生成中…';
+      btn.textContent = t('bank_making');
       API.post('/api/banks', payload()).then(function (res) {
         return makeOffline(res.bank.id);
       }).catch(function (e) {
         API.toast(e.message);
       }).finally(function () {
         btn.disabled = false;
-        btn.textContent = '🧪 生成离线测试';
+        btn.textContent = t('bank_offlineBtn');
         loadBanks();
       });
     };
