@@ -104,6 +104,12 @@
     });
   }
 
+  function tagCell(u) {
+    if (u.role === 'admin') return '';
+    if (!(u.tags || []).length) return '<span class="hint">' + esc(t('noTags')) + '</span>';
+    return u.tags.map(function (tag) { return '<span class="pill gray">' + esc(tag) + '</span>'; }).join(' ');
+  }
+
   function status(u) {
     if (u.role === 'admin') return '<span class="pill good">' + esc(t('statusAdmin')) + '</span>';
     if (u.disabled) return '<span class="pill bad">' + esc(t('statusDisabled')) + '</span>';
@@ -117,17 +123,18 @@
     el('usersCount').textContent = t('usersCount', { n: rows.length });
     var body = document.querySelector('#userTable tbody');
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="10" class="empty">' + esc(t('noUsers')) + '</td></tr>';
+      body.innerHTML = '<tr><td colspan="11" class="empty">' + esc(t('noUsers')) + '</td></tr>';
     } else {
       body.innerHTML = rows.map(function (u) {
         var actions = '<button class="btn sm ghost" data-act="reset" data-id="' + u.id + '">' + esc(t('reset')) + '</button>';
         if (u.locked) actions += '<button class="btn sm ghost" data-act="unlock" data-id="' + u.id + '">' + esc(t('unlock')) + '</button>';
         if (u.role !== 'admin') {
+          actions += '<button class="btn sm ghost" data-act="tags" data-id="' + u.id + '">' + esc(t('editTags')) + '</button>';
           actions += '<button class="btn sm ' + (u.disabled ? 'green' : 'danger') + '" data-act="' +
             (u.disabled ? 'enable' : 'disable') + '" data-id="' + u.id + '">' + esc(t(u.disabled ? 'enable' : 'disable')) + '</button>';
         }
         return '<tr><td>' + esc(u.student_no) + '</td><td>' + esc(u.name) + '</td><td>' + esc(u.class_name) +
-          '</td><td>' + esc(u.college) + '</td><td>' + esc(u.department) + '</td><td>' + status(u) +
+          '</td><td>' + esc(u.college) + '</td><td>' + esc(u.department) + '</td><td>' + tagCell(u) + '</td><td>' + status(u) +
           '</td><td class="num">' + u.games + '</td><td class="num">' + u.best + '</td><td>' +
           esc(u.last_login_at || t('never')) + '</td><td><div class="cell-actions">' + actions + '</div></td></tr>';
       }).join('');
@@ -174,6 +181,10 @@
         box.innerHTML = esc(t('resetDone', { name: u.name, no: u.student_no })) + ' <code>' + esc(res.password) + '</code>';
         box.scrollIntoView({ block: 'nearest' });
       });
+    } else if (action === 'tags') {
+      var typed = window.prompt(t('tagsPrompt', { name: u.name }), (u.tags || []).join(', '));
+      if (typed === null) return;
+      done = API.post(url + 'tags', { tags: typed }).then(function () { API.toast(t('tagsSaved')); });
     } else if (action === 'unlock') {
       done = API.post(url + 'unlock', {});
     } else if (action === 'disable') {
@@ -189,8 +200,26 @@
     });
   }
 
+  /* 批量：只作用于当前筛选出来的学生（管理员账号不受影响） */
+  function bulkTags(mode) {
+    var typed = el('bulkTags').value.trim();
+    if (!typed) { API.toast(t('bulkNeedTags')); return; }
+    var ids = filtered().filter(function (u) { return u.role !== 'admin'; }).map(function (u) { return u.id; });
+    if (!ids.length) { API.toast(t('bulkNoUsers')); return; }
+    var key = mode === 'add' ? 'bulkConfirmAdd' : 'bulkConfirmRemove';
+    if (!window.confirm(t(key, { n: ids.length, tags: typed }))) return;
+    var body = { user_ids: ids };
+    body[mode === 'add' ? 'add' : 'remove'] = typed;
+    API.post('/api/admin/users/tags', body).then(function (res) {
+      API.toast(t('bulkDone', { n: res.changed }));
+      return loadUsers();
+    }).catch(function (err) { API.toast(AuthUI.errorText(err)); });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     el('btnImport').onclick = doImport;
+    el('btnBulkAdd').onclick = function () { bulkTags('add'); };
+    el('btnBulkRemove').onclick = function () { bulkTags('remove'); };
     ['fClass', 'fCollege', 'fDept'].forEach(function (id) { el(id).onchange = render; });
     el('fSearch').oninput = render;
     document.querySelector('#userTable tbody').addEventListener('click', function (event) {

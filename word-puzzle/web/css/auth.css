@@ -3,6 +3,9 @@
 
 /* 学生看不到管理功能（上传、离线页、资料）；服务端本来就会拒绝，这里只是不让他们看到用不了的按钮 */
 body.role-student .admin-only { display: none !important; }
+/* 只给学生看的内容（例如「老师还没有给你开放题库」）；局域网版没有 role-student，不显示 */
+.student-only { display: none; }
+body.role-student .student-only { display: block; }
 
 .user-chip {
   display: inline-flex;

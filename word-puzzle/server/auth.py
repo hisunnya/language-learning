@@ -21,7 +21,7 @@ import unicodedata
 from collections import deque
 from typing import Callable
 
-from .db import Database, now_iso
+from .db import Database, TagError, normalize_tags, now_iso
 
 SESSION_COOKIE = "wp_session"
 SCRYPT_N, SCRYPT_R, SCRYPT_P = 2 ** 14, 8, 1
@@ -208,9 +208,11 @@ class AuthService:
         sql += " GROUP BY u.id ORDER BY u.class_name, u.student_no"
         now = self.clock()
         out = []
+        tags = self.db.user_tags_map()
         for row in self.db.query(sql, args):
             d = dict(row)
             d["locked"] = d.pop("locked_until") > now
+            d["tags"] = tags.get(d["id"], [])
             out.append(d)
         return out
 
@@ -334,6 +336,11 @@ class AuthService:
             fields = {k: rec.get(k, "") for k in ("name", "class_name", "college", "department")}
             existing = self.get_by_student_no(sn)
             try:
+                # 「标签」列：有内容就整组替换；列不存在或这一格是空的，保持原样
+                try:
+                    new_tags = normalize_tags(rec["tags"]) if str(rec.get("tags") or "").strip() else None
+                except TagError as exc:
+                    raise AuthError(400, "bad_tags", exc.args[0]) from exc
                 if existing is None:
                     custom = rec.get("password") or None
                     if custom and len(custom) < 6:
@@ -341,6 +348,8 @@ class AuthService:
                     user, plain = self.create_user(sn, fields["name"], password=custom, **{
                         k: fields[k] for k in ("class_name", "college", "department")})
                     report["created"] += 1
+                    if new_tags is not None:
+                        self.db.set_user_tags(user["id"], new_tags)
                     report["credentials"].append({"student_no": user["student_no"], "name": user["name"],
                                                   "class_name": user["class_name"], "password": plain})
                 else:
@@ -352,6 +361,8 @@ class AuthService:
                                     (fields["name"].strip(), fields["class_name"].strip(),
                                      fields["college"].strip(), fields["department"].strip(), existing["id"]))
                     report["updated"] += 1
+                    if new_tags is not None:
+                        self.db.set_user_tags(existing["id"], new_tags)
                     if reset_existing:
                         plain = self.reset_password(existing["id"])
                         report["credentials"].append({"student_no": sn, "name": fields["name"],

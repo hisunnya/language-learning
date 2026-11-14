@@ -34,7 +34,7 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
 from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
 from server import hierarchy, ipa, materials, offline, pdf, roster, tts  # noqa: E402
-from server.db import Database                 # noqa: E402
+from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -281,11 +281,22 @@ class Handler(BaseHTTPRequestHandler):
         return self.user["id"] if (self.auth is not None and self.user) else None
 
     def _bank_visible(self, bank: dict | None) -> bool:
+        """老师看得到全部；学生只看得到和自己至少有一个相同标签的题库（没打标签的就看不到）。"""
         if not bank:
             return False
-        if self._is_admin() or bank.get("owner_id") is None:
+        if self._is_admin():
             return True
-        return bank["owner_id"] == self._uid()
+        return self.db.bank_visible_to(bank["id"], self._uid())
+
+    @staticmethod
+    def _tags_meta(payload: dict) -> tuple[str | None, list[str] | None]:
+        """从请求里取分类和标签；没传的那一项返回 None（保持不变）。不合法返回 400。"""
+        try:
+            category = normalize_category(payload["category"]) if "category" in payload else None
+            tags = normalize_tags(payload["tags"]) if "tags" in payload else None
+        except TagError as exc:
+            raise HttpError(400, exc.args[0], "bad_tags") from exc
+        return category, tags
 
     def _gate(self, path: str) -> None:
         """家庭版：除了健康检查和登录相关接口，一律要先登录；还没改初始密码就只能去改密码。"""
@@ -396,17 +407,23 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/banks":
             if method == "GET":
                 visible = None if self._is_admin() else self._uid()
+                if visible is None and not self._is_admin():
+                    self.send_json({"ok": True, "banks": []})
+                    return
                 self.send_json({"ok": True, "banks": db.list_banks(visible)})
                 return
             if method == "POST":
+                # 建题库属于题库管理，只有老师（局域网版没有账号，等同老师）
+                self._need_admin()
                 payload = self.read_json()
-                if not self._is_admin() and payload.get("source", "seed") != "seed":
-                    raise HttpError(403, "只有管理员可以用上传的资料出题库", "forbidden")
+                category, tags = self._tags_meta(payload)
                 try:
                     created = bank_mod.create_bank(db, payload, owner_id=self._uid())
                 except bank_mod.BankError as exc:
                     raise HttpError(400, str(exc)) from exc
-                self.send_json({"ok": True, "bank": created}, status=201)
+                if category is not None or tags is not None:
+                    db.set_bank_meta(created["id"], category, tags)
+                self.send_json({"ok": True, "bank": db.get_bank(created["id"])}, status=201)
                 return
 
         m = re.fullmatch(r"/api/banks/(\d+)", path)
@@ -423,14 +440,23 @@ class Handler(BaseHTTPRequestHandler):
         m = re.fullmatch(r"/api/banks/(\d+)", path)
         if m and method == "DELETE":
             bank = db.get_bank(int(m.group(1)))
-            if not self._bank_visible(bank):
+            self._need_admin()
+            if not bank:
                 raise HttpError(404, "题库不存在")
-            if not self._is_admin() and bank.get("owner_id") != self._uid():
-                raise HttpError(403, "系统题库不能删除", "forbidden")
             ok = db.delete_bank(int(m.group(1)))
             if not ok:
                 raise HttpError(404, "题库不存在")
             self.send_json({"ok": True})
+            return
+
+        # ---- 改题库的分类和标签（只有老师） ----
+        m = re.fullmatch(r"/api/banks/(\d+)/meta", path)
+        if m and method == "POST":
+            self._need_admin()
+            category, tags = self._tags_meta(self.read_json())
+            if not db.set_bank_meta(int(m.group(1)), category, tags):
+                raise HttpError(404, "题库不存在")
+            self.send_json({"ok": True, "bank": db.list_banks_by_id(int(m.group(1)))})
             return
 
         # ---- 生成离线测试页（很吃资源，家庭版只给管理员） ----
@@ -478,6 +504,14 @@ class Handler(BaseHTTPRequestHandler):
             if method == "POST":
                 rec = self.read_json()
                 uid = self._uid()
+                if uid is not None and not self._is_admin() and rec.get("bank_id") not in (None, ""):
+                    # 成绩只能记在自己能打开的题库上，防止猜题库编号探测
+                    try:
+                        bank_id = int(rec["bank_id"])
+                    except (TypeError, ValueError):
+                        raise HttpError(400, "bank_id 不合法") from None
+                    if not db.bank_visible_to(bank_id, uid):
+                        raise HttpError(404, "题库不存在")
                 if uid is not None:
                     # 身份以登录态为准，不信客户端自己报的设备号和昵称
                     rec["device"] = "u%d" % uid
@@ -562,6 +596,37 @@ class Handler(BaseHTTPRequestHandler):
                 report = auth.import_roster(table["rows"], reset_existing=reset)
                 report["ignored_columns"] = table["ignored_columns"]
                 self.send_json({"ok": True, **report})
+                return
+
+            if path == "/api/admin/users/tags" and method == "POST":
+                # 批量：给一批学生加 / 去标签
+                payload = self.read_json()
+                ids = payload.get("user_ids")
+                if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+                    raise HttpError(400, "请选择要修改的学生")
+                try:
+                    add, remove = normalize_tags(payload.get("add")), normalize_tags(payload.get("remove"))
+                except TagError as exc:
+                    raise HttpError(400, exc.args[0], "bad_tags") from exc
+                if not add and not remove:
+                    raise HttpError(400, "请填写要加或要去掉的标签")
+                known = {u["id"] for u in auth.list_users() if u["role"] != "admin"}
+                ids = [i for i in ids if i in known]
+                self.db.change_user_tags(ids, add, remove)
+                self.send_json({"ok": True, "changed": len(ids)})
+                return
+
+            m = re.fullmatch(r"/api/admin/users/(\d+)/tags", path)
+            if m and method == "POST":
+                target = auth.get_by_id(int(m.group(1)))
+                if not target:
+                    raise HttpError(404, "没有这个用户")
+                try:
+                    tags = normalize_tags(self.read_json().get("tags"))
+                except TagError as exc:
+                    raise HttpError(400, exc.args[0], "bad_tags") from exc
+                self.db.set_user_tags(target["id"], tags)
+                self.send_json({"ok": True, "tags": tags})
                 return
 
             m = re.fullmatch(r"/api/admin/users/(\d+)/(reset-password|disabled|unlock)", path)
