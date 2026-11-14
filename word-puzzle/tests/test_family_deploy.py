@@ -83,6 +83,62 @@ class TestNginx(unittest.TestCase):
         self.assertNotIn("max-age", CONF)
         self.assertGreaterEqual(CONF.count('add_header Cache-Control "no-cache";'), 2)
 
+    def test_redirects_are_relative_because_funnel_sits_in_front(self):
+        """nginx 默认把重定向拼成绝对地址，只知道自己的 http://主机:8081；
+        前面还有 Funnel 的 https:443，学生就会被带到 https://…ts.net:8081/ 打不开。"""
+        self.assertIn("absolute_redirect off;", CONF)
+
+    @unittest.skipUnless(NGINX, "本机没有 nginx，跳过真实重定向测试")
+    def test_a_running_nginx_redirects_without_adding_its_own_port(self):
+        import socket
+        import time
+        import urllib.error
+        import urllib.request
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            install = tmp / "srv"
+            (install / "web").mkdir(parents=True)
+            (install / "shared").mkdir()
+            inc = tmp / "proxy.inc"
+            inc.write_text(PROXY, encoding="utf-8")
+            conf = (CONF.replace("@INSTALL_DIR@", str(install)).replace("@PORT@", "1")
+                    .replace("@NGINX_PORT@", str(port)).replace("@PROXY_INC@", str(inc))
+                    .replace("/var/log/nginx/", str(tmp) + "/"))
+            site = tmp / "site.conf"
+            site.write_text(conf, encoding="utf-8")
+            main = tmp / "nginx.conf"
+            main.write_text("pid %s/n.pid;\nerror_log %s/e.log;\nevents {}\nhttp {\n"
+                            "  client_body_temp_path %s/b; proxy_temp_path %s/p; fastcgi_temp_path %s/f;\n"
+                            "  uwsgi_temp_path %s/u; scgi_temp_path %s/s;\n  include %s;\n}\n"
+                            % ((tmp,) * 7 + (site,)), encoding="utf-8")
+            started = subprocess.run([NGINX, "-c", str(main), "-p", str(tmp)], capture_output=True, text=True)
+            self.assertEqual(started.returncode, 0, started.stderr)
+            try:
+                class NoFollow(urllib.request.HTTPRedirectHandler):
+                    def redirect_request(self, *args, **kwargs):
+                        return None
+                opener = urllib.request.build_opener(NoFollow)
+                for path, status in (("/", 302), ("/word-puzzle", 301)):
+                    request = urllib.request.Request("http://127.0.0.1:%d%s" % (port, path),
+                                                     headers={"Host": "lexica.example.ts.net"})
+                    for _ in range(20):
+                        try:
+                            opener.open(request, timeout=2)
+                            self.fail("应该是重定向")
+                        except urllib.error.HTTPError as exc:
+                            location = exc.headers.get("Location")
+                            self.assertEqual((exc.code, location), (status, "/word-puzzle/"), path)
+                            break
+                        except urllib.error.URLError:
+                            time.sleep(0.1)      # nginx 还没起来
+                    else:
+                        self.fail("nginx 没有响应")
+            finally:
+                subprocess.run([NGINX, "-c", str(main), "-p", str(tmp), "-s", "stop"], capture_output=True)
+
     @unittest.skipUnless(NGINX, "本机没有 nginx，跳过 nginx -t")
     def test_the_rendered_config_passes_nginx_t(self):
         with tempfile.TemporaryDirectory() as tmp:
