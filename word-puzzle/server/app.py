@@ -417,14 +417,39 @@ class Handler(BaseHTTPRequestHandler):
                 self._need_admin()
                 payload = self.read_json()
                 category, tags = self._tags_meta(payload)
+                split = bool(payload.get("split_units"))
+                if split and category is None:
+                    category = normalize_category(payload.get("title"))     # 分类默认就是书名
                 try:
-                    created = bank_mod.create_bank(db, payload, owner_id=self._uid())
+                    if split:
+                        made = bank_mod.create_bank_per_unit(db, payload, owner_id=self._uid())
+                    else:
+                        made = [bank_mod.create_bank(db, payload, owner_id=self._uid())]
                 except bank_mod.BankError as exc:
                     raise HttpError(400, str(exc)) from exc
                 if category is not None or tags is not None:
-                    db.set_bank_meta(created["id"], category, tags)
-                self.send_json({"ok": True, "bank": db.get_bank(created["id"])}, status=201)
+                    for item in made:
+                        db.set_bank_meta(item["id"], category, tags)
+                banks = [db.list_banks_by_id(item["id"]) for item in made]
+                self.send_json({"ok": True, "bank": banks[0], "banks": banks}, status=201)
                 return
+
+
+        if path == "/api/banks/tags" and method == "POST":
+            # 批量开放 / 收回：给一批题库加或去掉标签（学生有相同标签就能看到）
+            self._need_admin()
+            payload = self.read_json()
+            ids = payload.get("bank_ids")
+            if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+                raise HttpError(400, "请选择要修改的题库")
+            try:
+                add, remove = normalize_tags(payload.get("add")), normalize_tags(payload.get("remove"))
+            except TagError as exc:
+                raise HttpError(400, exc.args[0], "bad_tags") from exc
+            if not add and not remove:
+                raise HttpError(400, "请填写要加或要去掉的标签")
+            self.send_json({"ok": True, "changed": db.change_bank_tags(ids, add, remove)})
+            return
 
         m = re.fullmatch(r"/api/banks/(\d+)", path)
         if m and method == "GET":
@@ -596,6 +621,10 @@ class Handler(BaseHTTPRequestHandler):
                 report = auth.import_roster(table["rows"], reset_existing=reset)
                 report["ignored_columns"] = table["ignored_columns"]
                 self.send_json({"ok": True, **report})
+                return
+
+            if path == "/api/admin/tags" and method == "GET":
+                self.send_json({"ok": True, "tags": self.db.all_tags()})
                 return
 
             if path == "/api/admin/users/tags" and method == "POST":

@@ -218,6 +218,9 @@ class Database:
         if "owner_id" not in columns:
             # NULL = 系统题库（所有人可见）；否则是创建者的用户 id
             self.execute("ALTER TABLE banks ADD COLUMN owner_id INTEGER")
+        if "seq" not in columns:
+            # 同一分类（一本书）里的顺序：把一本书按单元拆成多个题库时，第几单元就是几
+            self.execute("ALTER TABLE banks ADD COLUMN seq INTEGER NOT NULL DEFAULT 0")
         if "category" not in columns:
             # 分类：只用来整理和浏览，不参与权限（权限只看标签）
             self.execute("ALTER TABLE banks ADD COLUMN category TEXT NOT NULL DEFAULT ''")
@@ -313,14 +316,14 @@ class Database:
             cur = conn.execute(
                 "INSERT INTO banks(title, level1, level2, level3, level4, source, "
                 "material_id, unit_mode, unit_from, unit_to, pairs_per_level, "
-                "word_count, unit_count, created_at, owner_id) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "word_count, unit_count, created_at, owner_id, seq) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (meta["title"], meta["level1"], meta["level2"], meta["level3"],
                  meta["level4"], meta["source"], meta.get("material_id"),
                  meta.get("unit_mode", "all"), meta.get("unit_from", 0),
                  meta.get("unit_to", 0),
                  int(meta.get("pairs_per_level") or 12), len(words),
-                 len({w["unit"] for w in words}), ts, meta.get("owner_id")),
+                 len({w["unit"] for w in words}), ts, meta.get("owner_id"), int(meta.get("seq") or 0)),
             )
             bid = cur.lastrowid
             conn.executemany(
@@ -380,6 +383,25 @@ class Database:
                 conn.executemany("INSERT INTO bank_tags(bank_id, tag) VALUES (?, ?)",
                                  [(bid, t) for t in tags])
         return True
+
+    def change_bank_tags(self, bank_ids: Iterable[int], add: list[str], remove: list[str]) -> int:
+        """批量给一批题库加 / 去标签（老师「批量开放」用）。返回实际存在的题库数。"""
+        ids = [i for i in bank_ids if self.get_bank(i)]
+        with self._tx() as conn:
+            conn.executemany("INSERT OR IGNORE INTO bank_tags(bank_id, tag) VALUES (?, ?)",
+                             [(b, t) for b in ids for t in add])
+            conn.executemany("DELETE FROM bank_tags WHERE bank_id=? AND tag=?",
+                             [(b, t) for b in ids for t in remove])
+        return len(ids)
+
+    def all_tags(self) -> list[dict]:
+        """所有出现过的标签，以及有多少学生 / 多少题库带着它（老师挑「开放给谁」时用）。"""
+        out: dict[str, dict] = {}
+        for row in self.query("SELECT tag, COUNT(*) AS n FROM user_tags GROUP BY tag"):
+            out.setdefault(row["tag"], {"tag": row["tag"], "students": 0, "banks": 0})["students"] = row["n"]
+        for row in self.query("SELECT tag, COUNT(*) AS n FROM bank_tags GROUP BY tag"):
+            out.setdefault(row["tag"], {"tag": row["tag"], "students": 0, "banks": 0})["banks"] = row["n"]
+        return sorted(out.values(), key=lambda t: (-t["students"], t["tag"]))
 
     def user_tags_map(self, user_ids: Iterable[int] | None = None) -> dict[int, list[str]]:
         rows = self.query("SELECT user_id, tag FROM user_tags ORDER BY tag")

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261114_172324.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261114_193316.sh
 # 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
 set -euo pipefail
 
@@ -17,6 +17,7 @@ command -v curl >/dev/null 2>&1 || die "缺少 curl，请先安装 curl"
 for path in \
   word-puzzle/deploy/install.sh \
   word-puzzle/web/img/icon.svg \
+  word-puzzle/web/js/release-presets.js \
   word-puzzle/web/js/i18n.js \
   word-puzzle/web/js/i18n-lexica.js \
   hub/deploy/install.sh \
@@ -83,6 +84,7 @@ check_path /physics/js/physics.js
 check_path /word-puzzle/
 check_path /word-puzzle/css/app.css
 check_path /word-puzzle/img/icon.svg
+check_path /word-puzzle/js/release-presets.js
 check_path /word-puzzle/js/i18n.js
 check_path /word-puzzle/js/i18n-lexica.js
 

@@ -317,6 +317,43 @@ def create_bank(db: Database, payload: dict, owner_id: int | None = None) -> dic
     return bank
 
 
+def create_bank_per_unit(db: Database, payload: dict, owner_id: int | None = None) -> list[dict]:
+    """把一本书按单元拆成多个题库：每个单元一个，单元是最小的开放单位。
+
+    题库标题是「书名 · 单元名」，``seq`` 是单元的顺序（1、2、3……），老师「批量开放」时按它排序、
+    按它算「上半部分 / 前 N 个」。每个题库只含自己这一个单元的词，补齐用的复习词也只来自本单元。"""
+    names = resolve_levels(payload)
+    mode = str(payload.get("unit_mode") or "all")
+    if mode not in UNIT_MODE_LABELS:
+        raise BankError("单元模式不合法")
+    units = apply_unit_mode(_collect_units(payload, db), mode,
+                            payload.get("unit_from", 0), payload.get("unit_to", 0))
+    if not units:
+        raise BankError("选中的范围内没有单词，换个范围试试")
+    book = str(payload.get("title") or "").strip() or "-".join(
+        [names["level1"], names["level2"], names["level3"]])
+    created = []
+    for index, unit in enumerate(units, start=1):
+        words = build_words([unit])
+        if not words:
+            continue
+        label = unit.get("label") or unit.get("name") or "Unit %d" % index
+        bid = db.insert_bank({
+            "title": "%s · %s" % (book, label),
+            "level1": names["level1"], "level2": names["level2"], "level3": names["level3"],
+            "level4": label,
+            "source": payload.get("source", "seed"),
+            "material_id": payload.get("material_id"),
+            "unit_mode": "all", "unit_from": 0, "unit_to": 0,
+            "pairs_per_level": resolve_pairs_per_level(payload),
+            "owner_id": owner_id, "seq": index,
+        }, words)
+        created.append(db.get_bank(bid))
+    if not created:
+        raise BankError("选中的范围内没有单词，换个范围试试")
+    return created
+
+
 def bank_payload(db: Database, bid: int) -> dict:
     """给前端游戏用的完整题库数据（词条 + 分组）。"""
     bank = db.get_bank(bid)

@@ -98,7 +98,7 @@ class TestDictionary(unittest.TestCase):
 
     def test_every_key_the_scripts_use_exists_and_every_key_is_used(self):
         defined = set(entries("zh"))
-        pattern = re.compile(r"""['"]((?:home|sel|bank|stats|play|g|api)_[A-Za-z0-9_]+)['"]""")
+        pattern = re.compile(r"""['"]((?:home|rel|sel|bank|stats|play|g|api)_[A-Za-z0-9_]+)['"]""")
         used = set()
         for name in SCRIPTS:
             used |= set(pattern.findall(text(name)))
