@@ -92,3 +92,18 @@ html.role-student .student-only { display: block; }
 .unit-row small { margin-left: auto; color: var(--ink3); white-space: nowrap; }
 .unit-row .pill[hidden] { display: none; }
 .modal-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* 成绩汇总：一人一套题一行，点开看每一次 */
+.sum-row { cursor: pointer; }
+.sum-row td { white-space: nowrap; }                 /* 班级 / 学号 / 姓名 / 数字都不换行 */
+.sum-row td.bank { white-space: normal; min-width: 220px; }   /* 只有题库名允许换行 */
+.sum-row:hover td, .sum-row:focus td { background: var(--chip-bg); outline: none; }
+.sum-row .caret { display: inline-block; width: 1em; color: var(--ink3); transition: transform .12s; }
+.sum-row[aria-expanded="true"] .caret { transform: rotate(90deg); }
+.caret-col { width: 26px; }
+.detail-row > td { padding: 0 0 10px 26px; background: var(--chip-bg); }
+.detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.detail-table th, .detail-table td { padding: 5px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.detail-table th { color: var(--ink3); font-weight: 600; }
+.pill.done { background: color-mix(in srgb, var(--green) 15%, var(--card)); color: var(--green); }
+.pill.notdone { background: color-mix(in srgb, var(--ink3) 15%, var(--card)); color: var(--ink3); }

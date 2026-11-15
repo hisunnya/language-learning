@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-roleflash">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-summary">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
 <body>
@@ -37,23 +37,26 @@
   </div>
 
   <div class="card">
-    <h2 data-module-zh="按题库统计" data-module-en="By bank">按题库统计</h2>
-    <p class="sub" data-module-zh="每个题库玩了多少次、最高多少分" data-module-en="How many times each bank was played and the best score">每个题库玩了多少次、最高多少分</p>
-    <div class="scroll"><table class="tbl" id="byBankTable">
-      <thead><tr><th data-module-zh="题库" data-module-en="Bank">题库</th><th data-module-zh="次数" data-module-en="Games">次数</th><th data-module-zh="最高分" data-module-en="Best">最高分</th><th data-module-zh="累计" data-module-en="Total">累计</th></tr></thead>
-      <tbody><tr><td colspan="4" class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</td></tr></tbody>
-    </table></div>
-  </div>
+    <h2 class="admin-only" data-module-zh="学生成绩汇总" data-module-en="Student scores">学生成绩汇总</h2>
+    <h2 class="student-only" data-module-zh="我的成绩" data-module-en="My scores">我的成绩</h2>
+    <p class="sub admin-only" data-module-zh="每个学生、每套题一行：班级、学号、姓名、玩了几次、完成几次、最高分、最低分、平均分、平均用时。点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了；中途退出、时间到、只通了前几关都不算。" data-module-en="One row per student and bank: class, student number, name, how many times it was played, how many were completed, best, worst and average score, and average time. Press a row to see every single game. “Completed” = one game in which every level of the bank was cleared; quitting, running out of time or clearing only the first levels does not count.">每个学生、每套题一行：班级、学号、姓名、玩了几次、完成几次、最高分、最低分、平均分、平均用时。点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了；中途退出、时间到、只通了前几关都不算。</p>
+    <p class="sub student-only" data-module-zh="每套题一行，点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了。" data-module-en="One row per bank. Press a row to see every single game. “Completed” = one game in which every level of the bank was cleared.">每套题一行，点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了。</p>
 
-  <div class="card">
-    <h2 data-module-zh="成绩明细" data-module-en="Score details">成绩明细</h2>
-    <p class="sub" data-module-zh="最近 200 条" data-module-en="The latest 200">最近 200 条</p>
-    <div class="scroll"><table class="tbl" id="scoreTable">
+    <div class="admin-filters admin-only">
+      <div class="field"><label for="fClass" data-module-zh="班级" data-module-en="Class">班级</label><select id="fClass"></select></div>
+      <div class="field"><label for="fBank" data-module-zh="题库" data-module-en="Bank">题库</label><select id="fBank"></select></div>
+      <div class="field"><label for="fSearch" data-module-zh="搜索学号或姓名" data-module-en="Search number or name">搜索学号或姓名</label><input type="text" id="fSearch" maxlength="40"></div>
+      <a class="btn ghost" id="btnExport" href="#" data-module-zh="导出汇总 CSV" data-module-en="Export summary CSV">导出汇总 CSV</a>
+    </div>
+    <p class="hint" id="sumCount" aria-live="polite"></p>
+
+    <div class="scroll"><table class="tbl" id="sumTable">
       <thead><tr>
-        <th data-module-zh="时间" data-module-en="Time">时间</th><th data-module-zh="题库" data-module-en="Bank">题库</th><th data-module-zh="得分" data-module-en="Score">得分</th><th data-module-zh="配对" data-module-en="Matched">配对</th>
-        <th data-module-zh="答错" data-module-en="Wrong">答错</th><th data-module-zh="最高连击" data-module-en="Best combo">最高连击</th><th data-module-zh="用时" data-module-en="Duration">用时</th><th data-module-zh="关数" data-module-en="Levels">关数</th>
+        <th class="caret-col"></th>
+        <th class="admin-only" data-module-zh="班级" data-module-en="Class">班级</th><th class="admin-only" data-module-zh="学号" data-module-en="No.">学号</th><th class="admin-only" data-module-zh="姓名" data-module-en="Name">姓名</th>
+        <th data-module-zh="题库" data-module-en="Bank">题库</th><th data-module-zh="次数" data-module-en="Games">次数</th><th data-module-zh="完成" data-module-en="Completed">完成</th><th data-module-zh="最高分" data-module-en="Best">最高分</th><th data-module-zh="最低分" data-module-en="Worst">最低分</th><th data-module-zh="平均分" data-module-en="Average">平均分</th><th data-module-zh="平均用时" data-module-en="Avg. time">平均用时</th><th data-module-zh="最近一次" data-module-en="Last played">最近一次</th>
       </tr></thead>
-      <tbody><tr><td colspan="8" class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</td></tr></tbody>
+      <tbody><tr><td colspan="12" class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</td></tr></tbody>
     </table></div>
   </div>
 
@@ -65,10 +68,10 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=20261114-release"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261115-summary"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261115-roleflash"></script>
-<script src="/word-puzzle/js/page-stats.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/page-stats.js?v=20261115-summary"></script>
 <script src="/shared/module-header.js"></script>
 </body>
 </html>

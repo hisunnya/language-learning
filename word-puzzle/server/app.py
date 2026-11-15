@@ -33,7 +33,7 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
 
 from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
-from server import hierarchy, ipa, materials, offline, pdf, roster, tts  # noqa: E402
+from server import hierarchy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -548,6 +548,28 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True, "id": sid}, status=201)
                 return
 
+        # ---- 成绩汇总：每个学生 × 每套题一行；点开一行看每一次的明细 ----
+        if path == "/api/scores/summary" and method == "GET":
+            admin = self._is_admin()
+            self.send_json({"ok": True, **scorebook.summarize(
+                db, only_user_id=None if admin else self._uid(),
+                class_name=query.get("class_name", "") if admin else "",
+                bank_id=int_param(query.get("bank_id"), "bank_id"), q=query.get("q", ""))})
+            return
+        if path == "/api/scores/plays" and method == "GET":
+            if self._is_admin():
+                uid = int_param(query.get("user_id"), "user_id")
+                device = None if uid is not None else (query.get("device") if "device" in query else None)
+            else:
+                uid, device = self._uid(), None          # 学生只能看自己的，传什么参数都一样
+            if uid is None and device is None:
+                raise HttpError(400, "请指明是谁的成绩")
+            bank_id = int_param(query.get("bank_id"), "bank_id")
+            self.send_json({"ok": True, "plays": scorebook.plays_of(
+                db, user_id=uid, device=device, bank_id=bank_id,
+                bank_title=query.get("bank_title") if bank_id is None and "bank_title" in query else None)})
+            return
+
         if path == "/api/stats" and method == "GET":
             only = None if self._is_admin() else self._uid()
             self.send_json({"ok": True, **db.score_stats(only)})
@@ -678,6 +700,12 @@ class Handler(BaseHTTPRequestHandler):
                     self.send_json({"ok": True})
                 return
 
+            if path == "/api/admin/export/score-summary.csv" and method == "GET":
+                data = self._score_summary_csv(query)
+                self._send(200, data, "text/csv; charset=utf-8", {
+                    "Content-Disposition": 'attachment; filename="lexica-score-summary.csv"'})
+                return
+
             if path == "/api/admin/export/scores.csv" and method == "GET":
                 data = self._scores_csv(query)
                 self._send(200, data, "text/csv; charset=utf-8", {
@@ -686,6 +714,21 @@ class Handler(BaseHTTPRequestHandler):
         except auth_mod.AuthError as exc:
             raise HttpError(exc.status, exc.message, exc.code) from exc
         raise HttpError(404, f"未知接口 {path}")
+
+    def _score_summary_csv(self, query: dict) -> bytes:
+        """一人一套题一行的汇总，老师拿去排名 / 存档。"""
+        data = scorebook.summarize(self.db, class_name=query.get("class_name", ""),
+                                   bank_id=int_param(query.get("bank_id"), "bank_id"), q=query.get("q", ""))
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(["班级", "学号", "姓名", "题库", "次数", "完成次数", "最高分", "最低分", "平均分",
+                         "平均用时(秒)", "最近一次"])
+        for r in data["rows"]:
+            cells = [r["class_name"], r["student_no"], r["name"], r["bank_title"], r["plays"], r["completed"],
+                     r["best"], r["worst"], r["avg_score"], r["avg_duration"], r["last_at"]]
+            # 以 = + - @ 开头的单元格在 Excel 里会被当成公式，前面补一个单引号
+            writer.writerow([("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in cells])
+        return ("\ufeff" + out.getvalue()).encode("utf-8")
 
     def _scores_csv(self, query: dict) -> bytes:
         where, args = [], []
