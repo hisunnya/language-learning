@@ -1,8 +1,8 @@
 [Unit]
-Description=词境 数据库每日备份（每天凌晨 3 点，错过了开机后补跑）
+Description=词境 数据库每日备份（每天北京时间凌晨 3 点，错过了开机后补跑）
 
 [Timer]
-OnCalendar=*-*-* 03:00:00
+OnCalendar=*-*-* 03:00:00 Asia/Shanghai
 Persistent=true
 RandomizedDelaySec=300
 

@@ -465,9 +465,12 @@ were requesting `/.env`, `/AGENTS.md`, `/CLAUDE.md`, `/config.js` (observed).
   included — a test that ran it in `/root` exposed `/root` until it was stopped).
   Funnel points only at the family nginx (127.0.0.1:8081), which sits in front of a
   backend that requires login for every API call.
-- Funnel hides the client address (everything arrives from 127.0.0.1), so there is
-  no per-IP rate limit; login is protected by per-account lockout (5 failures →
-  15 min) and per-student / site-wide attempt limits in the backend.
+- Funnel **does** pass the visitor's address: it arrives in `X-Forwarded-For` (verified on
+  2026-11-15: the address recorded for a request through Funnel equalled the sender's
+  public IP). nginx copies it into `X-Wp-Edge-Xff`; the backend records the last address
+  of that chain after skipping `WP_TRUSTED_PROXIES`. A per-IP rate limit is therefore
+  possible later; today login is protected by per-account lockout (5 failures → 15 min)
+  and per-student / site-wide attempt limits in the backend.
 - The student edition stores what the roster provides (student number, name, class,
   college, department) and everything the site observes: game results and a
   permanent **access log** (`page_views`, `login_events`) with account, IP address,

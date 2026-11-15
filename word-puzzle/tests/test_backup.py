@@ -92,6 +92,10 @@ class TestUnits(unittest.TestCase):
         self.assertIn("ProtectSystem=strict", unit)
         self.assertIn("ReadWritePaths=@BACKUP_DIR@", unit)
 
+    def test_the_timer_runs_in_beijing_time_not_container_utc(self):
+        timer = (FAMILY / "systemd" / "lexica-backup.timer").read_text(encoding="utf-8")
+        self.assertIn("OnCalendar=*-*-* 03:00:00 Asia/Shanghai", timer)
+
     def test_backup_is_opt_in_and_the_path_is_validated(self):
         self.assertIn("WP_BACKUP_DIR", self.INSTALL)
         self.assertIn("WP_BACKUP_DIR 必须是绝对路径", self.INSTALL)
