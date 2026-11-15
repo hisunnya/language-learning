@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import sys
@@ -227,6 +228,21 @@ class TestOverHttp(HttpCase):
         status, res = admin.json("POST", "/api/banks/tags", {"bank_ids": ids + [999999], "add": "一班"})
         self.assertEqual((status, res["changed"]), (200, 2), "不存在的编号被忽略")
 
+    def test_category_and_tags_are_edited_separately_and_do_not_disturb_each_other(self):
+        admin, mine = self.admin(), self.student(["一班"])
+        ids, _ = self.split_book(admin, units=2, tags="一班", category="原来的书")
+        bid = ids[0]
+        status, res = admin.json("POST", "/api/banks/%d/meta" % bid, {"category": "新书名"})
+        self.assertEqual((status, res["bank"]["category"], res["bank"]["tags"]), (200, "新书名", ["一班"]), "只改分类，标签保持")
+        self.assertIn(bid, self.visible(mine))
+        status, res = admin.json("POST", "/api/banks/%d/meta" % bid, {"tags": "二班"})
+        self.assertEqual((status, res["bank"]["category"], res["bank"]["tags"]), (200, "新书名", ["二班"]), "只改标签，分类保持")
+        self.assertNotIn(bid, self.visible(mine))
+        status, res = admin.json("POST", "/api/banks/%d/meta" % bid, {"tags": ""})
+        self.assertEqual((res["bank"]["category"], res["bank"]["tags"]), ("新书名", []), "清空标签不会清掉分类")
+        status, res = admin.json("POST", "/api/banks/%d/meta" % bid, {"category": ""})
+        self.assertEqual((res["bank"]["category"], res["bank"]["tags"]), ("", []))
+
     def test_students_cannot_release_or_list_tags(self):
         admin, kid = self.admin(), self.student()
         ids, _ = self.split_book(admin, units=2)
@@ -291,6 +307,30 @@ class TestPages(unittest.TestCase):
         code = self.js("page-home.js")
         self.assertIn("window.addEventListener('portal-lang-change', draw)", code)
         self.assertIn("window.removeEventListener('portal-lang-change', draw)", code)
+
+    def test_category_and_tags_have_their_own_buttons_with_explanations(self):
+        code = self.js("page-home.js")
+        self.assertNotIn("data-meta", code, "旧的合在一起的按钮不能再有")
+        self.assertNotIn("window.prompt", code, "不再用浏览器的 prompt 连着问两次")
+        i = code.index("function bankItem(")
+        item = code[i:code.index("function renderBanks")]
+        self.assertIn("data-cat=", item)
+        self.assertIn("data-tags=", item)
+        self.assertLess(item.index("if (!student) {"), item.index("data-cat="), "只给老师")
+        self.assertIn("body[isTags ? 'tags' : 'category'] = state.value", code, "一次只提交一项，另一项保持不变")
+        for key in ("field_catHelp", "field_tagsHelp", "field_tagsPreview", "field_tagsNone"):
+            self.assertIn(key, code)
+        self.assertIn("'/api/admin/users'", code, "标签面板要按学生的标签算出有多少人能看到")
+
+    def test_the_explanations_say_what_each_one_is_for(self):
+        text = (self.WEB / "js" / "i18n-lexica.js").read_text(encoding="utf-8")
+        zh = text[:text.index("}, {")]
+        cat = re.search(r"field_catHelp: '([^']*)'", zh).group(1)
+        tags = re.search(r"field_tagsHelp: '([^']*)'", zh).group(1)
+        self.assertIn("只用来整理", cat)
+        self.assertIn("不决定谁能看到", cat)
+        self.assertIn("决定谁能看到", tags)
+        self.assertIn("留空", tags)
 
     def test_the_workbench_can_split_into_one_bank_per_unit(self):
         html = (self.WEB / "bank.html").read_text(encoding="utf-8")

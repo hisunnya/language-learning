@@ -3,7 +3,7 @@
    ------------------------------------------------------------
    zh 和 en 必须是同一组键、同一组 {占位符}（tests/test_i18n.py 会检查）。
    用法：WPI18N.t('键', {n: 3})。
-   命名：home_ 首页 · rel_ 批量开放面板 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
+   命名：home_ 首页 · field_ 分类 / 标签面板 · rel_ 批量开放面板 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
    ============================================================ */
 (function (global) {
   'use strict';
@@ -11,7 +11,6 @@
   global.WPI18N.add({
     home_play: '开始游戏',
     home_offline: '生成离线测试',
-    home_meta: '分类和标签',
     home_delete: '删除',
     home_srcMaterial: '上传资料',
     home_srcSeed: '内置词库',
@@ -22,8 +21,6 @@
     home_catOther: '其他',
     home_catNone: '未分类',
     home_confirmDelete: '确定删除这个题库？',
-    home_promptCategory: '分类（例如：教材同步、考试词汇；只用来整理，留空表示未分类）：',
-    home_promptTags: '标签，用逗号隔开。学生标签里有一个相同就能看到这个题库；留空则学生看不到：',
     home_saved: '已保存',
     home_making: '生成中…',
     home_make: '生成题库并开始',
@@ -170,11 +167,28 @@
     bank_madeMany: '已按单元生成 {n} 个题库',
     rel_words: '{n} 词',
     rel_nothing: '所选单元已经是这个状态，没有需要改动的',
+    home_catBtn: '设置分类',
+    home_tagsBtn: '设置标签',
+    field_catTitle: '设置分类：{title}',
+    field_catHelp: '分类就像「书名」：学生的题库列表会按分类分组，同一本书的各个单元排在一起。它只用来整理，不决定谁能看到。例如：新视野大学英语 读写教程。留空 = 不分类。',
+    field_catLabel: '分类名称',
+    field_catPlaceholder: '例如：新视野大学英语 读写教程',
+    field_catExisting: '已有的分类（点一下直接使用）：',
+    field_tagsTitle: '设置标签：{title}',
+    field_tagsHelp: '标签决定谁能看到这个题库：学生只要有一个相同的标签就能看到。例如写班级名「学前2601」就只开放给这个班；写课程标签「大学英语BI」就开放给这门课的所有班。多个标签用逗号隔开。留空 = 学生看不到（老师始终看得到）。',
+    field_tagsLabel: '标签（用逗号隔开）',
+    field_tagsPlaceholder: '例如：学前2601, 大学英语BI',
+    field_tagsExisting: '已有的标签（点一下加进去；括号里是有这个标签的学生人数）：',
+    field_tagsCount: '{n} 名学生',
+    field_tagsNone: '没有标签：学生看不到这个题库（老师仍然看得到）。',
+    field_tagsPreview: '按这些标签，{n} 名学生能看到这个题库（一共 {total} 名学生）。',
+    field_save: '保存',
+    field_clear: '清空',
+    field_cancel: '取消',
     // @@zh-end
   }, {
     home_play: 'Play',
     home_offline: 'Make offline test',
-    home_meta: 'Category & tags',
     home_delete: 'Delete',
     home_srcMaterial: 'Uploaded',
     home_srcSeed: 'Built-in',
@@ -185,8 +199,6 @@
     home_catOther: 'Other',
     home_catNone: 'Uncategorised',
     home_confirmDelete: 'Delete this bank?',
-    home_promptCategory: 'Category (e.g. Textbook, Exam words; only for grouping, leave empty for none):',
-    home_promptTags: 'Tags, separated by commas. A student who shares one tag can see this bank; leave empty to hide it from students:',
     home_saved: 'Saved',
     home_making: 'Generating…',
     home_make: 'Generate and start',
@@ -333,6 +345,24 @@
     bank_madeMany: 'Generated {n} banks, one per unit',
     rel_words: '{n} words',
     rel_nothing: 'The ticked units are already in that state; nothing to change',
+    home_catBtn: 'Set category',
+    home_tagsBtn: 'Set tags',
+    field_catTitle: 'Category: {title}',
+    field_catHelp: 'A category works like a book title: the student\'s bank list is grouped by it, so the units of one book sit together. It is only for tidiness and does not decide who can see the bank. For example: New Horizon College English. Leave it empty for no category.',
+    field_catLabel: 'Category name',
+    field_catPlaceholder: 'e.g. New Horizon College English',
+    field_catExisting: 'Existing categories (press one to use it):',
+    field_tagsTitle: 'Tags: {title}',
+    field_tagsHelp: 'Tags decide who can see this bank: a student who has at least one of the same tags can see it. For example, a class name such as “Class 1” opens it to that class only, while a course tag such as “English-A” opens it to every class of the course. Separate several tags with commas. Leave it empty and students cannot see it (teachers always can).',
+    field_tagsLabel: 'Tags (separated by commas)',
+    field_tagsPlaceholder: 'e.g. Class 1, Course A',
+    field_tagsExisting: 'Existing tags (press one to add it; the number is how many students have it):',
+    field_tagsCount: '{n} students',
+    field_tagsNone: 'No tags: students cannot see this bank (teachers still can).',
+    field_tagsPreview: 'With these tags, {n} students can see this bank (out of {total} students).',
+    field_save: 'Save',
+    field_clear: 'Clear',
+    field_cancel: 'Cancel',
     // @@en-end
   });
 })(window);

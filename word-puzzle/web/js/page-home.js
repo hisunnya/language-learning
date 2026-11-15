@@ -92,7 +92,8 @@
     var meta = '<small>' + esc(counts(b)) + '</small>';
     var ops = '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('home_play')) + '</a>';
     if (!student) {
-      ops += (tagsEnabled() ? '<button class="btn sm ghost" data-meta="' + b.id + '">' + esc(t('home_meta')) + '</button>' : '') +
+      ops += (tagsEnabled() ? '<button class="btn sm ghost" data-cat="' + b.id + '">' + esc(t('home_catBtn')) + '</button>' +
+                              '<button class="btn sm ghost" data-tags="' + b.id + '">' + esc(t('home_tagsBtn')) + '</button>' : '') +
         '<button class="btn sm ghost" data-offline="' + b.id + '">' + esc(t('home_offline')) + '</button>' +
         '<button class="btn sm danger" data-del="' + b.id + '">' + esc(t('home_delete')) + '</button>';
     }
@@ -126,8 +127,11 @@
     box.querySelectorAll('[data-release]').forEach(function (btn) {
       btn.onclick = function () { editRelease(btn.getAttribute('data-release')); };
     });
-    box.querySelectorAll('[data-meta]').forEach(function (btn) {
-      btn.onclick = function () { editMeta(parseInt(btn.dataset.meta, 10)); };
+    box.querySelectorAll('[data-cat]').forEach(function (btn) {
+      btn.onclick = function () { editField('category', parseInt(btn.dataset.cat, 10)); };
+    });
+    box.querySelectorAll('[data-tags]').forEach(function (btn) {
+      btn.onclick = function () { editField('tags', parseInt(btn.dataset.tags, 10)); };
     });
     box.querySelectorAll('[data-del]').forEach(function (btn) {
       btn.onclick = function () {
@@ -139,17 +143,113 @@
     });
   }
 
-  /* 老师设置题库的分类和标签：学生标签里至少有一个和题库的相同，才看得到这个题库 */
-  function editMeta(id) {
+  /* 标签的分隔符：逗号（中英文）、顿号、分号、换行 */
+  var TAG_SEPARATORS = new RegExp('[,，、;；\\n]+');
+
+  /* 老师设置题库的分类 / 标签，两件事分开、各有说明：
+     分类 = 「书名」，只用来整理；标签 = 谁能看到（学生有一个相同的标签就能看到）。
+     标签面板会按现在填的内容，实时算出有多少名学生能看到。 */
+  function editField(kind, id) {
     var b = banks.filter(function (x) { return x.id === id; })[0];
     if (!b) return;
-    var category = window.prompt(t('home_promptCategory'), b.category || '');
-    if (category === null) return;
-    var tags = window.prompt(t('home_promptTags'), (b.tags || []).join(', '));
-    if (tags === null) return;
-    API.post('/api/banks/' + id + '/meta', { category: category, tags: tags })
-      .then(function () { API.toast(t('home_saved')); return loadBanks(); })
-      .catch(function (e) { API.toast(e.message); });
+    var isTags = kind === 'tags';
+    var state = { value: isTags ? (b.tags || []).join(', ') : (b.category || ''), allTags: [], students: null };
+    var back = document.createElement('div');
+    back.className = 'modal-back';
+    back.innerHTML = '<div class="modal" role="dialog" aria-modal="true"></div>';
+    document.body.appendChild(back);
+    var box = back.querySelector('.modal');
+
+    function close() { window.removeEventListener('portal-lang-change', draw); back.remove(); }
+    function typed() {
+      return isTags ? state.value.split(TAG_SEPARATORS).map(function (x) { return x.trim(); }).filter(Boolean) : [];
+    }
+    function categories() {
+      var seen = {};
+      banks.forEach(function (x) { if (x.category) seen[x.category] = true; });
+      return Object.keys(seen).sort();
+    }
+    function previewText() {
+      var tags = typed();
+      if (!tags.length) return t('field_tagsNone');
+      if (!state.students) return '';
+      var n = state.students.filter(function (u) {
+        return (u.tags || []).some(function (x) { return tags.indexOf(x) >= 0; });
+      }).length;
+      return t('field_tagsPreview', { n: n, total: state.students.length });
+    }
+    function refreshPreview() {
+      var el = box.querySelector('[data-preview]');
+      if (el) el.textContent = previewText();
+    }
+    function draw() {
+      var chips;
+      if (isTags) {
+        chips = state.allTags.map(function (x) {
+          return '<button class="chip" type="button" data-chip="' + esc(x.tag) + '">' + esc(x.tag) +
+            (x.students ? ' <small>(' + esc(t('field_tagsCount', { n: x.students })) + ')</small>' : '') + '</button>';
+        }).join('');
+      } else {
+        chips = categories().map(function (c) {
+          return '<button class="chip" type="button" data-chip="' + esc(c) + '">' + esc(c) + '</button>';
+        }).join('');
+      }
+      var K = isTags
+        ? { title: 'field_tagsTitle', help: 'field_tagsHelp', label: 'field_tagsLabel', ph: 'field_tagsPlaceholder', existing: 'field_tagsExisting' }
+        : { title: 'field_catTitle', help: 'field_catHelp', label: 'field_catLabel', ph: 'field_catPlaceholder', existing: 'field_catExisting' };
+      box.innerHTML = '<h2>' + esc(t(K.title, { title: b.title })) + '</h2>' +
+        '<p class="sub">' + esc(t(K.help)) + '</p>' +
+        '<label class="rel-label">' + esc(t(K.label)) +
+        '<input type="text" data-value maxlength="' + (isTags ? 120 : 20) + '" value="' + esc(state.value) + '" placeholder="' + esc(t(K.ph)) + '"></label>' +
+        (chips ? '<p class="hint">' + esc(t(K.existing)) + '</p><div class="chips">' + chips + '</div>' : '') +
+        (isTags ? '<p class="hint" data-preview>' + esc(previewText()) + '</p>' : '') +
+        '<div class="actions modal-actions"><button class="btn gold" type="button" data-act="save">' + esc(t('field_save')) + '</button>' +
+        '<button class="btn ghost" type="button" data-act="clear">' + esc(t('field_clear')) + '</button>' +
+        '<button class="btn ghost" type="button" data-act="cancel">' + esc(t('field_cancel')) + '</button></div>';
+    }
+
+    box.addEventListener('input', function (ev) {
+      if (!ev.target.matches('[data-value]')) return;
+      state.value = ev.target.value;
+      refreshPreview();
+    });
+    box.addEventListener('click', function (ev) {
+      var chip = ev.target.closest('[data-chip]');
+      if (chip) {
+        var value = chip.getAttribute('data-chip');
+        if (isTags) {
+          var now = typed();
+          if (now.indexOf(value) < 0) now.push(value);
+          state.value = now.join(', ');
+        } else {
+          state.value = value;
+        }
+        box.querySelector('[data-value]').value = state.value;
+        refreshPreview();
+        return;
+      }
+      var btn = ev.target.closest('[data-act]');
+      if (!btn) return;
+      var act = btn.getAttribute('data-act');
+      if (act === 'cancel') { close(); return; }
+      if (act === 'clear') { state.value = ''; box.querySelector('[data-value]').value = ''; refreshPreview(); return; }
+      btn.disabled = true;
+      var body = {};
+      body[isTags ? 'tags' : 'category'] = state.value;      /* 只提交这一项，另一项保持不变 */
+      API.post('/api/banks/' + id + '/meta', body)
+        .then(function () { API.toast(t('home_saved')); close(); return loadBanks(); })
+        .catch(function (e) { btn.disabled = false; API.toast(e.message); });
+    });
+    back.addEventListener('click', function (ev) { if (ev.target === back) close(); });
+    window.addEventListener('portal-lang-change', draw);
+    draw();
+    if (isTags) {
+      API.get('/api/admin/tags').then(function (res) { state.allTags = res.tags || []; draw(); }).catch(function () { });
+      API.get('/api/admin/users').then(function (res) {
+        state.students = (res.users || []).filter(function (u) { return u.role !== 'admin'; });
+        refreshPreview();
+      }).catch(function () { });
+    }
   }
 
   /* 批量开放：对一本书（同一分类）的各个单元题库，一次给一批加上 / 去掉某个班级标签。
