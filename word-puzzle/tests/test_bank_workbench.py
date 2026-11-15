@@ -72,6 +72,38 @@ class TestStructure(unittest.TestCase):
         self.assertNotIn("bank-panels.js", (WEB / "index.html").read_text(encoding="utf-8"))
 
 
+class TestTeacherLandingPage(unittest.TestCase):
+    """老师登录后没有「首页」：首页和题库工作台内容重复，工作台就是首页。学生和家庭版里没登录的访客仍然用首页。"""
+
+    def read(self, name):
+        return (WEB / name).read_text(encoding="utf-8")
+
+    def test_the_home_page_redirects_a_logged_in_teacher_before_painting(self):
+        html = self.read("index.html")
+        self.assertIn('<body data-page="home">', html)
+        head = html[:html.index("</head>")]
+        self.assertIn("sessionStorage.getItem('wp_teacher')==='1'", head)
+        self.assertIn("/word-puzzle/bank.html#banks", head)
+        self.assertLess(html.index("wp_teacher"), html.index('rel="stylesheet"'), "要在样式表之前")
+
+    def test_login_lands_teachers_on_the_workbench(self):
+        self.assertIn("AuthUI.landing(res.user)", self.read("js/page-login.js"))
+        ui = self.read("js/auth-ui.js")
+        self.assertIn("landing: landing", ui)
+        self.assertIn("location.replace(workbench())", ui)
+
+    def test_the_teacher_only_pages_have_no_home_link(self):
+        for page in ("bank.html", "admin.html", "visits.html"):
+            self.assertNotIn('<a href="/word-puzzle/" data-module-zh="首页"', self.read(page), page)
+
+    def test_the_other_pages_hide_it_for_teachers_only(self):
+        ui = self.read("js/auth-ui.js")
+        self.assertIn("function hideHomeLink()", ui)
+        self.assertIn("if (user.role === 'admin') { hideHomeLink(); addNavLinks(); }", ui)
+        for page in ("stats.html", "index.html"):
+            self.assertIn('href="/word-puzzle/" ', self.read(page).replace('class="active" ', ""), page + "：学生和访客仍然有首页链接")
+
+
 @unittest.skipUnless(NODE, "本机没有 node，跳过题库工作台的行为测试")
 class TestBehaviour(unittest.TestCase):
     def test_behaviour(self):

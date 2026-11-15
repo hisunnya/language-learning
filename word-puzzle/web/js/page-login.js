@@ -28,7 +28,7 @@
       API.post('/api/auth/login', { student_no: studentNo, password: password }).then(function (res) {
         // 还没改初始密码就先去改；否则回到刚才想去的页面
         if (res.user.must_change) AuthUI.go('change-password.html', true);
-        else location.replace(AuthUI.queryNext());
+        else location.replace(AuthUI.landing(res.user));
       }).catch(function (err) {
         document.getElementById('password').value = '';
         API.msg(msg, AuthUI.errorText(err), 'err');

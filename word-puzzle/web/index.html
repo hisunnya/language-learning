@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
+<script>(function(){var h=document.documentElement,r='';try{if(sessionStorage.getItem('wp_teacher')==='1'){location.replace('/word-puzzle/bank.html#banks');return}r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="wp-base" content="/word-puzzle">
 <title data-module-zh="词境 Lexica · 首页" data-module-en="Lexica · Home">词境 Lexica · 首页</title>
@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-roleflash">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
-<body>
+<body data-page="home">
 <div class="wrap">
 
   <header class="portal-topbar">

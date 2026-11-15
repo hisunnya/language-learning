@@ -185,6 +185,11 @@
   /* 角色：记在 <html> 的 class 和 sessionStorage 里。换页面时 <head> 里的脚本据此在页面画出来之前就设好，
      不会先闪一下教师版。服务器的答复回来后再校正一次。 */
   var ROLE_KEY = 'wp_role';
+  var TEACHER_KEY = 'wp_teacher';       /* 登录着的老师（不是家庭版里没登录的访客）：首页直接跳去题库工作台 */
+  function workbench() { return BASE + '/bank.html#banks'; }
+  function setTeacher(on) {
+    try { if (on) sessionStorage.setItem(TEACHER_KEY, '1'); else sessionStorage.removeItem(TEACHER_KEY); } catch (e) { }
+  }
   function setRole(role) {            /* role: 'admin' | 'student' | '' (未知，清掉) */
     var h = document.documentElement;
     h.classList.remove('role-pending', 'role-student', 'role-admin');
@@ -193,6 +198,7 @@
       if (role) sessionStorage.setItem(ROLE_KEY, role === 'admin' ? 'admin' : 'student');
       else sessionStorage.removeItem(ROLE_KEY);
     } catch (e) { }
+    if (role !== 'admin') setTeacher(false);
   }
 
   function decorate(user) {
@@ -223,7 +229,20 @@
     }
     /* 学生只看得到选题库和玩：题库管理、生成离线页等带 admin-only 的东西都不显示。
        服务端本来就会拒绝，这里是不让他们看到用不了的入口。 */
-    if (user.role === 'admin') addNavLinks();
+    if (user.role === 'admin') { hideHomeLink(); addNavLinks(); }
+  }
+
+  /* 老师登录后没有「首页」：题库工作台就是首页（首页和它的内容重复） */
+  function hideHomeLink() {
+    Array.prototype.forEach.call(document.querySelectorAll('.portal-nav a'), function (a) {
+      if (a.getAttribute('href') === BASE + '/' && a.parentNode) a.parentNode.removeChild(a);
+    });
+  }
+
+  /* 登录后去哪：默认回首页；老师的首页是题库工作台 */
+  function landing(user) {
+    var next = queryNext();
+    return user && user.role === 'admin' && next === BASE + '/' ? workbench() : next;
   }
 
   /* 老师才用得到的两个入口：账号管理、访问记录 */
@@ -281,7 +300,7 @@
     if (!info.user && info.guest) {                /* 家庭版：不登录也能用，管理页才要登录 */
       if (mode === 'admin' || mode === 'visits' || mode === 'change') { setRole(''); go('login.html', true); return info; }
       if (mode === 'public') document.documentElement.classList.remove('role-pending');
-      else { setRole('admin'); decorateGuest(); }
+      else { setRole('admin'); setTeacher(false); decorateGuest(); }
       return info;
     }
     if (!info.user) {
@@ -291,8 +310,10 @@
       return info;
     }
     setRole(info.user.role);
+    if (info.user.role === 'admin') setTeacher(true);
     if (info.user.must_change && mode !== 'change') { go('change-password.html', true); return info; }
-    if (mode === 'public' && !info.user.must_change) { location.replace(queryNext()); return info; }
+    if (mode === 'public' && !info.user.must_change) { location.replace(landing(info.user)); return info; }
+    if (info.user.role === 'admin' && document.body.getAttribute('data-page') === 'home') { location.replace(workbench()); return info; }
     if ((mode === 'admin' || mode === 'visits') && info.user.role !== 'admin') { go('', false); return info; }
     decorate(info.user);
     return info;
@@ -307,6 +328,7 @@
     errorText: errorText,
     safeNext: safeNext,
     queryNext: queryNext,
+    landing: landing,
     go: go,
     info: function () { return info; },
     /* 家庭版没有账号，等同管理员（行为不变） */
