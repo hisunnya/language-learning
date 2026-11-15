@@ -25,7 +25,7 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;       /* 老师登录后页眉里有品牌、4 个导航、用户条、语言和配色：英文版 14px 的间距会差 1 像素放不下而换行 */
   flex-wrap: wrap;
   padding: 12px 18px;
   margin: 0 0 18px;
@@ -64,6 +64,7 @@
 .portal-brand-mark--logo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .portal-brand-copy { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .portal-brand-copy strong { font-size: 16px; font-weight: 800; }
+html[lang="en"] .portal-brand-copy em { display: none; }       /* 英文时中文名那一格已经是英文名，LEXICA 之类的小字就重复了，还把页眉挤得换行 */
 .portal-brand-copy em { margin-left: 4px; color: var(--mh-accent); font-size: 10px; font-style: normal; letter-spacing: 1px; }
 .portal-brand-copy small { color: var(--mh-muted); font-size: 11.5px; font-weight: 500; }
 .portal-nav { display: flex; align-items: center; gap: 5px; margin-left: auto; flex-wrap: wrap; }

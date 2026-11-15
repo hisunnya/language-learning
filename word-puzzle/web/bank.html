@@ -5,7 +5,7 @@
 <script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="wp-base" content="/word-puzzle">
-<title data-module-zh="题库工作台 · 词境 Lexica" data-module-en="Question banks · Lexica">题库工作台 · 词境 Lexica</title>
+<title data-module-zh="题库工作台 · 词境 Lexica" data-module-en="Word banks · Lexica">题库工作台 · 词境 Lexica</title>
 <link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
@@ -19,10 +19,10 @@
   <header class="portal-topbar">
     <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
       <span class="portal-brand-mark portal-brand-mark--logo" aria-hidden="true"><img src="/word-puzzle/img/icon.svg" alt="" width="40" height="40"></span>
-        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="English vocabulary practice">英语词汇练习</small></span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="Vocabulary practice">英语词汇练习</small></span>
     </a>
     <nav class="portal-nav">
-      <a href="/word-puzzle/bank.html" class="active admin-only" data-module-zh="题库工作台" data-module-en="Banks">题库工作台</a>
+      <a href="/word-puzzle/bank.html" class="active admin-only" data-module-zh="题库工作台" data-module-en="Word banks">题库工作台</a>
       <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
     </nav>
     <div class="portal-topbar-right" id="portalHeaderControls"></div>
@@ -31,9 +31,9 @@
   <!-- 三个标签页：当前题库 / 新建题库 / 离线测试。网址 #banks #new #offline 可以收藏和直接打开 -->
   <div class="tabs" role="tablist" id="bankTabs" aria-label="题库工作台">
     <button type="button" class="tab active" role="tab" id="tabBanks" data-tab="banks" aria-controls="panelBanks" aria-selected="true">
-      <span data-module-zh="当前题库" data-module-en="Banks">当前题库</span> <span class="pill gray" id="bankCount" hidden></span></button>
+      <span data-module-zh="当前题库" data-module-en="Word banks">当前题库</span> <span class="pill gray" id="bankCount" hidden></span></button>
     <button type="button" class="tab" role="tab" id="tabNew" data-tab="new" aria-controls="panelNew" aria-selected="false" tabindex="-1">
-      <span data-module-zh="新建题库" data-module-en="New bank">新建题库</span></button>
+      <span data-module-zh="新建题库" data-module-en="New word bank">新建题库</span></button>
     <button type="button" class="tab" role="tab" id="tabOffline" data-tab="offline" aria-controls="panelOffline" aria-selected="false" tabindex="-1">
       <span data-module-zh="离线测试" data-module-en="Offline test">离线测试</span></button>
   </div>
@@ -41,12 +41,12 @@
   <!-- ============ 标签一：当前题库 ============ -->
   <section id="panelBanks" role="tabpanel" aria-labelledby="tabBanks">
     <div class="card">
-      <h2 data-module-zh="当前题库" data-module-en="Current banks">当前题库</h2>
-      <p class="sub" data-module-zh="所有题库都在这里。「分类」把题库归到一本书下面（只用来整理）；「标签」决定哪些学生能看到（学生有一个相同的标签就能看到，没有标签的学生看不到）。" data-module-en="All banks are here. “Category” files a bank under a book (for tidiness only); “Tags” decide which students can see it (a student sees a bank when they share at least one tag; banks without tags are hidden from students).">所有题库都在这里。「分类」把题库归到一本书下面（只用来整理）；「标签」决定哪些学生能看到（学生有一个相同的标签就能看到，没有标签的学生看不到）。</p>
+      <h2 data-module-zh="当前题库" data-module-en="Current word banks">当前题库</h2>
+      <p class="sub" data-module-zh="所有题库都在这里。「分类」把题库归到一本书下面（只用来整理）；「标签」决定哪些学生能看到（学生有一个相同的标签就能看到，没有标签的学生看不到）。" data-module-en="All word banks are here. “Category” files a word bank under a book (for tidiness only); “Tags” decide which students can see it (a student sees a word bank when they share at least one tag; word banks without tags are hidden from students).">所有题库都在这里。「分类」把题库归到一本书下面（只用来整理）；「标签」决定哪些学生能看到（学生有一个相同的标签就能看到，没有标签的学生看不到）。</p>
       <div class="msg info" id="bankNotice" role="status"></div>
       <div class="admin-filters">
-        <div class="field"><label for="bankFilter" data-module-zh="搜索题库" data-module-en="Search banks">搜索题库</label><input type="text" id="bankFilter" maxlength="40"></div>
-        <label class="check"><input type="checkbox" id="onlyClosed"> <span data-module-zh="只看学生看不到的（没有标签）" data-module-en="Only banks students cannot see (no tags)">只看学生看不到的（没有标签）</span></label>
+        <div class="field"><label for="bankFilter" data-module-zh="搜索题库" data-module-en="Search word banks">搜索题库</label><input type="text" id="bankFilter" maxlength="40"></div>
+        <label class="check"><input type="checkbox" id="onlyClosed"> <span data-module-zh="只看学生看不到的（没有标签）" data-module-en="Only word banks students cannot see (no tags)">只看学生看不到的（没有标签）</span></label>
       </div>
       <div class="list" id="bankList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
     </div>
@@ -55,15 +55,15 @@
   <!-- ============ 标签二：新建题库（三步） ============ -->
   <section id="panelNew" role="tabpanel" aria-labelledby="tabNew" hidden>
     <div class="card">
-      <h2 data-module-zh="新建题库" data-module-en="New bank">新建题库</h2>
-      <p class="sub" data-module-zh="三步：选词表 → 定义题库 → 决定谁能看到。词表文件是原始词表，题库是按单元和关卡切好、可以玩的内容；一份词表可以生成多个题库。" data-module-en="Three steps: choose a word list → define the bank → decide who can see it. A word-list file is the raw list; a bank is the playable content cut into units and levels; one list can make several banks.">三步：选词表 → 定义题库 → 决定谁能看到。词表文件是原始词表，题库是按单元和关卡切好、可以玩的内容；一份词表可以生成多个题库。</p>
-      <p class="flow" aria-hidden="true"><span data-module-zh="词表文件" data-module-en="Word-list file">词表文件</span> → <span data-module-zh="按单元切关" data-module-en="cut into levels">按单元切关</span> → <span data-module-zh="题库" data-module-en="Bank">题库</span> → <span data-module-zh="打标签开放" data-module-en="tag to release">打标签开放</span> → <span data-module-zh="学生" data-module-en="Students">学生</span></p>
+      <h2 data-module-zh="新建题库" data-module-en="New word bank">新建题库</h2>
+      <p class="sub" data-module-zh="三步：选词表 → 定义题库 → 决定谁能看到。词表文件是原始词表，题库是按单元和关卡切好、可以玩的内容；一份词表可以生成多个题库。" data-module-en="Three steps: choose a word list → define the word bank → decide who can see it. A word-list file is the raw list; a word bank is the playable content cut into units and levels; one list can make several word banks.">三步：选词表 → 定义题库 → 决定谁能看到。词表文件是原始词表，题库是按单元和关卡切好、可以玩的内容；一份词表可以生成多个题库。</p>
+      <p class="flow" aria-hidden="true"><span data-module-zh="词表文件" data-module-en="Word-list file">词表文件</span> → <span data-module-zh="按单元切关" data-module-en="cut into levels">按单元切关</span> → <span data-module-zh="题库" data-module-en="Word bank">题库</span> → <span data-module-zh="打标签开放" data-module-en="tag to release">打标签开放</span> → <span data-module-zh="学生" data-module-en="Students">学生</span></p>
     </div>
 
     <div class="step" data-step="1">
       <div class="step-band"><span class="step-no" data-module-zh="Step 1" data-module-en="Step 1">Step 1</span><span class="step-title" data-module-zh="词表从哪来" data-module-en="Where the words come from">词表从哪来</span></div>
       <div class="step-body">
-        <p class="sub" data-module-zh="选一种来源。上传的词表文件会先保存下来，之后还能再用它生成别的题库。" data-module-en="Pick one source. An uploaded file is kept, so you can make more banks from it later.">选一种来源。上传的词表文件会先保存下来，之后还能再用它生成别的题库。</p>
+        <p class="sub" data-module-zh="选一种来源。上传的词表文件会先保存下来，之后还能再用它生成别的题库。" data-module-en="Pick one source. An uploaded file is kept, so you can make more word banks from it later.">选一种来源。上传的词表文件会先保存下来，之后还能再用它生成别的题库。</p>
         <div class="source-choice" role="radiogroup" aria-label="词表来源">
           <label class="choice"><input type="radio" name="source" value="seed" checked> <b data-module-zh="内置人教版课程词库" data-module-en="Built-in curriculum list">内置人教版课程词库</b>
             <small data-module-zh="初中 / 高中全部教材，按下面的层级选范围" data-module-en="All middle- and high-school textbooks; choose the range with the levels below">初中 / 高中全部教材，按下面的层级选范围</small></label>
@@ -79,7 +79,7 @@
             <button type="button" class="btn ghost" id="btnQuick" data-module-zh="快速上传并生成" data-module-en="Quick upload and generate">快速上传并生成</button>
           </div>
           <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json,.md,.docx,.docm,.pdf" hidden>
-          <p class="hint" data-module-zh="「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。" data-module-en="“Choose a file”: upload, check what was recognised, then define the bank below. “Quick upload and generate”: upload and generate straight away with defaults (the recognised units, 9 words per level, not released yet), then you are reminded to set tags. Supports Word (.docx), PDF (scans go through OCR), TXT, CSV, JSON; save an old .doc as .docx first.">「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。</p>
+          <p class="hint" data-module-zh="「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。" data-module-en="“Choose a file”: upload, check what was recognised, then define the word bank below. “Quick upload and generate”: upload and generate straight away with defaults (the recognised units, 9 words per level, not released yet), then you are reminded to set tags. Supports Word (.docx), PDF (scans go through OCR), TXT, CSV, JSON; save an old .doc as .docx first.">「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。</p>
           <div class="msg" id="upMsg" role="status"></div>
         </div>
 
@@ -95,7 +95,7 @@
     </div>
 
     <div class="step" data-step="2">
-      <div class="step-band"><span class="step-no" data-module-zh="Step 2" data-module-en="Step 2">Step 2</span><span class="step-title" data-module-zh="定义题库" data-module-en="Define the bank">定义题库</span></div>
+      <div class="step-band"><span class="step-no" data-module-zh="Step 2" data-module-en="Step 2">Step 2</span><span class="step-title" data-module-zh="定义题库" data-module-en="Define the word bank">定义题库</span></div>
       <div class="step-body">
         <p class="sub" data-module-zh="内置词库：选学段、年级、册别和单元范围。上传的词表：给它起个名字，并写上它属于哪个学段、年级、册别（不写也可以）。" data-module-en="Built-in list: choose stage, grade, volume and unit range. Uploaded list: give it a name and say which stage, grade and volume it belongs to (optional).">内置词库：选学段、年级、册别和单元范围。上传的词表：给它起个名字，并写上它属于哪个学段、年级、册别（不写也可以）。</p>
 
@@ -103,7 +103,7 @@
           <div id="levelBox"></div>
         </div>
         <div id="materialFields" hidden>
-          <div class="field"><label for="bankTitle" data-module-zh="题库名称" data-module-en="Bank name">题库名称</label><input type="text" id="bankTitle" maxlength="60"></div>
+          <div class="field"><label for="bankTitle" data-module-zh="题库名称" data-module-en="Word bank name">题库名称</label><input type="text" id="bankTitle" maxlength="60"></div>
           <div class="row" style="margin-top:10px">
             <div class="field"><label for="lv1" data-module-zh="学段" data-module-en="Stage">学段</label><input type="text" id="lv1" maxlength="20" placeholder="如：大学"></div>
             <div class="field"><label for="lv2" data-module-zh="年级" data-module-en="Grade">年级</label><input type="text" id="lv2" maxlength="20" placeholder="如：大学英语"></div>
@@ -120,7 +120,7 @@
         </div>
         <label class="hint" style="display:block;margin:10px 0">
           <input type="checkbox" id="splitNew">
-          <span data-module-zh="按单元拆成多个题库（一个单元一个题库，之后可以批量开放给学生）" data-module-en="Split into one bank per unit (you can then release them to students in bulk)">按单元拆成多个题库（一个单元一个题库，之后可以批量开放给学生）</span>
+          <span data-module-zh="按单元拆成多个题库（一个单元一个题库，之后可以批量开放给学生）" data-module-en="Split into one word bank per unit (you can then release them to students in bulk)">按单元拆成多个题库（一个单元一个题库，之后可以批量开放给学生）</span>
         </label>
         <div class="msg info" id="selInfo" role="status"></div>
       </div>
@@ -129,7 +129,7 @@
     <div class="step optional" data-step="3">
       <div class="step-band"><span class="step-no" data-module-zh="Step 3" data-module-en="Step 3">Step 3</span><span class="step-title" data-module-zh="开放给谁（可以稍后再设）" data-module-en="Who can see it (can be set later)">开放给谁（可以稍后再设）</span></div>
       <div class="step-body">
-        <p class="sub" data-module-zh="分类 = 书名，只用来整理。标签 = 谁能看到：写班级名（如「学前2601」）就只开放给那个班；不写标签，学生就看不到这个题库（老师始终看得到）。" data-module-en="Category = book name, for tidiness only. Tags = who can see it: a class name (e.g. “Class A”) opens it to that class only; without tags students cannot see the bank (you always can).">分类 = 书名，只用来整理。标签 = 谁能看到：写班级名（如「学前2601」）就只开放给那个班；不写标签，学生就看不到这个题库（老师始终看得到）。</p>
+        <p class="sub" data-module-zh="分类 = 书名，只用来整理。标签 = 谁能看到：写班级名（如「学前2601」）就只开放给那个班；不写标签，学生就看不到这个题库（老师始终看得到）。" data-module-en="Category = book name, for tidiness only. Tags = who can see it: a class name (e.g. “Class A”) opens it to that class only; without tags students cannot see the word bank (you always can).">分类 = 书名，只用来整理。标签 = 谁能看到：写班级名（如「学前2601」）就只开放给那个班；不写标签，学生就看不到这个题库（老师始终看得到）。</p>
         <div class="row">
           <div class="field"><label for="newCategory" data-module-zh="分类（书名）" data-module-en="Category (book name)">分类（书名）</label><input type="text" id="newCategory" maxlength="20"></div>
           <div class="field" id="tagsField"><label for="newTags" data-module-zh="标签（用逗号隔开）" data-module-en="Tags (comma separated)">标签（用逗号隔开）</label><input type="text" id="newTags" maxlength="120"></div>
@@ -141,7 +141,7 @@
     <div class="card make-bar">
       <div class="msg" id="makeMsg" role="status"></div>
       <div class="actions">
-        <button type="button" class="btn lg gold" id="btnMake" data-module-zh="生成题库" data-module-en="Generate bank">生成题库</button>
+        <button type="button" class="btn lg gold" id="btnMake" data-module-zh="生成题库" data-module-en="Generate word bank">生成题库</button>
         <span class="hint" id="makeHint"></span>
       </div>
     </div>
@@ -151,9 +151,9 @@
   <section id="panelOffline" role="tabpanel" aria-labelledby="tabOffline" hidden>
     <div class="card">
       <h2 data-module-zh="离线测试" data-module-en="Offline test">离线测试</h2>
-      <p class="sub" data-module-zh="把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。" data-module-en="Export an existing bank as a single HTML file: word list, styles, scripts and audio are all built in, so you can double-click it on a computer without internet; scores stay in that computer’s browser. Good for classrooms without network or for USB sticks. Exporting does not create a bank.">把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。</p>
+      <p class="sub" data-module-zh="把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。" data-module-en="Export an existing word bank as a single HTML file: word list, styles, scripts and audio are all built in, so you can double-click it on a computer without internet; scores stay in that computer’s browser. Good for classrooms without network or for USB sticks. Exporting does not create a word bank.">把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。</p>
       <div class="row">
-        <div class="field"><label for="offBank" data-module-zh="选择题库" data-module-en="Bank">选择题库</label><select id="offBank"></select></div>
+        <div class="field"><label for="offBank" data-module-zh="选择题库" data-module-en="Word bank">选择题库</label><select id="offBank"></select></div>
       </div>
       <div class="actions">
         <button type="button" class="btn gold" id="btnOfflineMake" data-module-zh="生成并下载" data-module-en="Generate and download">生成并下载</button>

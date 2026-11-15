@@ -255,7 +255,7 @@
       link.setAttribute('data-module-zh', TEXT.zh.adminLink);
       link.setAttribute('data-module-en', TEXT.en.adminLink);
       link.textContent = t('adminLink');
-      if (document.body.getAttribute('data-auth') === 'admin') link.className = 'active';
+      if (location.pathname.slice(-10) === 'admin.html') link.className = 'active';     /* 只有账号管理页自己才高亮（题库工作台也是 data-auth=admin，不能按它判断） */
       nav.appendChild(link);
     }
     if (nav && !document.getElementById('visitsNavLink')) {

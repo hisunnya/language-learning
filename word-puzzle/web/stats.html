@@ -19,11 +19,11 @@
   <header class="portal-topbar">
     <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
       <span class="portal-brand-mark portal-brand-mark--logo" aria-hidden="true"><img src="/word-puzzle/img/icon.svg" alt="" width="40" height="40"></span>
-        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="English vocabulary practice">英语词汇练习</small></span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="Vocabulary practice">英语词汇练习</small></span>
     </a>
     <nav class="portal-nav">
       <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
-      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Banks">题库工作台</a>
+      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Word banks">题库工作台</a>
       <a href="/word-puzzle/stats.html" class="active" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
     </nav>
     <div class="portal-topbar-right" id="portalHeaderControls"></div>
@@ -39,12 +39,12 @@
   <div class="card">
     <h2 class="admin-only" data-module-zh="学生成绩汇总" data-module-en="Student scores">学生成绩汇总</h2>
     <h2 class="student-only" data-module-zh="我的成绩" data-module-en="My scores">我的成绩</h2>
-    <p class="sub admin-only" data-module-zh="每个学生、每套题一行：班级、学号、姓名、玩了几次、完成几次、最高分、最低分、平均分、平均用时。点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了；中途退出、时间到、只通了前几关都不算。" data-module-en="One row per student and bank: class, student number, name, how many times it was played, how many were completed, best, worst and average score, and average time. Press a row to see every single game. “Completed” = one game in which every level of the bank was cleared; quitting, running out of time or clearing only the first levels does not count.">每个学生、每套题一行：班级、学号、姓名、玩了几次、完成几次、最高分、最低分、平均分、平均用时。点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了；中途退出、时间到、只通了前几关都不算。</p>
-    <p class="sub student-only" data-module-zh="每套题一行，点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了。" data-module-en="One row per bank. Press a row to see every single game. “Completed” = one game in which every level of the bank was cleared.">每套题一行，点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了。</p>
+    <p class="sub admin-only" data-module-zh="每个学生、每套题一行：班级、学号、姓名、玩了几次、完成几次、最高分、最低分、平均分、平均用时。点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了；中途退出、时间到、只通了前几关都不算。" data-module-en="One row per student and word bank: class, student number, name, how many times it was played, how many were completed, best, worst and average score, and average time. Press a row to see every single game. “Completed” = one game in which every level of the word bank was cleared; quitting, running out of time or clearing only the first levels does not count.">每个学生、每套题一行：班级、学号、姓名、玩了几次、完成几次、最高分、最低分、平均分、平均用时。点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了；中途退出、时间到、只通了前几关都不算。</p>
+    <p class="sub student-only" data-module-zh="每套题一行，点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了。" data-module-en="One row per word bank. Press a row to see every single game. “Completed” = one game in which every level of the word bank was cleared.">每套题一行，点一行展开，看每一次的具体情况。「完成」= 一次把整套题的所有关都通关了。</p>
 
     <div class="admin-filters admin-only">
       <div class="field"><label for="fClass" data-module-zh="班级" data-module-en="Class">班级</label><select id="fClass"></select></div>
-      <div class="field"><label for="fBank" data-module-zh="题库" data-module-en="Bank">题库</label><select id="fBank"></select></div>
+      <div class="field"><label for="fBank" data-module-zh="题库" data-module-en="Word bank">题库</label><select id="fBank"></select></div>
       <div class="field"><label for="fSearch" data-module-zh="搜索学号或姓名" data-module-en="Search number or name">搜索学号或姓名</label><input type="text" id="fSearch" maxlength="40"></div>
       <a class="btn ghost" id="btnExport" href="#" data-module-zh="导出汇总 CSV" data-module-en="Export summary CSV">导出汇总 CSV</a>
     </div>
@@ -54,7 +54,7 @@
       <thead><tr>
         <th class="caret-col"></th>
         <th class="admin-only" data-module-zh="班级" data-module-en="Class">班级</th><th class="admin-only" data-module-zh="学号" data-module-en="No.">学号</th><th class="admin-only" data-module-zh="姓名" data-module-en="Name">姓名</th>
-        <th data-module-zh="题库" data-module-en="Bank">题库</th><th data-module-zh="次数" data-module-en="Games">次数</th><th data-module-zh="完成" data-module-en="Completed">完成</th><th data-module-zh="最高分" data-module-en="Best">最高分</th><th data-module-zh="最低分" data-module-en="Worst">最低分</th><th data-module-zh="平均分" data-module-en="Average">平均分</th><th data-module-zh="平均用时" data-module-en="Avg. time">平均用时</th><th data-module-zh="最近一次" data-module-en="Last played">最近一次</th>
+        <th data-module-zh="题库" data-module-en="Word bank">题库</th><th data-module-zh="次数" data-module-en="Games">次数</th><th data-module-zh="完成" data-module-en="Completed">完成</th><th data-module-zh="最高分" data-module-en="Best">最高分</th><th data-module-zh="最低分" data-module-en="Worst">最低分</th><th data-module-zh="平均分" data-module-en="Average">平均分</th><th data-module-zh="平均用时" data-module-en="Avg. time">平均用时</th><th data-module-zh="最近一次" data-module-en="Last played">最近一次</th>
       </tr></thead>
       <tbody><tr><td colspan="12" class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</td></tr></tbody>
     </table></div>
