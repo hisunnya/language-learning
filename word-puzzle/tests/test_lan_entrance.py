@@ -84,6 +84,32 @@ class TestStatic(unittest.TestCase):
         self.assertIn("@TRUSTED_PROXIES@", self.INSTALL)
 
 
+class TestBootOrder(unittest.TestCase):
+    """开机时 nginx 比容器的静态 IP 先起来会监听失败，连公网入口一起带倒（部署时真的撞上过）。"""
+    INSTALL = (FAMILY / "install.sh").read_text(encoding="utf-8")
+
+    def test_nginx_waits_for_the_lan_address_and_retries(self):
+        self.assertIn("lexica-wait-lan.conf", self.INSTALL)
+        self.assertRegex(self.INSTALL, r"ExecStartPre=\n")                 # 先清掉原来的，保证等待在 nginx -t 之前
+        self.assertIn("ip -4 -o addr show | grep -q", self.INSTALL)
+        self.assertIn("Restart=on-failure", self.INSTALL)
+
+    def test_the_wait_comes_before_the_config_test(self):
+        block = self.INSTALL[self.INSTALL.index("[Service]"):self.INSTALL.index("UNIT\n  systemctl daemon-reload")]
+        self.assertLess(block.index("ip -4 -o addr show"), block.index("nginx -t"))
+
+    def test_without_a_lan_address_the_dropin_is_removed(self):
+        self.assertIn('rm -f "$NGINX_DROPIN"', self.INSTALL)
+
+    @unittest.skipUnless(shutil.which("ip"), "本机没有 ip 命令（macOS），在 Linux 上才能跑这条")
+    def test_the_wait_command_itself_works(self):
+        """把安装脚本里写的等待命令原样跑一遍：地址已经存在时立刻返回，不存在时到点也退出 0（不卡住启动）。"""
+        line = [l for l in self.INSTALL.splitlines() if l.startswith("ExecStartPre=/bin/sh -c 'i=0")][0]
+        cmd = line[len("ExecStartPre=/bin/sh -c "):].strip("'").replace("\\$", "$").replace("$LAN_ADDR", "127.0.0.1")
+        quick = subprocess.run(["sh", "-c", cmd], capture_output=True, timeout=20)
+        self.assertEqual(quick.returncode, 0)
+
+
 @unittest.skipUnless(NGINX, "本机没有 nginx，跳过真实入口测试")
 class TestRealNginx(unittest.TestCase):
     def test_two_entrances_one_backend(self):

@@ -37,6 +37,7 @@ TRUSTED_PROXIES="${WP_TRUSTED_PROXIES:-}"
 # 数据库每日备份（可选）：WP_BACKUP_DIR=备份目录（建议是挂进容器的宿主机目录，且和数据库不在同一块盘上）。
 BACKUP_DIR="${WP_BACKUP_DIR:-}"
 LAN_PROXY_INC=/etc/nginx/word-puzzle-family-proxy-lan.inc
+NGINX_DROPIN=/etc/systemd/system/nginx.service.d/lexica-wait-lan.conf
 LAN_CONF_FILE=/etc/nginx/conf.d/word-puzzle-family-lan.conf
 CONF_FILE=/etc/nginx/conf.d/$SITE_NAME.conf
 
@@ -150,6 +151,18 @@ if [[ -n "$LAN_ADDR" ]]; then
     | sed -e "s|listen 127.0.0.1:@NGINX_PORT@;|listen $LAN_ADDR:$LAN_PORT;|" -e "s|@PROXY_INC@|$LAN_PROXY_INC|g" \
           -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@PORT@|$PORT|g" -e "s|word-puzzle-family\\.|word-puzzle-family-lan.|g" \
     > "$LAN_CONF_FILE.tmp.$$"
+  # 开机时 nginx 可能比容器的静态 IP 先起来，监听内网地址会失败，连公网入口一起带倒。
+  # 所以让 nginx 启动前最多等 60 秒，等到这个地址出现，并且失败了自动重试。
+  install -d /etc/systemd/system/nginx.service.d
+  cat > "$NGINX_DROPIN" <<UNIT
+[Service]
+ExecStartPre=
+ExecStartPre=/bin/sh -c 'i=0; while [ \$i -lt 60 ]; do ip -4 -o addr show | grep -q " $LAN_ADDR/" && exit 0; i=\$((i+1)); sleep 1; done; exit 0'
+ExecStartPre=/usr/sbin/nginx -t -q -g 'daemon on; master_process on;'
+Restart=on-failure
+RestartSec=3
+UNIT
+  systemctl daemon-reload
   if [[ -e "$LAN_CONF_FILE" ]]; then cp -a "$LAN_CONF_FILE" "$LAN_CONF_FILE.bak"; fi
   mv "$LAN_CONF_FILE.tmp.$$" "$LAN_CONF_FILE"
   if ! nginx -t; then
@@ -158,6 +171,7 @@ if [[ -n "$LAN_ADDR" ]]; then
   fi
 else
   rm -f "$LAN_CONF_FILE" "$LAN_PROXY_INC"
+  if [[ -e "$NGINX_DROPIN" ]]; then rm -f "$NGINX_DROPIN"; systemctl daemon-reload; fi
 fi
 systemctl reload nginx
 
