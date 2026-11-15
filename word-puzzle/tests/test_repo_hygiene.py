@@ -108,11 +108,14 @@ class TestTrackedFiles(unittest.TestCase):
                     problems.append("%s: 命中私有模式 #%d" % (name, patterns.index(pat) + 1))
         self.assertEqual(problems, [])
 
-    def test_every_commit_is_authored_with_the_noreply_address(self):
+    def test_every_commit_has_exactly_one_personal_identity(self):
         out = subprocess.run([GIT, "-C", str(REPO), "log", "--all", "--format=%ae%n%ce"], capture_output=True, text=True, check=True).stdout
         emails = {e.strip() for e in out.splitlines() if e.strip()}
-        bad = {e for e in emails if not e.endswith("@users.noreply.github.com")}
-        self.assertEqual(bad, set(), "提交作者 / 提交者邮箱必须是 GitHub noreply 地址（见 AGENTS.md「Identity」）")
+        self.assertEqual(len(emails), 1, "作者 / 提交者邮箱必须只有一个（个人邮箱），见 AGENTS.md「Identity」")
+        if LOCAL_PATTERNS.is_file():
+            for line in LOCAL_PATTERNS.read_text(encoding="utf-8").splitlines():
+                if line.strip() and not line.startswith("#"):
+                    self.assertIsNone(re.search(line.strip(), next(iter(emails))), "提交邮箱命中了 .private-patterns 里的私有模式")
 
     def test_gitignore_blocks_the_usual_leaks(self):
         ignore = (REPO / ".gitignore").read_text(encoding="utf-8")

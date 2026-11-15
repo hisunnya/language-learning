@@ -27,18 +27,18 @@ the repository — see §2 for everything else.
 - Before pushing, `git rebase origin/main` — the remote often has commits that
   landed in the meantime.
 
-### Identity: never the company e-mail
+### Identity: the owner's personal address, never a company one
 
 This is a **personal** repository and it is public: the author and committer e-mail of
-every commit is published with the history. Commits must carry the GitHub no-reply
-address (`<id>+<username>@users.noreply.github.com`), never a company or other private
-address. Before the first commit on a machine check `git config user.email`; if it is
-wrong, fix it (`git config --global user.email …`) *before* committing. The hygiene
-test fails on any e-mail address in tracked files, and a history check
-(`git log --all --format=%ae %ce | sort -u`) must show only the no-reply address.
-Rewriting published history to remove a leaked address needs the owner's explicit
-agreement (it requires a force-push) — it was done once, on the owner's request, to
-remove a company address.
+every commit is published with the history. Commits must carry the owner's personal
+address (the one in `git config user.email`; see `AGENTS.local.md`), never a company or
+any other private address. Before the first commit on a machine check
+`git config user.email`; if it is wrong, fix it *before* committing. The hygiene test
+fails on any e-mail address in tracked files and unless all commits share exactly one
+identity (and, on the owner's machine, unless it avoids every pattern in the git-ignored
+`.private-patterns`). Rewriting published history needs the owner's explicit agreement
+(it requires a force-push); it has been done twice on the owner's request — to remove a
+company address, then to switch to the personal one.
 
 ### Branches and reverts
 
