@@ -221,6 +221,7 @@ class TestInstaller(unittest.TestCase):
     def test_deploy_all_points_the_home_edition_at_the_student_edition(self):
         self.assertIn('WP_AUTH_REMOTE="$STUDENT_URL"', self.DEPLOY_ALL)
         self.assertIn("LEXICA_STUDENT_URL", self.DEPLOY_ALL)
+        self.assertIn("http://192.168.1.100:8082/word-puzzle", self.DEPLOY_ALL)      # 走内网入口，不绕公网
 
 
 class TestPages(unittest.TestCase):
