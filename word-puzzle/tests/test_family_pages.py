@@ -308,3 +308,21 @@ class TestStudentViewIsWired(unittest.TestCase):
             self.assertIn(needle, html)
         self.assertEqual(html.count("<th "), 11, "表头列数要和 page-admin.js 里的 colspan 一致")
         self.assertIn('colspan="11"', (WEB / "js" / "page-admin.js").read_text(encoding="utf-8"))
+
+
+class TestLevelSizeDefault(unittest.TestCase):
+    """每关默认 9 对词 = 18 张卡 = 手机竖屏 3 列 × 6 行一屏放下。网页、后端、小程序必须是同一个数。"""
+
+    def test_every_default_is_nine(self):
+        import re
+        root = Path(__file__).resolve().parent.parent
+        for page in ("index.html", "bank.html"):
+            html = (root / "web" / page).read_text(encoding="utf-8")
+            self.assertRegex(html, r'id="pairsPerLevel"[^>]*value="9"', page)
+        for js in ("page-home.js", "page-bank.js"):
+            text = (root / "web" / "js" / js).read_text(encoding="utf-8")
+            self.assertEqual(len(re.findall(r"\b12\b", text.split("function pairsPerLevel()")[1].split("}")[0])), 0, js)
+        mini = (root.parent / "miniprogram" / "utils" / "bank.js").read_text(encoding="utf-8")
+        self.assertIn("var MAX_PAIRS = 9;", mini)
+        server = (root / "server" / "bank.py").read_text(encoding="utf-8")
+        self.assertIn("MAX_PAIRS_PER_LEVEL = 9", server)

@@ -425,17 +425,45 @@ class TestBank(TempDB):
         for group in groups:
             self.assertLessEqual(len(group["words"]), 6)
 
-    def test_pairs_per_level_defaults_to_twelve(self):
+    def test_pairs_per_level_defaults_to_nine(self):
         b = bank_mod.create_bank(self.db, {
             "source": "seed", "level1": "初中", "level2": "九年级",
             "level3": "上册", "level4": "all", "unit_mode": "all",
         })
-        self.assertEqual(self.db.get_bank(b["id"])["pairs_per_level"], 12)
+        self.assertEqual(self.db.get_bank(b["id"])["pairs_per_level"], 9)     # 9 对 = 18 张卡 = 手机竖屏 3×6 一屏
 
     def test_pairs_per_level_out_of_range_falls_back(self):
         for value in (0, 999, "abc", None):
             self.assertEqual(
-                bank_mod.resolve_pairs_per_level({"pairs_per_level": value}), 12)
+                bank_mod.resolve_pairs_per_level({"pairs_per_level": value}), 9)
+
+    def test_a_37_word_unit_becomes_five_levels_of_nine(self):
+        words = [{"en": "w%d" % i, "cn": "词%d" % i} for i in range(37)]
+        parts = bank_mod.chunk_groups([{"unit": "Unit 1", "words": words}], rng=lambda: 0.5)
+        self.assertEqual([len(p["words"]) for p in parts], [9, 9, 9, 9, 9])
+        self.assertIn("含复习", parts[-1]["unit"])                 # 最后一关只有 1 个新词，其余 8 个是复习
+        self.assertNotIn("含复习", parts[0]["unit"])
+
+    def test_old_default_banks_are_moved_to_nine_once_and_custom_sizes_are_left_alone(self):
+        import tempfile
+        from pathlib import Path
+        from server.db import Database
+        with tempfile.TemporaryDirectory() as tmp:
+            path = str(Path(tmp) / "m.db")
+            db = Database(path)
+            a = bank_mod.create_bank(db, {"source": "seed", "level1": "初中", "level2": "九年级", "level3": "上册", "level4": "all", "unit_mode": "all"})["id"]
+            b = bank_mod.create_bank(db, {"source": "seed", "level1": "初中", "level2": "七年级", "level3": "上册", "level4": "all", "unit_mode": "all", "pairs_per_level": 15})["id"]
+            db.execute("UPDATE banks SET pairs_per_level=12 WHERE id=?", (a,))          # 模拟升级前的老库：旧默认 12
+            db.execute("PRAGMA user_version = 0")
+            db.close()
+            db = Database(path)                                                          # 重新打开 = 升级
+            self.assertEqual(db.get_bank(a)["pairs_per_level"], 9)
+            self.assertEqual(db.get_bank(b)["pairs_per_level"], 15)                      # 老师特意设的不动
+            db.execute("UPDATE banks SET pairs_per_level=12 WHERE id=?", (a,))          # 之后老师自己又设回 12
+            db.close()
+            db = Database(path)
+            self.assertEqual(db.get_bank(a)["pairs_per_level"], 12)                      # 只迁移一次，不会再改回去
+            db.close()
 
     def test_seed_default_bank_idempotent(self):
         a = bank_mod.seed_default_bank(self.db)
@@ -452,7 +480,7 @@ class TestBank(TempDB):
         new_id = bank_mod.seed_default_bank(self.db)
 
         self.assertEqual(new_id, old_id)
-        self.assertEqual(self.db.get_bank(new_id)["pairs_per_level"], 12)
+        self.assertEqual(self.db.get_bank(new_id)["pairs_per_level"], 9)
 
     def test_seed_curriculum_banks_shows_every_book_idempotently(self):
         default_id = bank_mod.seed_default_bank(self.db)

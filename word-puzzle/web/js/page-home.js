@@ -450,11 +450,11 @@
     };
   });
 
-  /* 「每关词数」：默认 12，输错了也按默认值来 */
+  /* 「每关词数」：默认 9，输错了也按默认值来 */
   function pairsPerLevel() {
     var input = document.getElementById('pairsPerLevel');
-    var value = input ? parseInt(input.value, 10) : 12;
-    if (!value || value < 4 || value > 40) return 12;
+    var value = input ? parseInt(input.value, 10) : 9;
+    if (!value || value < 4 || value > 40) return 9;
     return value;
   }
 

@@ -17,7 +17,7 @@
 ----------
 有些单元词很多（三十几个），一关全放进去卡片会挤成一团。
 所以词条按 :data:`MAX_PAIRS_PER_LEVEL` 切块：37 个词的 ``Unit 1`` 会变成
-四关，每关最多 12 个词。最后一关不足时，从前面出现过的词里补齐（复习），
+五关，每关最多 9 个词。最后一关不足时，从前面出现过的词里补齐（复习），
 补进来的词在本关里不会重复。
 """
 from __future__ import annotations
@@ -33,8 +33,8 @@ from .hierarchy import CURRICULUM_OBJ
 
 UNIT_MODE_LABELS = dict(hierarchy.UNIT_MODES)
 
-# 一关最多多少对词。单元词多时按这个上限切块。
-MAX_PAIRS_PER_LEVEL = 12
+# 一关最多多少对词。单元词多时按这个上限切块。9 对 = 18 张卡，手机竖屏 3 列 × 6 行正好一屏放下（12 对要滚动）。
+MAX_PAIRS_PER_LEVEL = 9
 # 允许的范围（太小一关只有几个词，太大牌面会挤）
 MIN_PAIRS_PER_LEVEL = 4
 MAX_PAIRS_PER_LEVEL_LIMIT = 40
@@ -198,7 +198,7 @@ def chunk_groups(groups: list[dict],
 
     切分
     ----
-    一个单元按 max_pairs 切开：37 个词的 ``Unit 1`` 变成四关，每关最多 12 词。
+    一个单元按 max_pairs 切开：37 个词的 ``Unit 1`` 变成五关，每关最多 9 词。
 
     补齐
     ------

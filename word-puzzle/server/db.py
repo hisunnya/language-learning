@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS banks (
     unit_mode    TEXT NOT NULL DEFAULT 'all',   -- all | per-unit | range
     unit_from    INTEGER DEFAULT 0,
     unit_to      INTEGER DEFAULT 0,
-    pairs_per_level INTEGER DEFAULT 12,  -- 一关最多多少词
+    pairs_per_level INTEGER DEFAULT 9,   -- 一关最多多少词
     word_count   INTEGER DEFAULT 0,
     unit_count   INTEGER DEFAULT 0,
     created_at   TEXT NOT NULL
@@ -290,7 +290,7 @@ class Database:
         columns = {row["name"] for row in self.query("PRAGMA table_info(banks)")}
         if "pairs_per_level" not in columns:
             self.execute("ALTER TABLE banks ADD COLUMN "
-                         "pairs_per_level INTEGER DEFAULT 12")
+                         "pairs_per_level INTEGER DEFAULT 9")
         if "owner_id" not in columns:
             # NULL = 系统题库（所有人可见）；否则是创建者的用户 id
             self.execute("ALTER TABLE banks ADD COLUMN owner_id INTEGER")
@@ -304,6 +304,11 @@ class Database:
         if "user_id" not in score_columns:
             self.execute("ALTER TABLE scores ADD COLUMN user_id INTEGER")
             self.execute("CREATE INDEX IF NOT EXISTS ix_scores_user ON scores(user_id)")
+        # v1（2026-11）：每关默认词数 12 → 9（手机竖屏一屏正好放下 3×6 张卡）。
+        # 只改还是旧默认值 12 的题库；老师特意设成别的数的不动；只做一次（user_version 记着）。
+        if self.one("PRAGMA user_version")[0] < 1:
+            self.execute("UPDATE banks SET pairs_per_level=9 WHERE pairs_per_level=12")
+            self.execute("PRAGMA user_version = 1")
 
     # ---------------- 基础操作 ----------------
 
@@ -398,7 +403,7 @@ class Database:
                  meta["level4"], meta["source"], meta.get("material_id"),
                  meta.get("unit_mode", "all"), meta.get("unit_from", 0),
                  meta.get("unit_to", 0),
-                 int(meta.get("pairs_per_level") or 12), len(words),
+                 int(meta.get("pairs_per_level") or 9), len(words),
                  len({w["unit"] for w in words}), ts, meta.get("owner_id"), int(meta.get("seq") or 0)),
             )
             bid = cur.lastrowid
