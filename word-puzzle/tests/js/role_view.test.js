@@ -52,7 +52,7 @@ const sorted = (set) => Array.from(set).sort();
   check('缓存说是老师、服务器说是学生：以服务器为准', JSON.stringify(sorted(p.classes)) === '["role-student"]' && p.store.wp_role === 'student');
   p = makePage({}, { auth_enabled: false, user: null });
   await p.ready;
-  check('局域网版（没有账号）：等同老师', JSON.stringify(sorted(p.classes)) === '["role-admin"]' && p.store.wp_role === 'admin');
+  check('家庭版（没有账号）：等同老师', JSON.stringify(sorted(p.classes)) === '["role-admin"]' && p.store.wp_role === 'admin');
 
   // 3) 没登录
   p = makePage({ wp_role: 'admin' }, { auth_enabled: true, user: null }, '');

@@ -1,4 +1,4 @@
-"""家庭版 / 班级版的管理命令行：在服务器上用，不经过网络。
+"""学生版的管理命令行：在服务器上用，不经过网络。
 
     python3 -m server.admin create-admin 20260001 --name 张老师
     python3 -m server.admin import 名单.xlsx --out 初始密码.csv     # 文件名写 - 表示从标准输入读
@@ -48,7 +48,7 @@ def write_credentials(path: str, credentials: list[dict]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="词境 家庭版账号管理")
+    ap = argparse.ArgumentParser(description="词境 学生版账号管理")
     ap.add_argument("--db", default=os.environ.get("WP_DB", ""), help="数据库文件（默认读 WP_DB）")
     sub = ap.add_subparsers(dest="cmd", required=True)
 

@@ -1,16 +1,16 @@
-/* 家庭版 / 班级版：登录页、改密码页、管理页，以及所有页面顶部的「当前用户」小条。
+/* 学生版：登录页、改密码页、管理页，以及所有页面顶部的「当前用户」小条。
    颜色一律用页眉的 --mh-* 变量（五套配色都有），表单沿用 app.css 的 --ink / --line / --blue 等。 */
 
 /* 学生看不到管理功能（上传、离线页、资料）；服务端本来就会拒绝，这里只是不让他们看到用不了的按钮。
    角色记在 <html> 的 class 上，由每页 <head> 里的一小段脚本在页面画出来之前就设好（读本次会话里记下的角色），
    所以换页面时不会先闪一下教师版：
      role-student  学生：教师控件不显示
-     role-admin    老师（或没有账号体系的局域网版）：全部显示
+     role-admin    老师（或没有账号体系的家庭版）：全部显示
      role-pending  这个会话里还没问过服务器是谁：整页先不显示，等 /api/auth/me 回来再决定，
                    而不是先把教师版完整画出来 */
 html.role-student .admin-only, html.role-pending .admin-only { display: none !important; }
 html.role-pending body { visibility: hidden; }
-/* 只给学生看的内容（例如「老师还没有给你开放题库」）；局域网版不是学生，不显示 */
+/* 只给学生看的内容（例如「老师还没有给你开放题库」）；家庭版不是学生，不显示 */
 .student-only { display: none; }
 html.role-student .student-only { display: block; }
 

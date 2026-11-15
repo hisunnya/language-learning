@@ -114,7 +114,7 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "WordPuzzle/2.0"
     protocol_version = "HTTP/1.1"
     db: Database = None            # type: ignore[assignment]
-    auth: "auth_mod.AuthService | None" = None     # None = 局域网版，不需要登录
+    auth: "auth_mod.AuthService | None" = None     # None = 家庭版，不需要登录
     user: dict | None = None
     _body_read = False
     track_throttle = accesslog.Throttle(limit=900, seconds=60)     # 每个来源地址每分钟最多收这么多条上报
@@ -272,11 +272,17 @@ class Handler(BaseHTTPRequestHandler):
         return self.auth.user_for_token(self._session_token())
 
     def _is_admin(self) -> bool:
-        """局域网版没有账号体系，等同管理员（行为和以前一样）。"""
+        """家庭版没有账号体系，等同管理员（行为和以前一样）。"""
         return self.auth is None or bool(self.user and self.user["role"] == "admin")
+
+    def _sees_all(self) -> bool:
+        """能看到全部题库 / 成绩的人：老师，以及家庭版里没登录的人（家庭版不登录也能用所有页面）。"""
+        return self._is_admin() or bool(self.auth is not None and self.auth.guest and not self.user)
 
     def _need_admin(self) -> None:
         if not self._is_admin():
+            if self.auth is not None and not self.user:
+                raise HttpError(401, "请先用教师账号登录", "login_required")      # 页面收到它就跳去登录
             raise HttpError(403, "需要管理员权限", "forbidden")
 
     def _uid(self) -> int | None:
@@ -286,7 +292,7 @@ class Handler(BaseHTTPRequestHandler):
         """老师看得到全部；学生只看得到和自己至少有一个相同标签的题库（没打标签的就看不到）。"""
         if not bank:
             return False
-        if self._is_admin():
+        if self._sees_all():
             return True
         return self.db.bank_visible_to(bank["id"], self._uid())
 
@@ -301,8 +307,8 @@ class Handler(BaseHTTPRequestHandler):
         return category, tags
 
     def _gate(self, path: str) -> None:
-        """家庭版：除了健康检查和登录相关接口，一律要先登录；还没改初始密码就只能去改密码。"""
-        if self.auth is None or path == "/api/health" or path.startswith("/api/auth/"):
+        """学生版：除了健康检查和登录相关接口，一律要先登录；还没改初始密码就只能去改密码。"""
+        if self.auth is None or self.auth.guest or path == "/api/health" or path.startswith("/api/auth/"):
             return
         if not self.user:
             raise HttpError(401, "请先登录", "login_required")
@@ -350,7 +356,7 @@ class Handler(BaseHTTPRequestHandler):
             self.handle_auth(method, path)
             return
 
-        # ---- 访问记录上报（没登录也收：登录页的访问也要记；局域网版不记） ----
+        # ---- 访问记录上报（没登录也收：登录页的访问也要记；家庭版不记） ----
         if path == "/api/track" and method == "POST":
             self.handle_track()
             return
@@ -361,7 +367,7 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith("/api/admin/"):
             self._need_admin()
             if self.auth is None:
-                raise HttpError(404, "局域网版没有账号管理")
+                raise HttpError(404, "家庭版没有账号管理")
             self.handle_admin(method, path, query)
             return
 
@@ -413,14 +419,14 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 题库 ----
         if path == "/api/banks":
             if method == "GET":
-                visible = None if self._is_admin() else self._uid()
-                if visible is None and not self._is_admin():
+                visible = None if self._sees_all() else self._uid()
+                if visible is None and not self._sees_all():
                     self.send_json({"ok": True, "banks": []})
                     return
                 self.send_json({"ok": True, "banks": db.list_banks(visible)})
                 return
             if method == "POST":
-                # 建题库属于题库管理，只有老师（局域网版没有账号，等同老师）
+                # 建题库属于题库管理，只有老师（家庭版没有账号，等同老师）
                 self._need_admin()
                 payload = self.read_json()
                 category, tags = self._tags_meta(payload)
@@ -491,7 +497,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, "bank": db.list_banks_by_id(int(m.group(1)))})
             return
 
-        # ---- 生成离线测试页（很吃资源，家庭版只给管理员） ----
+        # ---- 生成离线测试页（很吃资源，学生版只给管理员） ----
         if path.startswith("/api/offline") or path.endswith("/offline"):
             self._need_admin()
         m = re.fullmatch(r"/api/banks/(\d+)/offline", path)
@@ -527,8 +533,8 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET":
                 limit = int_param(query.get("limit"), "limit", 100, 1, 500)
                 bank_id = int_param(query.get("bank_id"), "bank_id")
-                # 家庭版：学生只能看自己的成绩，管理员看全部
-                only = None if self._is_admin() else self._uid()
+                # 学生版：学生只能看自己的成绩，管理员看全部
+                only = None if self._sees_all() else self._uid()
                 scores = db.list_scores(limit=limit, bank_id=bank_id, user_id=only)
                 self.send_json({"ok": True, "scores": scores,
                                 "stats": db.score_stats(only)})
@@ -557,14 +563,14 @@ class Handler(BaseHTTPRequestHandler):
 
         # ---- 成绩汇总：每个学生 × 每套题一行；点开一行看每一次的明细 ----
         if path == "/api/scores/summary" and method == "GET":
-            admin = self._is_admin()
+            admin = self._sees_all()
             self.send_json({"ok": True, **scorebook.summarize(
                 db, only_user_id=None if admin else self._uid(),
                 class_name=query.get("class_name", "") if admin else "",
                 bank_id=int_param(query.get("bank_id"), "bank_id"), q=query.get("q", ""))})
             return
         if path == "/api/scores/plays" and method == "GET":
-            if self._is_admin():
+            if self._sees_all():
                 uid = int_param(query.get("user_id"), "user_id")
                 device = None if uid is not None else (query.get("device") if "device" in query else None)
             else:
@@ -578,7 +584,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/stats" and method == "GET":
-            only = None if self._is_admin() else self._uid()
+            only = None if self._sees_all() else self._uid()
             self.send_json({"ok": True, **db.score_stats(only)})
             return
 
@@ -589,10 +595,11 @@ class Handler(BaseHTTPRequestHandler):
     def handle_auth(self, method: str, path: str) -> None:
         if path == "/api/auth/me" and method == "GET":
             self.send_json({"ok": True, "auth_enabled": self.auth is not None,
+                            "guest_mode": bool(self.auth is not None and self.auth.guest),
                             "user": auth_mod.AuthService.public(self.user)})
             return
         if self.auth is None:
-            raise HttpError(404, "局域网版没有登录功能")
+            raise HttpError(404, "家庭版没有登录功能")
         try:
             if path == "/api/auth/login" and method == "POST":
                 body = self.read_json()
@@ -956,13 +963,16 @@ def urllib_quote(text: str) -> str:
 
 def build_server(host: str = "127.0.0.1", port: int = 8000,
                  db_path: str | None = None, auth: "bool | dict | None" = None) -> ThreadingHTTPServer:
-    """auth: None = 看环境变量 WP_AUTH；True / dict = 启用登录（dict 是 AuthService 的参数）；False = 关闭。"""
+    """auth: None = 看环境变量 WP_AUTH（1 = 学生版；guest = 家庭版：不登录能用，管理要老师登录，账号由 WP_AUTH_REMOTE 指向的学生版核对）；True / dict = 启用登录（dict 是 AuthService 的参数）；False = 关闭。"""
     db = Database(db_path)
     Handler.db = db
     if auth is None:
-        enabled = os.environ.get("WP_AUTH", "").strip().lower() in ("1", "true", "yes", "on")
+        mode = os.environ.get("WP_AUTH", "").strip().lower()
+        enabled = mode in ("1", "true", "yes", "on", "guest")
         auth = ({"cookie_secure": os.environ.get("WP_COOKIE_SECURE", "").strip().lower() in ("1", "true", "yes", "on"),
-                 "session_days": float(os.environ.get("WP_SESSION_DAYS", "14"))} if enabled else False)
+                 "session_days": float(os.environ.get("WP_SESSION_DAYS", "14")),
+                 "guest": mode == "guest",
+                 "remote": os.environ.get("WP_AUTH_REMOTE", "").strip() if mode == "guest" else ""} if enabled else False)
     Handler.auth = auth_mod.AuthService(db, **(auth if isinstance(auth, dict) else {})) if auth else None
     try:
         default_id = bank_mod.seed_default_bank(db)
@@ -989,7 +999,7 @@ def main(argv: list[str] | None = None) -> int:
     print("  word-puzzle 服务已启动")
     print(f"  地址：http://{args.host}:{args.port}/")
     print(f"  数据库：{Handler.db.path}")
-    print("  登录：" + ("已启用（家庭版 / 班级版）" if Handler.auth else "未启用（局域网版）"))
+    print("  登录：" + ("已启用（学生版）" if Handler.auth else "未启用（家庭版）"))
     print(f"  内置词库：{meta.get('word_total', 0)} 词条 / "
           f"{meta.get('unit_total', 0)} 单元")
     print("  Ctrl-C 退出")

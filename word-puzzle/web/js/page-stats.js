@@ -22,7 +22,7 @@
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
   }
 
-  /* 一行的身份：有账号用 user_id，没有（局域网版）用设备号；题库用编号，没有编号用名字 */
+  /* 一行的身份：有账号用 user_id，没有（家庭版）用设备号；题库用编号，没有编号用名字 */
   function keyOf(r) {
     return (r.user_id != null ? 'u' + r.user_id : 'd' + r.device) + '|' + (r.bank_id != null ? 'b' + r.bank_id : 't' + r.bank_title);
   }

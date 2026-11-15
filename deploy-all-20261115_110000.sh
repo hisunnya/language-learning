@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261115_100003.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261115_110000.sh
 # 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_NAME="${LINGUA_SERVER_NAME:-192.168.1.93}"
 WP_PORT=8765
+# 家庭版里管理功能的教师账号由学生版核对；换了学生版的网址就用 LEXICA_STUDENT_URL 覆盖
+STUDENT_URL="${LEXICA_STUDENT_URL:-https://lexica.example-net.ts.net/word-puzzle}"
 
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -37,6 +39,7 @@ done
 
 say "部署词境后端（保留现有数据库）"
 WP_PORT="$WP_PORT" \
+WP_AUTH_REMOTE="$STUDENT_URL" \
 SITE_NAME=word-puzzle \
 WP_SERVER_NAME="$SERVER_NAME" \
 WP_SKIP_NGINX=1 \

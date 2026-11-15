@@ -305,6 +305,16 @@ titles, headers, README and the hub.
 
 ### 5.2 Deployment layout on the server
 
+**Edition names.** *学生版 / student edition* = the instance with login that students
+use (container `lexica`, public through Funnel). *家庭版 / home edition* = the
+instance on the LAN that the family uses (formerly "局域网版", "LAN edition"). Both
+run the same code and share the bank logic; the home edition shows every menu
+without login, and asks for a teacher login (checked against the student edition)
+only when a management function is used. The teacher account is the student
+edition's: the home edition forwards the login to `WP_AUTH_REMOTE` and keeps only a
+shadow admin row with a random password (`WP_AUTH=guest`). Data (banks, scores,
+access log) is **not** shared between the two.
+
 | Path | Holds |
 |---|---|
 | `/srv/word-puzzle` | 词境 Lexica 的后端代码（`word-puzzle/deploy/install.sh` 装的） |
@@ -322,11 +332,11 @@ titles, headers, README and the hub.
 target host: on production the flow is `git pull`, then run the script, which
 copies the files into the paths above.
 
-The **family / class edition** of Lexica (login required, `WP_AUTH=1`) is a
+The **student edition** (学生版) of Lexica (login required, `WP_AUTH=1`) is a
 separate instance of the same code and is *not* part of `deploy-all`:
 `word-puzzle/deploy/family/install.sh` installs it under `/srv/word-puzzle-family`,
 `/var/lib/word-puzzle-family`, systemd unit `word-puzzle-family`, backend on
-127.0.0.1:8766 and nginx on 127.0.0.1:8081, and never touches the LAN edition or
+127.0.0.1:8766 and nginx on 127.0.0.1:8081, and never touches the home edition or
 Tailscale. Install it in its own container or VM, not on the PVE host
 (`word-puzzle/deploy/family/部署说明.md`).
 Planned container: unprivileged LXC, hostname `lexica`, static address
@@ -446,7 +456,7 @@ were requesting `/.env`, `/AGENTS.md`, `/CLAUDE.md`, `/config.js` (observed).
 - Funnel hides the client address (everything arrives from 127.0.0.1), so there is
   no per-IP rate limit; login is protected by per-account lockout (5 failures →
   15 min) and per-student / site-wide attempt limits in the backend.
-- The family edition stores what the roster provides (student number, name, class,
+- The student edition stores what the roster provides (student number, name, class,
   college, department) and everything the site observes: game results and a
   permanent **access log** (`page_views`, `login_events`) with account, IP address,
   device, browser, pages visited and time on page. Nothing is deleted

@@ -1,4 +1,4 @@
-"""家庭版 / 班级版登录：密码、会话、锁定、名单导入、权限隔离、导出，以及局域网版不受影响。"""
+"""学生版登录：密码、会话、锁定、名单导入、权限隔离、导出，以及家庭版不受影响。"""
 from __future__ import annotations
 
 import http.client
@@ -649,7 +649,7 @@ class TestLanEditionIsUnchanged(HttpCase):
         self.assertEqual(c.json("POST", "/api/auth/login", {"student_no": "a", "password": "b"})[0], 404)
         self.assertEqual(c.json("GET", "/api/admin/users")[0], 404)
         self.assertIsNone(c.last.getheader("Set-Cookie"))
-        self.assertNotEqual(c.last.getheader("Cache-Control"), "no-store", "局域网版的响应头保持原样")
+        self.assertNotEqual(c.last.getheader("Cache-Control"), "no-store", "家庭版的响应头保持原样")
 
 
 class TestAdminCli(unittest.TestCase):

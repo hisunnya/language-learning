@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# 词境 家庭版 / 班级版（带登录）一键部署：Debian / Ubuntu，nginx + systemd + Python 标准库。
+# 词境 学生版（带登录）一键部署：Debian / Ubuntu，nginx + systemd + Python 标准库。
 #
 #   sudo env WP_PUBLIC_URL=https://lexica.tailXXXX.ts.net bash word-puzzle/deploy/family/install.sh
 #
-# 和局域网版（word-puzzle/deploy/install.sh）互不干扰：用户、目录、端口、systemd 服务名都是单独的，
+# 和家庭版（word-puzzle/deploy/install.sh）互不干扰：用户、目录、端口、systemd 服务名都是单独的，
 # 所以可以装在同一台机器上试，也可以单独装在一个容器里（推荐，见 部署说明.md）。
 #
 # 做的事：

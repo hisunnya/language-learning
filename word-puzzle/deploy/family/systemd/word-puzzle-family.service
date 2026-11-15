@@ -1,5 +1,5 @@
 [Unit]
-Description=词境 Lexica 家庭版 / 班级版后端（带登录）
+Description=词境 Lexica 学生版后端（带登录）
 After=network-online.target
 Wants=network-online.target
 

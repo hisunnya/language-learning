@@ -49,7 +49,7 @@
     return !AuthUI.isAdmin();
   }
 
-  /* 标签只在启用了登录的站点（家庭版 / 班级版）才有意义；局域网版没有学生账号 */
+  /* 标签只在启用了登录的站点（学生版）才有意义；家庭版没有学生账号 */
   function tagsEnabled() {
     return !!(AuthUI.info() && AuthUI.info().enabled);
   }

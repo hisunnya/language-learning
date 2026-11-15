@@ -58,7 +58,7 @@
       throw new Error(tr('api_notJson', { status: res.status }, '服务器返回了非 JSON 内容（HTTP ' + res.status + '）'));
     }
     if (!res.ok || data.ok === false) {
-      // 家庭版：登录失效 / 还没改初始密码，统一跳转，页面不用各自处理（也不弹错误）
+      // 学生版：登录失效 / 还没改初始密码，统一跳转，页面不用各自处理（也不弹错误）
       if (data.code === 'login_required' && global.AuthUI) { AuthUI.go('login.html', true); return new Promise(function () {}); }
       if (data.code === 'password_change_required' && global.AuthUI) { AuthUI.go('change-password.html', true); return new Promise(function () {}); }
       var err = new Error(data.error || tr('api_requestFailed', { status: res.status }, '请求失败（HTTP ' + res.status + '）'));

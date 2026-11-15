@@ -1,9 +1,9 @@
 /* ============================================================
-   auth-ui.js —— 家庭版 / 班级版的登录态在页面里的体现
+   auth-ui.js —— 学生版的登录态在页面里的体现
    ------------------------------------------------------------
    * 问一次 /api/auth/me，没登录就跳到登录页，还没改初始密码就跳到改密码页；
    * 顶部加「当前用户 + 退出」，管理员多一个「账号管理」入口；
-   * 局域网版（没有登录功能）什么都不做，页面和以前完全一样；
+   * 家庭版（没有登录功能）什么都不做，页面和以前完全一样；
    * 页面用 <body data-auth="..."> 声明自己的要求：
        public = 不需要登录（登录页）   change = 允许还没改密码（改密码页）
        admin  = 只给管理员            （不写）= 普通已登录用户
@@ -19,6 +19,7 @@
       changePassword: '修改密码',
       adminLink: '账号管理',
       visitsLink: '访问记录',
+      teacherSignIn: '教师登录',
       signingIn: '登录中…',
       signIn: '登录',
       saving: '保存中…',
@@ -31,6 +32,10 @@
       err_weak_password: '新密码不符合要求：至少 8 位，字母、数字、符号至少用两种，不能包含学号',
       err_forbidden: '没有权限做这件事',
       err_network: '网络不通，请稍后再试',
+      err_teacher_only: '家庭版只有老师需要登录；学生不用登录，直接使用即可',
+      err_remote_unreachable: '连不上学生版，暂时无法登录管理（其他功能不受影响）',
+      err_remote_must_change: '请先到学生版把初始密码改掉，再回来登录',
+      err_remote_password: '家庭版的老师账号和学生版是同一个，请到学生版修改密码',
       err_generic: '出错了，请稍后再试',
       pwTooShort: '新密码至少 8 位',
       pwNeedMix: '新密码请至少混合使用两种字符（字母、数字、符号）',
@@ -81,6 +86,7 @@
       changePassword: 'Change password',
       adminLink: 'Accounts',
       visitsLink: 'Visits',
+      teacherSignIn: 'Teacher sign-in',
       signingIn: 'Signing in…',
       signIn: 'Sign in',
       saving: 'Saving…',
@@ -93,6 +99,10 @@
       err_weak_password: 'The new password is not acceptable: at least 8 characters, mix at least two kinds (letters, digits, symbols), and do not include your student number',
       err_forbidden: 'You are not allowed to do that',
       err_network: 'Network problem, please try again later',
+      err_teacher_only: 'Only teachers sign in on the home edition; students can simply use it without signing in',
+      err_remote_unreachable: 'Cannot reach the student edition, so management sign-in is unavailable for now (everything else still works)',
+      err_remote_must_change: 'Please change the initial password on the student edition first, then come back',
+      err_remote_password: 'The teacher account is the same as on the student edition; change the password there',
       err_generic: 'Something went wrong, please try again later',
       pwTooShort: 'The new password needs at least 8 characters',
       pwNeedMix: 'Mix at least two kinds of characters (letters, digits, symbols)',
@@ -178,7 +188,7 @@
     location.replace(BASE + '/' + page + (withNext ? '?next=' + encodeURIComponent(here()) : ''));
   }
 
-  var info = { enabled: false, user: null };
+  var info = { enabled: false, user: null, guest: false };
 
   /* 角色：记在 <html> 的 class 和 sessionStorage 里。换页面时 <head> 里的脚本据此在页面画出来之前就设好，
      不会先闪一下教师版。服务器的答复回来后再校正一次。 */
@@ -213,7 +223,7 @@
       out.textContent = t('signOut');
       out.addEventListener('click', function () {
         out.disabled = true;
-        API.post('/api/auth/logout', {}).catch(function () {}).then(function () { setRole(''); go('login.html', false); });
+        API.post('/api/auth/logout', {}).catch(function () {}).then(function () { setRole(''); go(info.guest ? '' : 'login.html', false); });
       });
       chip.appendChild(name);
       chip.appendChild(out);
@@ -221,8 +231,13 @@
     }
     /* 学生只看得到选题库和玩：题库管理、生成离线页等带 admin-only 的东西都不显示。
        服务端本来就会拒绝，这里是不让他们看到用不了的入口。 */
+    if (user.role === 'admin') addNavLinks();
+  }
+
+  /* 老师才用得到的两个入口：账号管理、访问记录 */
+  function addNavLinks() {
     var nav = document.querySelector('.portal-nav');
-    if (nav && user.role === 'admin' && !document.getElementById('adminNavLink')) {
+    if (nav && !document.getElementById('adminNavLink')) {
       var link = document.createElement('a');
       link.id = 'adminNavLink';
       link.href = BASE + '/admin.html';
@@ -232,7 +247,7 @@
       if (document.body.getAttribute('data-auth') === 'admin') link.className = 'active';
       nav.appendChild(link);
     }
-    if (nav && user.role === 'admin' && !document.getElementById('visitsNavLink')) {
+    if (nav && !document.getElementById('visitsNavLink')) {
       var visits = document.createElement('a');
       visits.id = 'visitsNavLink';
       visits.href = BASE + '/visits.html';
@@ -244,12 +259,37 @@
     }
   }
 
+  /* 家庭版里还没登录的人：所有菜单都显示，右上角给一个「教师登录」；点到管理功能时才会被要求登录 */
+  function decorateGuest() {
+    addNavLinks();
+    var controls = document.getElementById('portalHeaderControls');
+    if (controls && !document.getElementById('teacherSignIn')) {
+      var link = document.createElement('a');
+      link.id = 'teacherSignIn';
+      link.className = 'user-name';
+      link.href = BASE + '/login.html?next=' + encodeURIComponent(here());
+      link.setAttribute('data-module-zh', TEXT.zh.teacherSignIn);
+      link.setAttribute('data-module-en', TEXT.en.teacherSignIn);
+      link.textContent = t('teacherSignIn');
+      var chip = document.createElement('div');
+      chip.className = 'user-chip';
+      chip.appendChild(link);
+      controls.parentNode.insertBefore(chip, controls);
+    }
+  }
+
   var ready = API.get('/api/auth/me').then(function (res) {
     var mode = document.body.getAttribute('data-auth') || '';
-    info = { enabled: !!res.auth_enabled, user: res.user || null };
+    info = { enabled: !!res.auth_enabled, user: res.user || null, guest: !!res.guest_mode };
     if (!info.enabled) {
-      setRole('admin');                       /* 局域网版没有账号，等同老师 */
+      setRole('admin');                       /* 家庭版没有账号，等同老师 */
       if (mode === 'admin' || mode === 'visits' || mode === 'change') go('', false);
+      return info;
+    }
+    if (!info.user && info.guest) {                /* 家庭版：不登录也能用，管理页才要登录 */
+      if (mode === 'admin' || mode === 'visits' || mode === 'change') { setRole(''); go('login.html', true); return info; }
+      if (mode === 'public') document.documentElement.classList.remove('role-pending');
+      else { setRole('admin'); decorateGuest(); }
       return info;
     }
     if (!info.user) {
@@ -277,8 +317,8 @@
     queryNext: queryNext,
     go: go,
     info: function () { return info; },
-    /* 局域网版没有账号，等同管理员（行为不变） */
-    isAdmin: function () { return !info.enabled || (info.user && info.user.role === 'admin'); },
+    /* 家庭版没有账号，等同管理员（行为不变） */
+    isAdmin: function () { return !info.enabled || (info.guest && !info.user) || !!(info.user && info.user.role === 'admin'); },
     TEXT: TEXT
   };
 })(window);

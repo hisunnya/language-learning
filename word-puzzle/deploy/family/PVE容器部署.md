@@ -1,6 +1,6 @@
-# 在 PVE 里用容器跑「词境 家庭版」+ Tailscale Funnel
+# 在 PVE 里用容器跑「词境 学生版」+ Tailscale Funnel
 
-目标：**家庭版只跑在一个独立的 LXC 容器里**，容器里装本程序和 Tailscale，由 Funnel 对外。
+目标：**学生版只跑在一个独立的 LXC 容器里**，容器里装本程序和 Tailscale，由 Funnel 对外。
 PVE 宿主机（管理界面、SSH、其他虚拟机）不在对外的路径上。
 
 ```

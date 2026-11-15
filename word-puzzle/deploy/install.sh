@@ -78,9 +78,17 @@ else
 fi
 
 say "安装 systemd 服务"
+# 可选：WP_AUTH_REMOTE=学生版的接口地址（例如 https://lexica.xxxx.ts.net/word-puzzle）。
+# 设了：家庭版不登录能用所有页面，管理题库 / 标签 / 账号时要教师登录，账号密码交给学生版核对。
+AUTH_LINES=""
+if [[ -n "${WP_AUTH_REMOTE:-}" ]]; then
+  [[ "$WP_AUTH_REMOTE" =~ ^https?://[A-Za-z0-9.:-]+(/[A-Za-z0-9._/-]*)?$ ]] || die "WP_AUTH_REMOTE 格式无效，应形如 https://主机名/word-puzzle"
+  AUTH_LINES="Environment=WP_AUTH=guest|Environment=WP_AUTH_REMOTE=$WP_AUTH_REMOTE"
+fi
 sed -e "s|/var/lib/word-puzzle|$DATA_DIR|g" \
     -e "s|^Environment=WP_PORT=.*|Environment=WP_PORT=$PORT|" \
     "$INSTALL_DIR/deploy/systemd/word-puzzle.service" \
+  | awk -v extra="$AUTH_LINES" '{ print } /^Environment=WP_QUIET=1/ && extra != "" { n = split(extra, a, "|"); for (i = 1; i <= n; i++) print a[i] }' \
     > /etc/systemd/system/$SITE_NAME.service
 systemctl daemon-reload
 systemctl enable "$SITE_NAME"

@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS scores (
 );
 CREATE INDEX IF NOT EXISTS ix_scores_created ON scores(created_at DESC);
 
--- 家庭版（WP_AUTH=1）才会用到的账号表；局域网版里这两张表是空的
+-- 学生版（WP_AUTH=1）才会用到的账号表；家庭版里这两张表是空的
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     student_no    TEXT NOT NULL UNIQUE,      -- 学号，同时是登录名

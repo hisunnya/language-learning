@@ -8,6 +8,7 @@
     var btn = document.getElementById('btnLogin');
 
     AuthUI.ready.then(function (info) {
+      document.getElementById('guestHint').hidden = !info.guest;
       if (!info.enabled) {
         form.hidden = true;
         API.msg(msg, AuthUI.t('notEnabled'), 'info');

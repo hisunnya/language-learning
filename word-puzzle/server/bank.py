@@ -274,7 +274,7 @@ def resolve_pairs_per_level(payload: dict) -> int:
 
 
 def create_bank(db: Database, payload: dict, owner_id: int | None = None) -> dict:
-    """生成并落库一个题库，返回题库元信息。owner_id 是创建者（家庭版里用来区分各人的题库）。"""
+    """生成并落库一个题库，返回题库元信息。owner_id 是创建者（学生版里用来区分各人的题库）。"""
     names = resolve_levels(payload)
     mode = str(payload.get("unit_mode") or "all")
     if mode not in UNIT_MODE_LABELS:

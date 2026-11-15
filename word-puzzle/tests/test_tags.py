@@ -5,7 +5,7 @@
   * 没打标签的题库学生看不到（老师始终看得到全部）；
   * 分类只用来整理，不参与权限；
   * 建题库、删题库、改分类和标签、上传、离线页：只有老师；
-  * 局域网版没有账号，行为不变。
+  * 家庭版没有账号，行为不变。
 """
 from __future__ import annotations
 
@@ -324,7 +324,7 @@ class TestLanEditionTagsDoNothing(HttpCase):
         self.assertEqual(status, 201)
         bid = body["bank"]["id"]
         listed = c.json("GET", "/api/banks")[1]["banks"]
-        self.assertIn(bid, {b["id"] for b in listed}, "局域网版没打标签的题库照样看得到")
+        self.assertIn(bid, {b["id"] for b in listed}, "家庭版没打标签的题库照样看得到")
         self.assertEqual(c.json("GET", "/api/banks/%d" % bid)[0], 200)
         self.assertEqual(c.json("DELETE", "/api/banks/%d" % bid)[0], 200)
 

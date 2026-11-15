@@ -31,7 +31,7 @@ class TestHeadScript(unittest.TestCase):
 
     def test_signing_out_forgets_the_role(self):
         code = (WEB / "js" / "auth-ui.js").read_text(encoding="utf-8")
-        self.assertIn("setRole(''); go('login.html', false)", code)
+        self.assertIn("setRole(''); go(info.guest ? '' : 'login.html', false)", code)
 
     def test_pages_load_versioned_styles_and_the_new_script(self):
         for page in PROTECTED:
