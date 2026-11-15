@@ -1,4 +1,4 @@
-"""学生版的内网入口：同一个网站、同一个数据库、同一套账号，老师在家直接访问；照样要登录。"""
+"""内网入口（家庭版）：同一个后端、同一个数据库、同一套账号；不登录能做题，管理要登录；公网入口不受影响。"""
 from __future__ import annotations
 
 import http.server
@@ -69,10 +69,19 @@ class TestStatic(unittest.TestCase):
         for bad in ("8.8.8.8", "100.64.0.1", "172.32.0.1", "127.0.0.1", "lexica.ts.net", "0.0.0.0"):
             self.assertFalse(rx.match(bad), bad)
 
-    def test_there_is_no_password_free_path(self):
+    def test_no_password_free_management_path_exists(self):
         for name in ("install.sh", "nginx/proxy.inc", "nginx/word-puzzle-family.conf"):
             self.assertNotIn("Lan-Admin", (FAMILY / name).read_text(encoding="utf-8"))
         self.assertNotIn("WP_LAN_ADMIN", (ROOT / "server" / "app.py").read_text(encoding="utf-8"))
+
+    def test_the_public_entrance_clears_the_marker_and_the_unit_has_the_switches(self):
+        proxy = (FAMILY / "nginx" / "proxy.inc").read_text(encoding="utf-8")
+        self.assertRegex(proxy, r'(?m)^proxy_set_header X-Wp-Entry "";$')
+        unit = (FAMILY / "systemd" / "word-puzzle-family.service").read_text(encoding="utf-8")
+        self.assertIn("Environment=WP_LAN_GUEST=@LAN_GUEST@", unit)
+        self.assertIn("Environment=WP_TRUSTED_PROXIES=@TRUSTED_PROXIES@", unit)
+        self.assertIn("@LAN_GUEST@", self.INSTALL)
+        self.assertIn("@TRUSTED_PROXIES@", self.INSTALL)
 
 
 @unittest.skipUnless(NGINX, "本机没有 nginx，跳过真实入口测试")
@@ -109,7 +118,8 @@ class TestRealNginx(unittest.TestCase):
             (tmp / "proxy.inc").write_text(proxy, encoding="utf-8")
             # 和 install.sh 里一模一样的变换
             lan_proxy = re.sub(r"(?m)^proxy_set_header X-Forwarded-Proto .*$", "proxy_set_header X-Forwarded-Proto http;", proxy)
-            lan_proxy = re.sub(r"(?m)^proxy_set_header X-Wp-Edge-Xff .*$", "proxy_set_header X-Wp-Edge-Xff $remote_addr;", lan_proxy)
+            lan_proxy = re.sub(r"(?m)^proxy_set_header X-Wp-Edge-Xff .*$", "proxy_set_header X-Wp-Edge-Xff $proxy_add_x_forwarded_for;", lan_proxy)
+            lan_proxy = re.sub(r"(?m)^proxy_set_header X-Wp-Entry .*$", "proxy_set_header X-Wp-Entry lan;", lan_proxy)
             (tmp / "proxy-lan.inc").write_text(lan_proxy, encoding="utf-8")
 
             def render(text, inc, port):
@@ -134,7 +144,7 @@ class TestRealNginx(unittest.TestCase):
                         except Exception:
                             time.sleep(0.1)
                     self.fail("nginx 没有响应")
-                public = hit(pub, **{"X-Forwarded-For": "198.51.100.9", "X-Forwarded-Proto": "http"})
+                public = hit(pub, **{"X-Forwarded-For": "198.51.100.9", "X-Forwarded-Proto": "http", "X-Wp-Entry": "lan"})
                 inside = hit(lan, **{"X-Forwarded-For": "6.6.6.6"})
             finally:
                 subprocess.run([NGINX, "-c", str(tmp / "nginx.conf"), "-p", str(tmp), "-s", "stop"], capture_output=True)
@@ -142,7 +152,12 @@ class TestRealNginx(unittest.TestCase):
         self.assertEqual(public.get("x-forwarded-proto"), "https")                 # 公网入口：恒为 https，客户端写的 http 被覆盖
         self.assertEqual(public.get("x-wp-edge-xff"), "198.51.100.9")
         self.assertEqual(inside.get("x-forwarded-proto"), "http")                   # 内网入口：明文
-        self.assertEqual(inside.get("x-wp-edge-xff"), "127.0.0.1")                  # 记真实连接地址，不信客户端写的 6.6.6.6
+        self.assertEqual(public.get("x-wp-entry", ""), "")                          # 公网入口：伪造的内网标记被清掉
+        self.assertEqual(inside.get("x-wp-entry"), "lan")                           # 内网入口：打标记
+        self.assertEqual(inside.get("x-wp-edge-xff"), "6.6.6.6, 127.0.0.1")         # 转发链：客户端写的在前，nginx 看到的真实连接在最后
+        from server import accesslog
+        ip, _ = accesslog.client_address({"X-Wp-Edge-Xff": inside["x-wp-edge-xff"]}, "127.0.0.1")
+        self.assertEqual(ip, "127.0.0.1")                                           # 取最后一环，伪造的 6.6.6.6 不算
 
 
 if __name__ == "__main__":

@@ -29,7 +29,16 @@ trap 'rm -rf "$BACKUP_DIR"; rm -f "$TEMP_CONF"' EXIT
 say "检查项目依赖"
 bash "$REPO_DIR/word-puzzle/deploy/check-deps.sh"
 
-systemctl is-active --quiet word-puzzle || die "词境后端 word-puzzle 未运行，请先部署并启动它"
+# LEXICA_UPSTREAM=主机:端口（例如 192.168.1.100:8082）：词境后端在学生版容器里，这台机器的 /word-puzzle/api/ 转给它的内网入口；
+# 不设就是本机的 word-puzzle 服务（127.0.0.1:8765）。
+LEXICA_UPSTREAM="${LEXICA_UPSTREAM:-}"
+if [[ -n "$LEXICA_UPSTREAM" ]]; then
+  [[ "$LEXICA_UPSTREAM" =~ ^[A-Za-z0-9.-]+:[0-9]{2,5}$ ]] || die "LEXICA_UPSTREAM 格式应为 主机:端口"
+  curl --noproxy '*' -fsS --max-time 8 "http://$LEXICA_UPSTREAM/word-puzzle/api/health" >/dev/null \
+    || die "连不上词境后端 http://$LEXICA_UPSTREAM/word-puzzle/api/health；先确认容器的内网入口已部署（WP_LAN_ADDR）"
+else
+  systemctl is-active --quiet word-puzzle || die "词境后端 word-puzzle 未运行，请先部署并启动它"
+fi
 
 say "部署五个前端项目"
 [[ -f "$REPO_DIR/chemistry/index.html" ]] || die "缺少化学探秘页面"
@@ -70,7 +79,13 @@ if [[ -e "$LEXICA_ENABLED" || -L "$LEXICA_ENABLED" ]]; then
   rm -f "$LEXICA_ENABLED"
 fi
 
-sed "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" \
+# 后端在别处时：upstream 换成它的内网入口，接口路径带上它那边的 /word-puzzle 前缀
+UPSTREAM_SERVER="127.0.0.1:8765"
+UPSTREAM_PATH="/api/"
+if [[ -n "$LEXICA_UPSTREAM" ]]; then UPSTREAM_SERVER="$LEXICA_UPSTREAM"; UPSTREAM_PATH="/word-puzzle/api/"; fi
+sed -e "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" \
+    -e "s|server 127.0.0.1:8765;|server $UPSTREAM_SERVER;|" \
+    -e "s|proxy_pass http://lexica_api/api/;|proxy_pass http://lexica_api${UPSTREAM_PATH};|" \
   "$REPO_DIR/hub/deploy/lingua-grove.conf" > "$TEMP_CONF"
 chmod 0644 "$TEMP_CONF"
 mv "$TEMP_CONF" "$CONF_FILE"

@@ -16,6 +16,10 @@ Environment=WP_QUIET=1
 Environment=TZ=Asia/Shanghai
 # 登录功能和安全相关设置：站点只通过 HTTPS 对外（Tailscale Funnel），所以 Cookie 必须带 Secure
 Environment=WP_AUTH=1
+# 内网入口允许不登录做题（只有 nginx 的内网入口会打 X-Wp-Entry 标记；1 = 开，0 = 关）
+Environment=WP_LAN_GUEST=@LAN_GUEST@
+# 我们自己信任的前置代理（例如 pvehost 的 nginx）：访问记录里跳过它们，记真正的访客 IP
+Environment=WP_TRUSTED_PROXIES=@TRUSTED_PROXIES@
 Environment=WP_COOKIE_SECURE=1
 Environment=WP_SESSION_DAYS=14
 # 对外地址由配置决定，不信客户端传来的 Host / X-Forwarded-Host（离线页里「返回主页」链接用它）

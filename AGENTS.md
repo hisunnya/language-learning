@@ -305,19 +305,20 @@ titles, headers, README and the hub.
 
 ### 5.2 Deployment layout on the server
 
-**Edition names.** *学生版 / student edition* = the instance with login that students
-use (container `lexica`, public through Funnel). *家庭版 / home edition* = the
-instance on the LAN that the family uses (formerly "局域网版", "LAN edition"). Both
-run the same code and share the bank logic; the home edition shows every menu
-without login, and asks for a teacher login (checked against the student edition)
-only when a management function is used. The teacher account is the student
-edition's: the home edition forwards the login to `WP_AUTH_REMOTE` and keeps only a
-shadow admin row with a random password (`WP_AUTH=guest`). Data (banks, scores,
-access log) is **not** shared between the two.
-To manage the student edition's own data from home, the student edition has an optional
-LAN-only entrance (`WP_LAN_ADDR`, nginx on `<container-ip>:8082`): same site, same
-database, same accounts, login still required, session cookie without `Secure`
-(plain http), real LAN IP in the access log. Funnel only points at the loopback entrance.
+**Architecture (one backend, two fronts, one database).** There is a single Lexica backend,
+in the container `lexica` (the *student edition*, 学生版). It has two nginx entrances: the
+public one (Funnel → 127.0.0.1:8081) requires login for everything; the LAN one
+(`WP_LAN_ADDR`, `<container-ip>:8082`, also reached through pvehost's nginx at
+`http://192.168.1.93/word-puzzle/`) lets visitors play without login and records their
+visits and scores by device — the *home edition* (家庭版, formerly "局域网版") — and asks for a
+teacher login only when a management function is used, with the same accounts because it
+is the same database. nginx marks the entrance with `X-Wp-Entry` (cleared on the public
+side); the backend honours it only from a loopback peer with `WP_LAN_GUEST=1`.
+The database lives **outside the container** (pvehost `/data01/lexica-data`, backups in
+`/data02/lexica-backup`, both bind-mounted); the container stays stateless. The old
+separate home backend on pvehost is retired. Other subjects plug in through
+`server/modules.py`, `/api/records` and `server/policy.py`; see `docs/路线图.md`.
+
 
 | Path | Holds |
 |---|---|
@@ -447,6 +448,13 @@ See `/memories/repo/word-puzzle-website.md` for the implementation details.
 ---
 
 ## 8. Public exposure and student data
+
+**This repository is public on GitHub.** Code and documentation may be public; data may
+not. Never commit rosters, databases, backups, credentials lists, phone numbers or keys
+(`.gitignore` blocks the usual names and `word-puzzle/tests/test_repo_hygiene.py` fails on
+tracked data files, phone-like numbers and key-like strings). Use the GitHub no-reply
+address as `git config user.email` — the commit author address is published with the
+history. See `docs/路线图.md` §5.
 
 Anything reachable through Funnel is **public**: the `*.ts.net` name appears in
 certificate-transparency logs, and within a minute of turning Funnel on, scanners

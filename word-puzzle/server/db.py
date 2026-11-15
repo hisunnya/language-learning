@@ -136,6 +136,19 @@ CREATE TABLE IF NOT EXISTS bank_tags (
 );
 CREATE INDEX IF NOT EXISTS ix_bank_tags_tag ON bank_tags(tag);
 
+-- 各学科（化学、物理、话题、无线电……）通用的成绩 / 进度记录：模块只管 POST，不用各建一张表。
+CREATE TABLE IF NOT EXISTS subject_records (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER,                              -- 没登录（家庭版内网入口）为空，用 device 区分
+    device     TEXT NOT NULL DEFAULT '',
+    subject    TEXT NOT NULL,                        -- server/modules.py 里登记的模块 id
+    kind       TEXT NOT NULL DEFAULT '',             -- 模块自己定义：quiz / exercise / progress …
+    payload    TEXT NOT NULL DEFAULT '{}',           -- JSON，上限 20 KB
+    created_at INTEGER NOT NULL                      -- UTC 秒
+);
+CREATE INDEX IF NOT EXISTS ix_records_subject ON subject_records(subject, created_at);
+CREATE INDEX IF NOT EXISTS ix_records_user ON subject_records(user_id, created_at);
+
 -- 访问记录：谁、从哪个 IP、用什么设备和浏览器、看了哪些页面、停留多久。永久保留，不自动删除。
 -- 时间一律存 UTC 秒数（整数）：这几张表里的时间不受服务器时区影响，页面上由浏览器换成本地时间。
 -- 一行 page_views = 一次页面打开（vid 是页面自己生成的随机号）；sid 是同一个浏览器标签页的会话号，

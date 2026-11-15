@@ -28,3 +28,22 @@ word-puzzle/var/
 
 # ECDICT 词典（体积大，需要时用 tools/build_seed_data.py --ecdict 临时下载）
 word-puzzle/data/raw/ecdict.csv
+
+# 真实数据永远不进仓库（仓库在 GitHub 上是公开的）：数据库、名单、初始密码清单、备份、密钥
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+.env
+.env.*
+*名单*
+*初始密码*
+*credentials*
+*roster*.xlsx
+*roster*.csv
+backups/
+lexica-data/
+lexica-backup/

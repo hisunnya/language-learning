@@ -15,3 +15,6 @@ proxy_set_header X-Wp-Edge-Tailscale $http_tailscale_user_login;
 proxy_connect_timeout 10s;
 proxy_read_timeout 600s;
 proxy_send_timeout 600s;
+# 内网入口（install.sh 生成的另一个 server）才会把它改成 lan；公网入口这里恒为空，客户端自己带的会被覆盖掉。
+# 后端据此决定「不登录也能用」只对内网入口开放。
+proxy_set_header X-Wp-Entry "";

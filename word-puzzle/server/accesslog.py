@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import os
 import re
 import threading
 import time
@@ -127,6 +128,12 @@ FORWARD_HEADERS = (            # 收到什么存什么（只存有的）
 )
 
 
+def trusted_proxies() -> set[str]:
+    """我们自己信任的前置代理地址（环境变量 WP_TRUSTED_PROXIES，逗号分隔）：例如 pvehost 上的 nginx 把请求转给容器时，
+    转发链最后一环是 pvehost，要跳过它才是真正的访客。"""
+    return {ip for ip in (_valid_ip(x) for x in os.environ.get("WP_TRUSTED_PROXIES", "").split(",")) if ip}
+
+
 def client_address(headers, peer: str) -> tuple[str, dict]:
     """返回 (ip, 收到的转发头)。peer 是 TCP 对端；只有对端是本机（我们自己的 nginx）才相信转发头。"""
     forwarded = {key: headers.get(h).strip()[:300] for h, key in FORWARD_HEADERS if headers.get(h)}
@@ -136,6 +143,9 @@ def client_address(headers, peer: str) -> tuple[str, dict]:
         for key in ("edge_xff", "xff", "edge_real_ip", "real_ip"):
             chain = _chain(forwarded.get(key, ""))
             if chain:
+                trusted = trusted_proxies()
+                while len(chain) > 1 and chain[-1] in trusted:
+                    chain.pop()              # 跳过我们自己的前置代理
                 ip = chain[-1]               # 离我们最近的一环：不是客户端自己写的
                 break
     return ip, forwarded

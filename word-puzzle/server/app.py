@@ -33,7 +33,7 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
 
 from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
-from server import accesslog, hierarchy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
+from server import accesslog, hierarchy, modules, policy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -275,15 +275,27 @@ class Handler(BaseHTTPRequestHandler):
         """家庭版没有账号体系，等同管理员（行为和以前一样）。"""
         return self.auth is None or bool(self.user and self.user["role"] == "admin")
 
+    def _guest_entrance(self) -> bool:
+        """内网入口（家庭版）：不登录也能用所有页面，管理功能才要登录。
+        只有「开了 WP_LAN_GUEST」且「请求来自本机 nginx」且「nginx 的内网入口打了 X-Wp-Entry: lan」才算；
+        公网入口的 nginx 每次都把这个头清空，外面的人自己带了也没用。"""
+        return (self.auth is not None and os.environ.get("WP_LAN_GUEST") == "1"
+                and self._peer() in accesslog.LOOPBACK and self.headers.get("X-Wp-Entry") == "lan")
+
     def _sees_all(self) -> bool:
-        """能看到全部题库 / 成绩的人：老师，以及家庭版里没登录的人（家庭版不登录也能用所有页面）。"""
-        return self._is_admin() or bool(self.auth is not None and self.auth.guest and not self.user)
+        """能看到全部题库 / 成绩的人：老师，以及内网入口里没登录的人（家庭版不登录也能用所有页面）。"""
+        return self._is_admin() or bool(self._guest_entrance() and not self.user)
+
+    def _need(self, action: str, resource: dict | None = None) -> None:
+        """按 server/policy.py 判断当前用户能不能做这件事；局域网版（没有账号体系）等同允许。"""
+        if self.auth is None or policy.allow(self.user, action, resource):
+            return
+        if not self.user:
+            raise HttpError(401, "请先用教师账号登录", "login_required")
+        raise HttpError(403, "需要管理员权限", "forbidden")
 
     def _need_admin(self) -> None:
-        if not self._is_admin():
-            if self.auth is not None and not self.user:
-                raise HttpError(401, "请先用教师账号登录", "login_required")      # 页面收到它就跳去登录
-            raise HttpError(403, "需要管理员权限", "forbidden")
+        self._need("admin")
 
     def _uid(self) -> int | None:
         return self.user["id"] if (self.auth is not None and self.user) else None
@@ -308,7 +320,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _gate(self, path: str) -> None:
         """学生版：除了健康检查和登录相关接口，一律要先登录；还没改初始密码就只能去改密码。"""
-        if self.auth is None or self.auth.guest or path == "/api/health" or path.startswith("/api/auth/"):
+        if self.auth is None or self._guest_entrance() or path == "/api/health" or path.startswith("/api/auth/"):
             return
         if not self.user:
             raise HttpError(401, "请先登录", "login_required")
@@ -414,6 +426,14 @@ class Handler(BaseHTTPRequestHandler):
             if not ok:
                 raise HttpError(404, "资料不存在")
             self.send_json({"ok": True})
+            return
+
+        # ---- 模块登记表 / 各学科通用的成绩记录 ----
+        if path == "/api/modules" and method == "GET":
+            self.send_json({"ok": True, "modules": modules.listing()})
+            return
+        if path == "/api/records":
+            self.handle_records(method, query)
             return
 
         # ---- 题库 ----
@@ -595,7 +615,7 @@ class Handler(BaseHTTPRequestHandler):
     def handle_auth(self, method: str, path: str) -> None:
         if path == "/api/auth/me" and method == "GET":
             self.send_json({"ok": True, "auth_enabled": self.auth is not None,
-                            "guest_mode": bool(self.auth is not None and self.auth.guest),
+                            "guest_mode": self._guest_entrance(),
                             "user": auth_mod.AuthService.public(self.user)})
             return
         if self.auth is None:
@@ -811,6 +831,65 @@ class Handler(BaseHTTPRequestHandler):
             writer.writerow([("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in cells])
         return ("\ufeff" + out.getvalue()).encode("utf-8")
 
+    def handle_records(self, method: str, query: dict) -> None:
+        """各学科通用的成绩 / 进度：POST 存一条，GET 取（学生只看自己的，老师按 policy 看全部）。"""
+        db = self.db
+        if method == "POST":
+            body = self.read_json()
+            subject = str(body.get("subject") or "")
+            if subject not in modules.enabled_ids():
+                raise HttpError(400, "未知的学科模块", "bad_subject")
+            payload = body.get("payload", {})
+            if not isinstance(payload, dict):
+                raise HttpError(400, "payload 需要是 JSON 对象", "bad_payload")
+            text = json.dumps(payload, ensure_ascii=False)
+            if len(text.encode("utf-8")) > 20 * 1024:
+                raise HttpError(413, "payload 太大（上限 20KB）", "payload_too_large")
+            uid = self._uid()
+            device = "" if uid is not None else re.sub(r"[^A-Za-z0-9_.:-]", "", str(body.get("device") or ""))[:64]
+            kind = re.sub(r"[^A-Za-z0-9_.-]", "", str(body.get("kind") or ""))[:40]
+            cur = db.execute("INSERT INTO subject_records(user_id, device, subject, kind, payload, created_at) VALUES (?,?,?,?,?,?)",
+                             (uid, device, subject, kind, text, int(time.time())))
+            self.send_json({"ok": True, "id": cur.lastrowid}, status=201)
+            return
+        if method == "GET":
+            subject = query.get("subject", "")
+            limit = int_param(query.get("limit"), "limit", 100, 1, 500)
+            where, args = [], []
+            if subject:
+                where.append("subject=?")
+                args.append(subject)
+            if query.get("kind"):
+                where.append("kind=?")
+                args.append(query["kind"])
+            if policy.allow(self.user, "records.read_all", {"subject": subject}) or self.auth is None:
+                if query.get("user_id"):
+                    where.append("user_id=?")
+                    args.append(int_param(query["user_id"], "user_id"))
+            elif self.user:
+                where.append("user_id=?")
+                args.append(self.user["id"])
+            elif query.get("device"):
+                where.append("user_id IS NULL AND device=?")
+                args.append(query["device"])
+            else:
+                raise HttpError(400, "请指明 device", "need_device")
+            sql = "SELECT id, user_id, device, subject, kind, payload, created_at FROM subject_records"
+            if where:
+                sql += " WHERE " + " AND ".join(where)
+            rows = db.query(sql + " ORDER BY id DESC LIMIT ?", (*args, limit))
+            records = []
+            for r in rows:
+                d = dict(r)
+                try:
+                    d["payload"] = json.loads(d["payload"])
+                except ValueError:
+                    d["payload"] = {}
+                records.append(d)
+            self.send_json({"ok": True, "records": records})
+            return
+        raise HttpError(405, "不支持的方法")
+
     def _access_csv(self, table: str, query: dict) -> bytes:
         """访问记录 / 登录记录的完整导出：所有列，时间换成 UTC+8 的可读时间。"""
         cols, rows = accesslog.all_rows(self.db, table, class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
@@ -970,16 +1049,13 @@ def urllib_quote(text: str) -> str:
 
 def build_server(host: str = "127.0.0.1", port: int = 8000,
                  db_path: str | None = None, auth: "bool | dict | None" = None) -> ThreadingHTTPServer:
-    """auth: None = 看环境变量 WP_AUTH（1 = 学生版；guest = 家庭版：不登录能用，管理要老师登录，账号由 WP_AUTH_REMOTE 指向的学生版核对）；True / dict = 启用登录（dict 是 AuthService 的参数）；False = 关闭。"""
+    """auth: None = 看环境变量 WP_AUTH（1 = 带登录；内网入口是否允许不登录由 WP_LAN_GUEST 决定）；True / dict = 启用登录（dict 是 AuthService 的参数）；False = 关闭。"""
     db = Database(db_path)
     Handler.db = db
     if auth is None:
-        mode = os.environ.get("WP_AUTH", "").strip().lower()
-        enabled = mode in ("1", "true", "yes", "on", "guest")
+        enabled = os.environ.get("WP_AUTH", "").strip().lower() in ("1", "true", "yes", "on")
         auth = ({"cookie_secure": os.environ.get("WP_COOKIE_SECURE", "").strip().lower() in ("1", "true", "yes", "on"),
-                 "session_days": float(os.environ.get("WP_SESSION_DAYS", "14")),
-                 "guest": mode == "guest",
-                 "remote": os.environ.get("WP_AUTH_REMOTE", "").strip() if mode == "guest" else ""} if enabled else False)
+                 "session_days": float(os.environ.get("WP_SESSION_DAYS", "14"))} if enabled else False)
     Handler.auth = auth_mod.AuthService(db, **(auth if isinstance(auth, dict) else {})) if auth else None
     try:
         default_id = bank_mod.seed_default_bank(db)

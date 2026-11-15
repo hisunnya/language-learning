@@ -28,10 +28,14 @@ TTS_VENV="${WP_FAMILY_TTS_VENV:-/opt/word-puzzle-family/tts-venv}"
 PUBLIC_URL="${WP_PUBLIC_URL:-}"
 PROXY_INC=/etc/nginx/word-puzzle-family-proxy.inc
 # 内网入口（可选）：WP_LAN_ADDR=容器的内网地址（例如 192.168.1.100），端口默认 8082。
-# 同一个网站、同一个数据库、同一套账号，只是多一个只监听内网地址的入口：老师在家直接访问，不绕公网。
-# 照样要登录；Funnel 只指向 127.0.0.1:$NGINX_PORT，到不了这里。
+# 同一个后端、同一个数据库、同一套账号，只是多一个只监听内网地址的入口（家庭版）：
+# 不登录就能做题并留下记录，点到管理功能才要老师登录。Funnel 只指向 127.0.0.1:$NGINX_PORT，到不了这里，公网仍然全部要登录。
+# WP_TRUSTED_PROXIES=我们自己的前置代理地址（逗号分隔，例如 pvehost 的 192.168.1.93），访问记录里会跳过它们。
 LAN_ADDR="${WP_LAN_ADDR:-}"
 LAN_PORT="${WP_LAN_PORT:-8082}"
+TRUSTED_PROXIES="${WP_TRUSTED_PROXIES:-}"
+# 数据库每日备份（可选）：WP_BACKUP_DIR=备份目录（建议是挂进容器的宿主机目录，且和数据库不在同一块盘上）。
+BACKUP_DIR="${WP_BACKUP_DIR:-}"
 LAN_PROXY_INC=/etc/nginx/word-puzzle-family-proxy-lan.inc
 LAN_CONF_FILE=/etc/nginx/conf.d/word-puzzle-family-lan.conf
 CONF_FILE=/etc/nginx/conf.d/$SITE_NAME.conf
@@ -44,6 +48,9 @@ die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 [[ -n "$PUBLIC_URL" ]] || die "请用 WP_PUBLIC_URL 指定对外的 https 地址，例如 https://lexica.tailXXXX.ts.net（没有它，离线页里的链接会信客户端传来的主机名）"
 [[ "$PUBLIC_URL" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{2,5})?$ ]] || die "WP_PUBLIC_URL 必须是 https://主机名[:端口]，结尾不要带斜杠"
 [[ "$PORT" =~ ^[0-9]+$ && "$NGINX_PORT" =~ ^[0-9]+$ && "$LAN_PORT" =~ ^[0-9]+$ ]] || die "端口必须是数字"
+[[ -z "$BACKUP_DIR" || "$BACKUP_DIR" =~ ^/[A-Za-z0-9._/-]+$ ]] || die "WP_BACKUP_DIR 必须是绝对路径（字母、数字、._/-）"
+[[ "$TRUSTED_PROXIES" =~ ^[0-9a-fA-F:.,]*$ ]] || die "WP_TRUSTED_PROXIES 只能是逗号分隔的 IP 地址"
+LAN_GUEST=0; [[ -z "$LAN_ADDR" ]] || LAN_GUEST=1
 [[ -z "$LAN_ADDR" || "$LAN_ADDR" =~ ^(10|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9.]+$ ]] || die "WP_LAN_ADDR 必须是内网地址（10.x / 172.16-31.x / 192.168.x），不能是公网地址"
 [[ -f "$REPO_DIR/hub/shared/module-header.js" ]] || die "找不到 hub/shared（页眉和配色切换用）：请在完整的仓库里运行"
 
@@ -96,10 +103,23 @@ fi
 say "安装 systemd 服务 $SITE_NAME"
 sed -e "s|@RUN_USER@|$RUN_USER|g" -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@DATA_DIR@|$DATA_DIR|g" \
     -e "s|@PORT@|$PORT|g" -e "s|@PUBLIC_URL@|$PUBLIC_URL|g" -e "s|@TTS_VENV@|$TTS_VENV|g" \
+    -e "s|@LAN_GUEST@|$LAN_GUEST|g" -e "s|@TRUSTED_PROXIES@|$TRUSTED_PROXIES|g" \
     "$INSTALL_DIR/deploy/family/systemd/word-puzzle-family.service" > "/etc/systemd/system/$SITE_NAME.service"
 systemctl daemon-reload
 systemctl enable "$SITE_NAME" >/dev/null
 systemctl restart "$SITE_NAME"
+
+if [[ -n "$BACKUP_DIR" ]]; then
+  say "安装每日备份定时器（$BACKUP_DIR，保留 30 份）"
+  install -d -o "$RUN_USER" -g "$RUN_USER" -m 0750 "$BACKUP_DIR"
+  for unit in lexica-backup.service lexica-backup.timer; do
+    sed -e "s|@RUN_USER@|$RUN_USER|g" -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@DATA_DIR@|$DATA_DIR|g" \
+        -e "s|@BACKUP_DIR@|$BACKUP_DIR|g" "$INSTALL_DIR/deploy/family/systemd/$unit" > "/etc/systemd/system/$unit"
+  done
+  systemctl daemon-reload
+  systemctl enable --now lexica-backup.timer >/dev/null
+  systemctl start lexica-backup.service || warn "第一次备份没成功，用 journalctl -u lexica-backup 看原因"
+fi
 
 say "安装 nginx 配置（只监听 127.0.0.1:$NGINX_PORT）"
 install -d /etc/nginx/conf.d
@@ -119,10 +139,11 @@ if ! nginx -t; then
 fi
 
 if [[ -n "$LAN_ADDR" ]]; then
-  say "安装内网入口 $LAN_ADDR:$LAN_PORT（同一个网站，照样要登录，只给内网）"
-  # 在公网配置的基础上：换监听地址；告诉后端这是明文 http（会话 Cookie 不带 Secure）；访问记录里记真实的内网 IP
+  say "安装内网入口 $LAN_ADDR:$LAN_PORT（家庭版：不登录能做题，管理要登录；只给内网）"
+  # 在公网配置的基础上：换监听地址；标记为内网入口；告诉后端这是明文 http（会话 Cookie 不带 Secure）；转发链交给后端算真实 IP
   sed -e 's|^proxy_set_header X-Forwarded-Proto .*|proxy_set_header X-Forwarded-Proto http;|' \
-      -e 's|^proxy_set_header X-Wp-Edge-Xff .*|proxy_set_header X-Wp-Edge-Xff $remote_addr;|' \
+      -e 's|^proxy_set_header X-Wp-Edge-Xff .*|proxy_set_header X-Wp-Edge-Xff $proxy_add_x_forwarded_for;|' \
+      -e 's|^proxy_set_header X-Wp-Entry .*|proxy_set_header X-Wp-Entry lan;|' \
       "$PROXY_INC" > "$LAN_PROXY_INC"
   chmod 0644 "$LAN_PROXY_INC"
   sed -n '/^server {/,$p' "$INSTALL_DIR/deploy/family/nginx/word-puzzle-family.conf" \
@@ -180,7 +201,7 @@ cat <<EOF2
 部署完成（还没有对外开放）。
 
   本机入口 ： http://127.0.0.1:$NGINX_PORT/word-puzzle/
-$( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/word-puzzle/   （同一个网站，照样要登录）" )
+$( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/word-puzzle/   （家庭版：不登录能做题，管理要登录）" )
   对外地址 ： $PUBLIC_URL/word-puzzle/   （要先开 Tailscale Funnel，见 部署说明.md）
   数据库   ： $DATA_DIR/app.db
   服务     ： systemctl status $SITE_NAME

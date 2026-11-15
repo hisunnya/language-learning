@@ -1,0 +1,14 @@
+[Unit]
+Description=词境 数据库每日备份
+After=word-puzzle-family.service
+
+[Service]
+Type=oneshot
+User=@RUN_USER@
+ExecStart=/usr/bin/python3 @INSTALL_DIR@/deploy/family/backup.py @DATA_DIR@/app.db @BACKUP_DIR@ 30
+# 只允许写备份目录
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=@BACKUP_DIR@
+PrivateTmp=true
+ProtectHome=true

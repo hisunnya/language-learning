@@ -77,24 +77,22 @@ else
   echo "    Edge Neural TTS 已安装，跳过"
 fi
 
+# WP_REMOTE_BACKEND=1：后端已经搬到学生版（容器）那一个，这台机器只留网页文件，旧后端停掉（数据库文件原地保留当备份）。
+if [[ "${WP_REMOTE_BACKEND:-0}" == "1" ]]; then
+  say "后端在学生版：不再运行本机的 $SITE_NAME 服务（数据库 $DATA_DIR/app.db 原地保留，不删除）"
+  systemctl disable --now "$SITE_NAME" 2>/dev/null || true
+else
 say "安装 systemd 服务"
-# 可选：WP_AUTH_REMOTE=学生版的接口地址（例如 https://lexica.xxxx.ts.net/word-puzzle）。
-# 设了：家庭版不登录能用所有页面，管理题库 / 标签 / 账号时要教师登录，账号密码交给学生版核对。
-AUTH_LINES=""
-if [[ -n "${WP_AUTH_REMOTE:-}" ]]; then
-  [[ "$WP_AUTH_REMOTE" =~ ^https?://[A-Za-z0-9.:-]+(/[A-Za-z0-9._/-]*)?$ ]] || die "WP_AUTH_REMOTE 格式无效，应形如 https://主机名/word-puzzle"
-  AUTH_LINES="Environment=WP_AUTH=guest|Environment=WP_AUTH_REMOTE=$WP_AUTH_REMOTE"
-fi
 sed -e "s|/var/lib/word-puzzle|$DATA_DIR|g" \
     -e "s|^Environment=WP_PORT=.*|Environment=WP_PORT=$PORT|" \
     "$INSTALL_DIR/deploy/systemd/word-puzzle.service" \
-  | awk -v extra="$AUTH_LINES" '{ print } /^Environment=WP_QUIET=1/ && extra != "" { n = split(extra, a, "|"); for (i = 1; i <= n; i++) print a[i] }' \
     > /etc/systemd/system/$SITE_NAME.service
 systemctl daemon-reload
 systemctl enable "$SITE_NAME"
 systemctl restart "$SITE_NAME"
 sleep 1
 systemctl --no-pager --lines=5 status "$SITE_NAME" || true
+fi
 
 if [[ "${WP_SKIP_NGINX:-0}" == "1" ]]; then
   say "跳过独立 nginx 站点（由整站入口统一配置）"

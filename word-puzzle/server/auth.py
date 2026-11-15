@@ -13,14 +13,11 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import json
 import re
 import secrets
 import threading
 import time
 import unicodedata
-import urllib.error
-import urllib.request
 from collections import deque
 from typing import Callable
 
@@ -131,14 +128,8 @@ class RateLimiter:
 class AuthService:
     def __init__(self, db: Database, *, cookie_secure: bool = False, session_days: float = 14,
                  lock_after: int = 5, lock_minutes: float = 15,
-                 clock: Callable[[], float] = time.time,
-                 guest: bool = False, remote: str = "", remote_open=urllib.request.urlopen):
-        """guest = 家庭版：不登录也能用所有页面，管理功能才要登录；
-        remote = 学生版的接口地址（到 /word-puzzle 为止）：设了就由学生版核对账号密码，本地只留一个管理员的影子账号。"""
+                 clock: Callable[[], float] = time.time):
         self.db = db
-        self.guest = guest
-        self.remote = remote.rstrip("/")
-        self.remote_open = remote_open
         self.cookie_secure = cookie_secure
         self.session_seconds = session_days * 86400
         self.lock_after = lock_after
@@ -270,8 +261,6 @@ class AuthService:
             raise AuthError(400, "missing", "请输入学号和密码")
         if not (self.overall.allow("*") and self.per_student.allow(sn.lower())):
             raise AuthError(429, "rate_limited", "尝试太频繁了，请稍后再试")
-        if self.remote:
-            return self._remote_login(sn, password)
         user = self.get_by_student_no(sn)
         now = self.clock()
         if not user:
@@ -292,50 +281,7 @@ class AuthService:
                         (now_iso(), user["id"]))
         return user, self._new_session(user["id"])
 
-    def _remote_login(self, sn: str, password: str) -> tuple[dict, str]:
-        """家庭版登录：把学号和密码交给学生版核对（连错锁定、限速都在学生版那边算）。
-        只放行老师；通过后在本地留一个管理员的影子账号（密码是随机的，只能经学生版登录）来承载会话。"""
-        body = json.dumps({"student_no": sn, "password": password}).encode("utf-8")
-        request = urllib.request.Request(self.remote + "/api/auth/login", data=body, method="POST",
-                                         headers={"Content-Type": "application/json"})
-        try:
-            with self.remote_open(request, timeout=8) as response:
-                status, raw = response.status, response.read()
-        except urllib.error.HTTPError as exc:
-            status, raw = exc.code, exc.read()
-            exc.close()
-        except (urllib.error.URLError, OSError, ValueError):
-            raise AuthError(503, "remote_unreachable", "连不上学生版，暂时无法登录管理（家庭里的其他功能不受影响）") from None
-        try:
-            data = json.loads(raw.decode("utf-8"))
-        except ValueError:
-            data = {}
-        if status != 200 or not data.get("ok"):
-            code = data.get("code") or "remote_error"
-            raise AuthError(status if status in (400, 401, 429) else 502, code,
-                            data.get("error") or "学生版没有给出明确的答复，请稍后再试")
-        remote = data.get("user") or {}
-        if remote.get("role") != "admin":
-            raise AuthError(403, "teacher_only", "家庭版只有老师需要登录；学生不用登录，直接使用即可")
-        if remote.get("must_change"):
-            raise AuthError(403, "remote_must_change", "请先到学生版把初始密码改掉，再回来登录")
-        name = (str(remote.get("name") or sn).strip() or sn)[:40]
-        fields = {k: str(remote.get(k) or "")[:60] for k in ("class_name", "college", "department")}
-        user = self.get_by_student_no(sn)
-        if user:
-            self.db.execute("UPDATE users SET name=?, class_name=?, college=?, department=?, role='admin', disabled=0, "
-                            "must_change=0, failed_count=0, locked_until=0, pw_hash=?, last_login_at=? WHERE id=?",
-                            (name, fields["class_name"], fields["college"], fields["department"],
-                             hash_password(secrets.token_urlsafe(24)), now_iso(), user["id"]))
-            user = self.get_by_id(user["id"])
-        else:
-            user, _ = self.create_user(sn, name, password=secrets.token_urlsafe(24), role="admin", must_change=False, **fields)
-            self.db.execute("UPDATE users SET last_login_at=? WHERE id=?", (now_iso(), user["id"]))
-        return user, self._new_session(user["id"])
-
     def change_password(self, user: dict, old: str, new: str, keep_token: str | None) -> str:
-        if self.remote:
-            raise AuthError(400, "remote_password", "家庭版的老师账号和学生版是同一个，请到学生版修改密码")
         """改密码并返回新的会话令牌：其他设备上的登录全部作废。"""
         if not verify_password(str(old or ""), user["pw_hash"]):
             raise AuthError(400, "wrong_old_password", "旧密码不对")

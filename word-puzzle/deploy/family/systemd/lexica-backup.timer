@@ -1,0 +1,10 @@
+[Unit]
+Description=词境 数据库每日备份（每天凌晨 3 点，错过了开机后补跑）
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

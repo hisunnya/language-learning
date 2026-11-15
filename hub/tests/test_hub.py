@@ -420,6 +420,15 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("__LINGUA_SERVER_NAME__", INSTALL_SCRIPT)
         self.assertIn("nginx -t", INSTALL_SCRIPT)
 
+    def test_installer_can_point_the_word_puzzle_api_at_a_backend_elsewhere(self):
+        # install.sh 里的两条 sed 必须正好改到模板里的这两处（各一处），否则 LEXICA_UPSTREAM 就悄悄不生效
+        self.assertEqual(NGINX.count("server 127.0.0.1:8765;"), 1)
+        self.assertEqual(NGINX.count("proxy_pass http://lexica_api/api/;"), 1)
+        self.assertIn('-e "s|server 127.0.0.1:8765;|server $UPSTREAM_SERVER;|"', INSTALL_SCRIPT)
+        self.assertIn('-e "s|proxy_pass http://lexica_api/api/;|proxy_pass http://lexica_api${UPSTREAM_PATH};|"', INSTALL_SCRIPT)
+        self.assertIn('UPSTREAM_PATH="/word-puzzle/api/"', INSTALL_SCRIPT)
+        self.assertIn("LEXICA_UPSTREAM", INSTALL_SCRIPT)
+
     def test_lexica_copy_uses_volume_terminology_without_fixed_server_ip(self):
         self.assertIn("册别", JS)
         self.assertIn("volume", JS)

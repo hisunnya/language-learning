@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261115_114500.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261115_130000.sh
 # 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_NAME="${LINGUA_SERVER_NAME:-192.168.1.93}"
 WP_PORT=8765
-# 家庭版里管理功能的教师账号由学生版核对，走内网入口（容器 120 的 192.168.1.100:8082，见 word-puzzle/deploy/family/部署说明.md）；
-# 换了地址就用 LEXICA_STUDENT_URL 覆盖
-STUDENT_URL="${LEXICA_STUDENT_URL:-http://192.168.1.100:8082/word-puzzle}"
+# 词境后端只有一个：在学生版容器里（数据库放宿主机目录，见 word-puzzle/deploy/family/部署说明.md）。
+# 这台机器（家庭版入口）的 /word-puzzle/api/ 转给容器的内网入口；换了地址就用 LEXICA_UPSTREAM 覆盖。
+# 设成空（LEXICA_UPSTREAM=none）则退回本机后端 127.0.0.1:8765。
+LEXICA_UPSTREAM="${LEXICA_UPSTREAM:-192.168.1.100:8082}"
+[[ "$LEXICA_UPSTREAM" != "none" ]] || LEXICA_UPSTREAM=""
 
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
@@ -40,14 +42,14 @@ done
 
 say "部署词境后端（保留现有数据库）"
 WP_PORT="$WP_PORT" \
-WP_AUTH_REMOTE="$STUDENT_URL" \
+WP_REMOTE_BACKEND="$([[ -n "$LEXICA_UPSTREAM" ]] && echo 1 || echo 0)" \
 SITE_NAME=word-puzzle \
 WP_SERVER_NAME="$SERVER_NAME" \
 WP_SKIP_NGINX=1 \
   bash "$REPO_DIR/word-puzzle/deploy/install.sh"
 
 say "部署语林门户、每日话题、无线电执照、化学探秘、物理探秘和统一 nginx 入口"
-LINGUA_SERVER_NAME="$SERVER_NAME" bash "$REPO_DIR/hub/deploy/install.sh"
+LINGUA_SERVER_NAME="$SERVER_NAME" LEXICA_UPSTREAM="$LEXICA_UPSTREAM" bash "$REPO_DIR/hub/deploy/install.sh"
 
 say "执行整站冒烟检查"
 # nginx reload 是异步的：旧 worker 还在应答时会拿到旧配置的 404，所以失败要重试几次。

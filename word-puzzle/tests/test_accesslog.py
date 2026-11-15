@@ -5,6 +5,7 @@ import csv
 import http.server
 import io
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -101,6 +102,15 @@ class TestClientAddress(unittest.TestCase):
     def test_garbage_in_the_header_is_ignored(self):
         self.assertEqual(self.addr("127.0.0.1", **{"X-Wp-Edge-Xff": "<script>, not-an-ip"})[0], "127.0.0.1")
         self.assertEqual(self.addr("127.0.0.1", **{"X-Wp-Edge-Xff": "198.51.100.7:51234"})[0], "198.51.100.7")
+
+    def test_trusted_front_proxies_are_skipped_to_reach_the_real_visitor(self):
+        from unittest import mock
+        chain = {"X-Wp-Edge-Xff": "6.6.6.6, 192.168.1.55, 192.168.1.93"}      # 伪造的, 真实访客, 我们自己的前置代理
+        with mock.patch.dict(os.environ, {"WP_TRUSTED_PROXIES": "192.168.1.93"}):
+            self.assertEqual(self.addr("127.0.0.1", **chain)[0], "192.168.1.55")
+            self.assertEqual(self.addr("127.0.0.1", **{"X-Wp-Edge-Xff": "192.168.1.93"})[0], "192.168.1.93")   # 只剩它自己就如实记
+        with mock.patch.dict(os.environ, {"WP_TRUSTED_PROXIES": ""}):
+            self.assertEqual(self.addr("127.0.0.1", **chain)[0], "192.168.1.93")
 
     def test_every_forwarding_header_received_is_kept(self):
         _, forwarded = self.addr("127.0.0.1", **{"X-Wp-Edge-Xff": "1.1.1.1", "X-Wp-Edge-Tailscale": "a@b", "Via": "1.1 x"})
