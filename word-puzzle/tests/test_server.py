@@ -684,6 +684,16 @@ class TestHTTP(unittest.TestCase):
         self.assertIn("data:audio/mpeg;base64,SUQzbW9jaw==", html)
         self.assertIn('"backHref":"' + self.base + '/"', html)
 
+    def test_offline_export_never_creates_a_bank(self):
+        """工作台的「离线测试」只导出已有的题库；以前顶部那个按钮每点一次就悄悄多出一个题库。"""
+        bid = self.post("/api/banks", {"source": "seed", "level1": "初中", "level2": "九年级",
+                                       "level3": "上册", "level4": "all", "unit_mode": "all"})["bank"]["id"]
+        before = len(self.get("/api/banks")["banks"])
+        with mock.patch.object(tts, "synth_many", return_value={"apple": b"ID3mock"}):
+            self.post(f"/api/banks/{bid}/offline")
+            self.post(f"/api/banks/{bid}/offline")
+        self.assertEqual(len(self.get("/api/banks")["banks"]), before)
+
     def test_offline_post_body_does_not_corrupt_keep_alive_connection(self):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
         try:

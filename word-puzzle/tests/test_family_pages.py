@@ -148,11 +148,14 @@ class TestExistingPages(unittest.TestCase):
 
     def test_features_students_must_not_see_are_marked(self):
         index, bank = read("index.html"), read("bank.html")
-        for needle in ('class="btn lg ghost admin-only" id="btnUpload"', 'class="btn lg ghost admin-only" id="btnOffline"'):
-            self.assertIn(needle, index)
-        for heading in ("主要操作", "已上传的资料", "已生成的离线测试页"):
-            self.assertRegex(bank, r'<div class="card admin-only">\s*<h2[^>]*>%s</h2>' % heading)
-        self.assertRegex(bank, r'<div class="field admin-only">\s*<label[^>]*>题源</label>')
+        # 首页上给老师的只有一张「管理题库」卡片（带 admin-only），新建 / 离线等都在题库工作台里
+        self.assertRegex(index, r'<div class="card admin-only">\s*<h2[^>]*>管理题库</h2>')
+        for gone in ("btnUpload", "btnOffline", "btnMake", "defaultCard", "按层级生成题库"):
+            self.assertNotIn(gone, index, gone)
+        # 题库工作台整页只给老师（data-auth="admin" 会把学生送回首页），三个标签页都在里面
+        self.assertIn('<body data-auth="admin">', bank)
+        for tab in ("panelBanks", "panelNew", "panelOffline"):
+            self.assertIn('id="%s"' % tab, bank)
         self.assertIn("html.role-student .admin-only", read("css/auth.css"))
 
     def test_bank_page_only_loads_admin_data_for_admins(self):
@@ -280,12 +283,12 @@ class TestStudentViewIsWired(unittest.TestCase):
                 self.assertIn("admin-only", link, page)
         self.assertIn('<body data-auth="admin">', read("bank.html"))
 
-    def test_the_home_page_hides_generating_and_offline_from_students(self):
+    def test_the_home_page_has_no_generating_or_offline_for_anyone(self):
         html = read("index.html")
-        self.assertIn('class="card admin-only" id="defaultCard"', html)
-        self.assertRegex(html, r'<div class="card admin-only">\s*<h2[^>]*>按层级生成题库</h2>')
+        self.assertRegex(html, r'<div class="card admin-only">\s*<h2[^>]*>管理题库</h2>')
         self.assertIn('class="student-only"', html)
-        self.assertRegex(html, r'<span class="admin-only"[^>]*>离线测试页是单个 HTML 文件')
+        self.assertNotIn("离线测试页是单个 HTML 文件", html)
+        self.assertIn('href="/word-puzzle/bank.html#new"', html)
 
     def test_a_student_login_switches_the_view_on(self):
         ui = (WEB / "js" / "auth-ui.js").read_text(encoding="utf-8")
@@ -316,14 +319,13 @@ class TestLevelSizeDefault(unittest.TestCase):
     def test_every_default_is_nine(self):
         import re
         root = Path(__file__).resolve().parent.parent
-        for page in ("index.html", "bank.html"):
-            html = (root / "web" / page).read_text(encoding="utf-8")
-            self.assertRegex(html, r'id="pairsPerLevel"[^>]*value="9"', page)
-            self.assertNotIn("默认 12", html, page)                       # 提示文字也要跟着改
-            self.assertNotIn("default 12", html, page)
-        for js in ("page-home.js", "page-bank.js"):
-            text = (root / "web" / "js" / js).read_text(encoding="utf-8")
-            self.assertEqual(len(re.findall(r"\b12\b", text.split("function pairsPerLevel()")[1].split("}")[0])), 0, js)
+        html = (root / "web" / "bank.html").read_text(encoding="utf-8")
+        self.assertRegex(html, r'id="pairsPerLevel"[^>]*value="9"')
+        self.assertNotIn("默认 12", html)                       # 提示文字也要跟着改
+        self.assertNotIn("default 12", html)
+        text = (root / "web" / "js" / "page-bank.js").read_text(encoding="utf-8")
+        self.assertEqual(len(re.findall(r"\b12\b", text.split("function pairsPerLevel()")[1].split("}")[0])), 0)
+        self.assertIn("pairs_per_level: pairsPerLevel()", text)
         mini = (root.parent / "miniprogram" / "utils" / "bank.js").read_text(encoding="utf-8")
         self.assertIn("var MAX_PAIRS = 9;", mini)
         server = (root / "server" / "bank.py").read_text(encoding="utf-8")

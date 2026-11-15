@@ -21,10 +21,10 @@ CJK = re.compile(r"[一-鿿]")
 # 这些页面的文字都要能切换（登录 / 改密码 / 账号管理用 auth-ui.js 自己的词表，由 test_family_pages 检查）
 PAGES = ("index.html", "bank.html", "stats.html", "play.html")
 # 带用户可见文字、必须走 t() 的脚本
-SCRIPTS = ("page-home.js", "page-bank.js", "page-stats.js", "page-visits.js", "page-play.js", "game-ui.js", "selector.js", "api.js")
+SCRIPTS = ("page-home.js", "page-bank.js", "bank-panels.js", "page-stats.js", "page-visits.js", "page-play.js", "game-ui.js", "selector.js", "api.js")
 
 # 中文字符串字面量里，这些不是给人看的：和后端 / 教材数据约定好的值，翻译了反而会坏
-DATA_LITERALS = {"自定义", "整学年", "初中", "九年级", "上册"}
+DATA_LITERALS = {"自定义", "整学年", "初中", "九年级", "上册", "我的词表", "全部", "全部单元"}
 # api.js 里给「没加载 i18n.js 的页面」留的中文退路（登录页、账号管理页用）
 API_FALLBACKS = ("下载失败", "网络不通", "服务器返回了非 JSON", "请求失败")
 

@@ -278,20 +278,23 @@ class TestPages(unittest.TestCase):
         return (self.WEB / "js" / name).read_text(encoding="utf-8")
 
     def test_the_release_button_is_on_each_book_for_teachers_only_and_needs_accounts(self):
-        code = self.js("page-home.js")
+        code = self.js("page-bank.js")                 # 批量开放在题库工作台，首页不再有
         i = code.index("var canRelease")
-        self.assertIn("!student && tagsEnabled() && g.name && g.banks.length > 1", code[i:i + 120])
-        self.assertIn("function editRelease(", code)
-        self.assertIn("'/api/banks/tags'", code)
-        self.assertIn("'/api/admin/tags'", code)
+        self.assertIn("tagsEnabled() && g.name && g.banks.length > 1", code[i:i + 120])
+        panels = self.js("bank-panels.js")
+        self.assertIn("function editRelease(", panels)
+        self.assertIn("'/api/banks/tags'", panels)
+        self.assertIn("'/api/admin/tags'", panels)
+        self.assertNotIn("editRelease", self.js("page-home.js"))
 
     def test_presets_come_from_the_tested_module_and_it_loads_before_the_page_script(self):
-        html = (self.WEB / "index.html").read_text(encoding="utf-8")
-        self.assertLess(html.index("js/release-presets.js"), html.index("js/page-home.js"))
-        self.assertIn("WPRelease.indexes(kind, units.length, state.n)", self.js("page-home.js"))
+        html = (self.WEB / "bank.html").read_text(encoding="utf-8")
+        self.assertLess(html.index("js/release-presets.js"), html.index("js/bank-panels.js"))
+        self.assertLess(html.index("js/bank-panels.js"), html.index("js/page-bank.js"))
+        self.assertIn("WPRelease.indexes(kind, units.length, state.n)", self.js("bank-panels.js"))
 
     def test_open_and_withdraw_use_the_tag_and_both_need_a_tag_and_a_selection(self):
-        code = self.js("page-home.js")
+        code = self.js("bank-panels.js")
         self.assertIn("body[act === 'open' ? 'add' : 'remove'] = tag", code)
         self.assertIn("rel_noTag", code)
         self.assertIn("rel_noneTicked", code)
@@ -299,28 +302,33 @@ class TestPages(unittest.TestCase):
         self.assertIn("act === 'open' ? !hasTag(b) : hasTag(b)", code, "提示的数量按真正会变的算")
 
     def test_units_are_listed_in_book_order_for_teachers_and_students(self):
-        code = self.js("page-home.js")
-        i = code.index("function groupByCategory")
-        self.assertIn("b.seq > 0", code[i:i + 900])
+        for name in ("bank-panels.js", "page-home.js"):
+            code = self.js(name)
+            i = code.index("function groupByCategory")
+            self.assertIn("b.seq > 0", code[i:i + 900], name)
 
     def test_the_panel_follows_the_language_switch_and_cleans_up(self):
-        code = self.js("page-home.js")
+        code = self.js("bank-panels.js")
         self.assertIn("window.addEventListener('portal-lang-change', draw)", code)
         self.assertIn("window.removeEventListener('portal-lang-change', draw)", code)
 
     def test_category_and_tags_have_their_own_buttons_with_explanations(self):
-        code = self.js("page-home.js")
-        self.assertNotIn("data-meta", code, "旧的合在一起的按钮不能再有")
-        self.assertNotIn("window.prompt", code, "不再用浏览器的 prompt 连着问两次")
+        panels = self.js("bank-panels.js")
+        code = self.js("page-bank.js")
+        self.assertNotIn("data-meta", code + panels, "旧的合在一起的按钮不能再有")
+        self.assertNotIn("window.prompt", code + panels, "不再用浏览器的 prompt 连着问两次")
         i = code.index("function bankItem(")
-        item = code[i:code.index("function renderBanks")]
+        item = code[i:code.index("function renderNotice")]
         self.assertIn("data-cat=", item)
         self.assertIn("data-tags=", item)
-        self.assertLess(item.index("if (!student) {"), item.index("data-cat="), "只给老师")
-        self.assertIn("body[isTags ? 'tags' : 'category'] = state.value", code, "一次只提交一项，另一项保持不变")
+        self.assertIn("if (tagsEnabled()) {", item[:item.index("data-cat=")], "分类 / 标签只在有账号体系时给老师")
+        self.assertIn("body[isTags ? 'tags' : 'category'] = state.value", panels, "一次只提交一项，另一项保持不变")
         for key in ("field_catHelp", "field_tagsHelp", "field_tagsPreview", "field_tagsNone"):
-            self.assertIn(key, code)
-        self.assertIn("'/api/admin/users'", code, "标签面板要按学生的标签算出有多少人能看到")
+            self.assertIn(key, panels)
+        self.assertIn("'/api/admin/users'", panels, "标签面板要按学生的标签算出有多少人能看到")
+        home = self.js("page-home.js")
+        for gone in ("data-cat", "data-tags", "data-del", "data-offline", "makeOffline"):
+            self.assertNotIn(gone, home, "首页只选题库和玩：" + gone)
 
     def test_the_explanations_say_what_each_one_is_for(self):
         text = (self.WEB / "js" / "i18n-lexica.js").read_text(encoding="utf-8")
@@ -336,15 +344,15 @@ class TestPages(unittest.TestCase):
         html = (self.WEB / "bank.html").read_text(encoding="utf-8")
         self.assertRegex(html, r'<input type="checkbox" id="splitNew">\s*<span data-module-zh="[^"]+" data-module-en="[^"]+">')
         code = self.js("page-bank.js")
-        self.assertIn("getElementById('splitNew').checked) p.split_units = true", code)
+        self.assertIn("$('splitNew').checked) p.split_units = true", code)
         self.assertIn("bank_madeMany", code)
 
     def test_styles_exist_and_pages_load_the_new_versions(self):
         css = (self.WEB / "css" / "auth.css").read_text(encoding="utf-8")
         for needle in (".modal-back", ".presets", ".chip", ".unit-row"):
             self.assertIn(needle, css)
-        for page in ("index.html", "bank.html"):
-            self.assertIn("auth.css?v=20261115-roleflash", (self.WEB / page).read_text(encoding="utf-8"), page)
+        for page, version in (("index.html", "20261115-roleflash"), ("bank.html", "20261116-bank")):
+            self.assertIn("auth.css?v=" + version, (self.WEB / page).read_text(encoding="utf-8"), page)
 
 
 @unittest.skipUnless(NODE, "本机没有 node，跳过预设范围的行为测试")

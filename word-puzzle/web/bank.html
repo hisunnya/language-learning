@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-roleflash">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261116-bank">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
 <body data-auth="admin">
@@ -29,94 +29,156 @@
     <div class="portal-topbar-right" id="portalHeaderControls"></div>
   </header>
 
-  <!-- 两个主按钮 -->
-  <div class="card admin-only">
-    <h2 data-module-zh="主要操作" data-module-en="Main actions">主要操作</h2>
-    <p class="sub" data-module-zh="上传自己的词表，或把当前选好的层级直接导出成离线测试网页" data-module-en="Upload your own word list, or export the selected level straight to an offline test page">上传自己的词表，或把当前选好的层级直接导出成离线测试网页</p>
-    <div class="actions">
-      <button class="btn lg gold" id="btnUpload" data-module-zh="📁 上传题库" data-module-en="📁 Upload a bank">📁 上传题库</button>
-      <button class="btn lg green" id="btnOffline" data-module-zh="🧪 生成离线测试" data-module-en="🧪 Make offline test">🧪 生成离线测试</button>
-    </div>
-    <input type="file" id="fileInput"
-           accept=".txt,.csv,.tsv,.json,.md,.docx,.docm,.pdf" hidden>
-    <div class="msg" id="upMsg"></div>
-    <p class="hint" data-module-zh="支持 Word (.docx)、PDF、TXT、CSV、JSON。Word/PDF 里只要能看出「英文 + 中文释义」就能自动提取，扫描件（图片版 PDF）会走 OCR 识别。老式 .doc 请先在 Word 里另存为 .docx。" data-module-en="Supports Word (.docx), PDF, TXT, CSV and JSON. Word/PDF files are read automatically as long as each entry shows an English word and its Chinese meaning; scanned PDFs go through OCR. For an old .doc file, save it as .docx in Word first.">
-      支持 Word (.docx)、PDF、TXT、CSV、JSON。Word/PDF 里只要能看出「英文 + 中文释义」就能自动提取，扫描件（图片版 PDF）会走 OCR 识别。老式 .doc 请先在 Word 里另存为 .docx。
-    </p>
+  <!-- 三个标签页：当前题库 / 新建题库 / 离线测试。网址 #banks #new #offline 可以收藏和直接打开 -->
+  <div class="tabs" role="tablist" id="bankTabs" aria-label="题库工作台">
+    <button type="button" class="tab active" role="tab" id="tabBanks" data-tab="banks" aria-controls="panelBanks" aria-selected="true">
+      <span data-module-zh="当前题库" data-module-en="Banks">当前题库</span> <span class="pill gray" id="bankCount" hidden></span></button>
+    <button type="button" class="tab" role="tab" id="tabNew" data-tab="new" aria-controls="panelNew" aria-selected="false" tabindex="-1">
+      <span data-module-zh="新建题库" data-module-en="New bank">新建题库</span></button>
+    <button type="button" class="tab" role="tab" id="tabOffline" data-tab="offline" aria-controls="panelOffline" aria-selected="false" tabindex="-1">
+      <span data-module-zh="离线测试" data-module-en="Offline test">离线测试</span></button>
   </div>
 
-  <!-- 层级选择 -->
-  <div class="card">
-    <h2 data-module-zh="题源与层级" data-module-en="Source and level">题源与层级</h2>
-    <p class="sub" data-module-zh="第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称" data-module-en="Level 1 stage → level 2 grade → level 3 volume → level 4 unit; every level can have a custom name">第一级 学段 → 第二级 年级 → 第三级 册别 → 第四级 单元；每一级都可以自定义名称</p>
-
-    <div class="row" style="margin-bottom:12px">
-      <div class="field admin-only">
-        <label for="sourceSel" data-module-zh="题源" data-module-en="Source">题源</label>
-        <select id="sourceSel">
-          <option value="seed" data-module-zh="内置课程词库" data-module-en="Built-in curriculum bank">内置课程词库</option>
-          <option value="material" data-module-zh="使用上传的资料" data-module-en="Use uploaded material">使用上传的资料</option>
-        </select>
+  <!-- ============ 标签一：当前题库 ============ -->
+  <section id="panelBanks" role="tabpanel" aria-labelledby="tabBanks">
+    <div class="card">
+      <h2 data-module-zh="当前题库" data-module-en="Current banks">当前题库</h2>
+      <p class="sub" data-module-zh="所有题库都在这里。「分类」把题库归到一本书下面（只用来整理）；「标签」决定哪些学生能看到（学生有一个相同的标签就能看到，没有标签的学生看不到）。" data-module-en="All banks are here. “Category” files a bank under a book (for tidiness only); “Tags” decide which students can see it (a student sees a bank when they share at least one tag; banks without tags are hidden from students).">所有题库都在这里。「分类」把题库归到一本书下面（只用来整理）；「标签」决定哪些学生能看到（学生有一个相同的标签就能看到，没有标签的学生看不到）。</p>
+      <div class="msg info" id="bankNotice" role="status"></div>
+      <div class="admin-filters">
+        <div class="field"><label for="bankFilter" data-module-zh="搜索题库" data-module-en="Search banks">搜索题库</label><input type="text" id="bankFilter" maxlength="40"></div>
+        <label class="check"><input type="checkbox" id="onlyClosed"> <span data-module-zh="只看学生看不到的（没有标签）" data-module-en="Only banks students cannot see (no tags)">只看学生看不到的（没有标签）</span></label>
       </div>
-      <div class="field" id="matField" style="display:none">
-        <label for="matSel" data-module-zh="选择资料" data-module-en="Material">选择资料</label>
-        <select id="matSel"></select>
-        <div class="hint" data-module-zh="每次生成只使用一份资料并生成独立题库；不会自动合并已上传资料，也不会检查缺少的单元。需要合并时，请先把多册整理进同一份文件并标好单元。" data-module-en="Each run uses one material and makes a separate bank; uploaded materials are not merged and missing units are not checked. To combine several volumes, put them into one file with the units marked.">每次生成只使用一份资料并生成独立题库；不会自动合并已上传资料，也不会检查缺少的单元。需要合并时，请先把多册整理进同一份文件并标好单元。</div>
+      <div class="list" id="bankList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 标签二：新建题库（三步） ============ -->
+  <section id="panelNew" role="tabpanel" aria-labelledby="tabNew" hidden>
+    <div class="card">
+      <h2 data-module-zh="新建题库" data-module-en="New bank">新建题库</h2>
+      <p class="sub" data-module-zh="三步：选词表 → 定义题库 → 决定谁能看到。词表文件是原始词表，题库是按单元和关卡切好、可以玩的内容；一份词表可以生成多个题库。" data-module-en="Three steps: choose a word list → define the bank → decide who can see it. A word-list file is the raw list; a bank is the playable content cut into units and levels; one list can make several banks.">三步：选词表 → 定义题库 → 决定谁能看到。词表文件是原始词表，题库是按单元和关卡切好、可以玩的内容；一份词表可以生成多个题库。</p>
+      <p class="flow" aria-hidden="true"><span data-module-zh="词表文件" data-module-en="Word-list file">词表文件</span> → <span data-module-zh="按单元切关" data-module-en="cut into levels">按单元切关</span> → <span data-module-zh="题库" data-module-en="Bank">题库</span> → <span data-module-zh="打标签开放" data-module-en="tag to release">打标签开放</span> → <span data-module-zh="学生" data-module-en="Students">学生</span></p>
+    </div>
+
+    <div class="step" data-step="1">
+      <div class="step-band"><span class="step-no" data-module-zh="Step 1" data-module-en="Step 1">Step 1</span><span class="step-title" data-module-zh="词表从哪来" data-module-en="Where the words come from">词表从哪来</span></div>
+      <div class="step-body">
+        <p class="sub" data-module-zh="选一种来源。上传的词表文件会先保存下来，之后还能再用它生成别的题库。" data-module-en="Pick one source. An uploaded file is kept, so you can make more banks from it later.">选一种来源。上传的词表文件会先保存下来，之后还能再用它生成别的题库。</p>
+        <div class="source-choice" role="radiogroup" aria-label="词表来源">
+          <label class="choice"><input type="radio" name="source" value="seed" checked> <b data-module-zh="内置人教版课程词库" data-module-en="Built-in curriculum list">内置人教版课程词库</b>
+            <small data-module-zh="初中 / 高中全部教材，按下面的层级选范围" data-module-en="All middle- and high-school textbooks; choose the range with the levels below">初中 / 高中全部教材，按下面的层级选范围</small></label>
+          <label class="choice"><input type="radio" name="source" value="upload"> <b data-module-zh="上传新词表" data-module-en="Upload a new list">上传新词表</b>
+            <small data-module-zh="Word、PDF、TXT、CSV、JSON；每行「英文 + 中文释义」，可以按单元分组" data-module-en="Word, PDF, TXT, CSV, JSON; one “English + Chinese meaning” per line, optionally grouped by unit">Word、PDF、TXT、CSV、JSON；每行「英文 + 中文释义」，可以按单元分组</small></label>
+          <label class="choice"><input type="radio" name="source" value="material"> <b data-module-zh="选用以前上传的词表" data-module-en="Use a list uploaded earlier">选用以前上传的词表</b>
+            <small data-module-zh="从已经上传过的文件里选一份" data-module-en="Pick one of the files already uploaded">从已经上传过的文件里选一份</small></label>
+        </div>
+
+        <div id="srcUpload" class="src-box" hidden>
+          <div class="actions">
+            <button type="button" class="btn gold" id="btnPick" data-module-zh="选择文件…" data-module-en="Choose a file…">选择文件…</button>
+            <button type="button" class="btn ghost" id="btnQuick" data-module-zh="快速上传并生成" data-module-en="Quick upload and generate">快速上传并生成</button>
+          </div>
+          <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json,.md,.docx,.docm,.pdf" hidden>
+          <p class="hint" data-module-zh="「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。" data-module-en="“Choose a file”: upload, check what was recognised, then define the bank below. “Quick upload and generate”: upload and generate straight away with defaults (the recognised units, 9 words per level, not released yet), then you are reminded to set tags. Supports Word (.docx), PDF (scans go through OCR), TXT, CSV, JSON; save an old .doc as .docx first.">「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。</p>
+          <div class="msg" id="upMsg" role="status"></div>
+        </div>
+
+        <div id="srcMaterial" class="src-box" hidden>
+          <div class="field"><label for="matSel" data-module-zh="选择词表" data-module-en="Word list">选择词表</label><select id="matSel"></select></div>
+          <div class="msg info" id="matInfo" role="status"></div>
+          <details class="mat-manage" id="matManage">
+            <summary data-module-zh="管理词表文件（查看、删除）" data-module-en="Manage word-list files (view, delete)">管理词表文件（查看、删除）</summary>
+            <div class="list" id="matList"><div class="empty" data-module-zh="还没有上传词表" data-module-en="No word list uploaded yet">还没有上传词表</div></div>
+          </details>
+        </div>
       </div>
     </div>
 
-    <div id="levelBox"></div>
-    <div class="row" style="margin-top:12px">
-      <div class="field" style="flex:0 0 200px">
-        <label for="pairsPerLevel" data-module-zh="每关词数" data-module-en="Words per level">每关词数</label>
-        <input type="number" id="pairsPerLevel" min="4" max="40" step="1" value="9">
-        <div class="hint" data-module-zh="一关最多多少个词；词多的单元会拆成多关（默认 9）" data-module-en="The most words in one level; units with more words are split into several levels (default 9)">一关最多多少个词；词多的单元会拆成多关（默认 9）</div>
+    <div class="step" data-step="2">
+      <div class="step-band"><span class="step-no" data-module-zh="Step 2" data-module-en="Step 2">Step 2</span><span class="step-title" data-module-zh="定义题库" data-module-en="Define the bank">定义题库</span></div>
+      <div class="step-body">
+        <p class="sub" data-module-zh="内置词库：选学段、年级、册别和单元范围。上传的词表：给它起个名字，并写上它属于哪个学段、年级、册别（不写也可以）。" data-module-en="Built-in list: choose stage, grade, volume and unit range. Uploaded list: give it a name and say which stage, grade and volume it belongs to (optional).">内置词库：选学段、年级、册别和单元范围。上传的词表：给它起个名字，并写上它属于哪个学段、年级、册别（不写也可以）。</p>
+
+        <div id="seedFields">
+          <div id="levelBox"></div>
+        </div>
+        <div id="materialFields" hidden>
+          <div class="field"><label for="bankTitle" data-module-zh="题库名称" data-module-en="Bank name">题库名称</label><input type="text" id="bankTitle" maxlength="60"></div>
+          <div class="row" style="margin-top:10px">
+            <div class="field"><label for="lv1" data-module-zh="学段" data-module-en="Stage">学段</label><input type="text" id="lv1" maxlength="20" placeholder="如：大学"></div>
+            <div class="field"><label for="lv2" data-module-zh="年级" data-module-en="Grade">年级</label><input type="text" id="lv2" maxlength="20" placeholder="如：大学英语"></div>
+            <div class="field"><label for="lv3" data-module-zh="册别" data-module-en="Volume">册别</label><input type="text" id="lv3" maxlength="20" placeholder="如：读写教程 第一册"></div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <div class="field" style="flex:0 0 200px">
+            <label for="pairsPerLevel" data-module-zh="每关词数" data-module-en="Words per level">每关词数</label>
+            <input type="number" id="pairsPerLevel" min="4" max="40" step="1" value="9">
+            <div class="hint" data-module-zh="一关最多多少个词；词多的单元会拆成多关（默认 9，手机竖屏一屏正好放下）" data-module-en="The most words in one level; units with more words are split into several levels (default 9: fits one phone screen)">一关最多多少个词；词多的单元会拆成多关（默认 9，手机竖屏一屏正好放下）</div>
+          </div>
+        </div>
+        <label class="hint" style="display:block;margin:10px 0">
+          <input type="checkbox" id="splitNew">
+          <span data-module-zh="按单元拆成多个题库（一个单元一个题库，之后可以批量开放给学生）" data-module-en="Split into one bank per unit (you can then release them to students in bulk)">按单元拆成多个题库（一个单元一个题库，之后可以批量开放给学生）</span>
+        </label>
+        <div class="msg info" id="selInfo" role="status"></div>
       </div>
     </div>
-    <div class="msg info" id="selInfo"></div>
-    <label class="hint" style="display:block;margin:10px 0">
-      <input type="checkbox" id="splitNew">
-      <span data-module-zh="按单元拆成多个题库（一个单元一个题库，之后可以在首页批量开放给学生）" data-module-en="Split into one bank per unit (you can then release them to students in bulk on the home page)">按单元拆成多个题库（一个单元一个题库，之后可以在首页批量开放给学生）</span>
-    </label>
-    <div class="actions">
-      <button class="btn" id="btnMake" data-module-zh="生成题库" data-module-en="Generate bank">生成题库</button>
+
+    <div class="step optional" data-step="3">
+      <div class="step-band"><span class="step-no" data-module-zh="Step 3" data-module-en="Step 3">Step 3</span><span class="step-title" data-module-zh="开放给谁（可以稍后再设）" data-module-en="Who can see it (can be set later)">开放给谁（可以稍后再设）</span></div>
+      <div class="step-body">
+        <p class="sub" data-module-zh="分类 = 书名，只用来整理。标签 = 谁能看到：写班级名（如「学前2601」）就只开放给那个班；不写标签，学生就看不到这个题库（老师始终看得到）。" data-module-en="Category = book name, for tidiness only. Tags = who can see it: a class name (e.g. “Class A”) opens it to that class only; without tags students cannot see the bank (you always can).">分类 = 书名，只用来整理。标签 = 谁能看到：写班级名（如「学前2601」）就只开放给那个班；不写标签，学生就看不到这个题库（老师始终看得到）。</p>
+        <div class="row">
+          <div class="field"><label for="newCategory" data-module-zh="分类（书名）" data-module-en="Category (book name)">分类（书名）</label><input type="text" id="newCategory" maxlength="20"></div>
+          <div class="field" id="tagsField"><label for="newTags" data-module-zh="标签（用逗号隔开）" data-module-en="Tags (comma separated)">标签（用逗号隔开）</label><input type="text" id="newTags" maxlength="120"></div>
+        </div>
+        <div class="chips" id="tagChips"></div>
+      </div>
     </div>
-  </div>
 
-  <!-- 资料列表 -->
-  <div class="card admin-only">
-    <h2 data-module-zh="已上传的资料" data-module-en="Uploaded materials">已上传的资料</h2>
-    <p class="sub" data-module-zh="支持 TXT / CSV / TSV / JSON；JSON、CSV 会自动识别单元字段" data-module-en="TXT / CSV / TSV / JSON; unit fields in JSON and CSV are detected automatically">支持 TXT / CSV / TSV / JSON；JSON、CSV 会自动识别单元字段</p>
-    <div class="list" id="matList"><div class="empty" data-module-zh="还没有上传资料" data-module-en="No material uploaded yet">还没有上传资料</div></div>
-  </div>
+    <div class="card make-bar">
+      <div class="msg" id="makeMsg" role="status"></div>
+      <div class="actions">
+        <button type="button" class="btn lg gold" id="btnMake" data-module-zh="生成题库" data-module-en="Generate bank">生成题库</button>
+        <span class="hint" id="makeHint"></span>
+      </div>
+    </div>
+  </section>
 
-  <!-- 题库列表 -->
-  <div class="card">
-    <h2 data-module-zh="已生成的题库" data-module-en="Generated banks">已生成的题库</h2>
-    <p class="sub" data-module-zh="可以直接玩，也可以导出成离线单文件网页" data-module-en="Play them directly, or export them as a single-file offline page">可以直接玩，也可以导出成离线单文件网页</p>
-    <div class="list" id="bankList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
-  </div>
-
-  <!-- 离线文件 -->
-  <div class="card admin-only">
-    <h2 data-module-zh="已生成的离线测试页" data-module-en="Generated offline test pages">已生成的离线测试页</h2>
-    <p class="sub" data-module-zh="文件名规则：层级 + 日期 + 时间.html" data-module-en="File name: level + date + time.html">文件名规则：层级 + 日期 + 时间.html</p>
-    <div class="list" id="fileList"><div class="empty" data-module-zh="还没有生成过" data-module-en="None generated yet">还没有生成过</div></div>
-  </div>
-
-  <footer class="foot" data-module-zh="离线测试页是单个 HTML 文件，词表、样式、脚本全部内嵌，双击即可在没网的电脑上玩，成绩存在浏览器本地。" data-module-en="An offline test page is a single HTML file with the word list, styles and scripts all built in: double-click it to play on a computer without internet. Scores are kept in the browser.">
-    离线测试页是单个 HTML 文件，词表、样式、脚本全部内嵌，双击即可在没网的电脑上玩，成绩存在浏览器本地。
-  </footer>
+  <!-- ============ 标签三：离线测试 ============ -->
+  <section id="panelOffline" role="tabpanel" aria-labelledby="tabOffline" hidden>
+    <div class="card">
+      <h2 data-module-zh="离线测试" data-module-en="Offline test">离线测试</h2>
+      <p class="sub" data-module-zh="把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。" data-module-en="Export an existing bank as a single HTML file: word list, styles, scripts and audio are all built in, so you can double-click it on a computer without internet; scores stay in that computer’s browser. Good for classrooms without network or for USB sticks. Exporting does not create a bank.">把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。</p>
+      <div class="row">
+        <div class="field"><label for="offBank" data-module-zh="选择题库" data-module-en="Bank">选择题库</label><select id="offBank"></select></div>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn gold" id="btnOfflineMake" data-module-zh="生成并下载" data-module-en="Generate and download">生成并下载</button>
+      </div>
+      <p class="hint" data-module-zh="语音合成需要几分钟，生成过程中请不要关闭本页。" data-module-en="Speech synthesis takes a few minutes; please keep this page open while it runs.">语音合成需要几分钟，生成过程中请不要关闭本页。</p>
+    </div>
+    <div class="card">
+      <h2 data-module-zh="已生成的离线测试页" data-module-en="Generated offline test pages">已生成的离线测试页</h2>
+      <p class="sub" data-module-zh="文件名规则：层级 + 日期 + 时间.html" data-module-en="File name: level + date + time.html">文件名规则：层级 + 日期 + 时间.html</p>
+      <div class="list" id="fileList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
+    </div>
+  </section>
 </div>
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=20261114-release"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261116-bank"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261115-roleflash"></script>
 <script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
 <script src="/word-puzzle/js/selector.js?v=20261104-volumes"></script>
-<script src="/word-puzzle/js/page-bank.js?v=20261114-release"></script>
+<script src="/word-puzzle/js/release-presets.js?v=20261114-release"></script>
+<script src="/word-puzzle/js/bank-panels.js?v=20261116-bank"></script>
+<script src="/word-puzzle/js/page-bank.js?v=20261116-bank"></script>
 <script src="/shared/module-header.js"></script>
 </body>
 </html>
