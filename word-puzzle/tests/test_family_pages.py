@@ -153,7 +153,7 @@ class TestExistingPages(unittest.TestCase):
         for heading in ("主要操作", "已上传的资料", "已生成的离线测试页"):
             self.assertRegex(bank, r'<div class="card admin-only">\s*<h2[^>]*>%s</h2>' % heading)
         self.assertRegex(bank, r'<div class="field admin-only">\s*<label[^>]*>题源</label>')
-        self.assertIn("body.role-student .admin-only", read("css/auth.css"))
+        self.assertIn("html.role-student .admin-only", read("css/auth.css"))
 
     def test_bank_page_only_loads_admin_data_for_admins(self):
         code = read("js/page-bank.js")
@@ -289,10 +289,10 @@ class TestStudentViewIsWired(unittest.TestCase):
 
     def test_a_student_login_switches_the_view_on(self):
         ui = (WEB / "js" / "auth-ui.js").read_text(encoding="utf-8")
-        self.assertIn("document.body.classList.add('role-student')", ui)
+        self.assertIn("h.classList.add(role === 'admin' ? 'role-admin' : 'role-student')", ui)
         css = (WEB / "css" / "auth.css").read_text(encoding="utf-8")
-        self.assertIn("body.role-student .admin-only { display: none !important; }", css)
-        self.assertIn("body.role-student .student-only", css)
+        self.assertIn("html.role-student .admin-only, html.role-pending .admin-only { display: none !important; }", css)
+        self.assertIn("html.role-student .student-only", css)
 
     def test_the_home_page_waits_for_the_role_and_groups_by_category(self):
         js = (WEB / "js" / "page-home.js").read_text(encoding="utf-8")

@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="wp-base" content="/word-puzzle">
@@ -10,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/game.css?v=20261107-exit-link">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261112-auth">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-roleflash">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
 <body>
@@ -49,7 +50,7 @@
 <script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
 <script src="/word-puzzle/js/i18n-lexica.js?v=20261114-release"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
-<script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261115-roleflash"></script>
 <script src="/word-puzzle/js/game-core.js"></script>
 <script src="/word-puzzle/js/game-ui.js?v=20261107-exit-link"></script>
 <script src="/word-puzzle/js/game-adapter-online.js?v=20261104-base"></script>

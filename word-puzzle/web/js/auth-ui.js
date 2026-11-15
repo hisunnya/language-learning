@@ -178,6 +178,19 @@
 
   var info = { enabled: false, user: null };
 
+  /* 角色：记在 <html> 的 class 和 sessionStorage 里。换页面时 <head> 里的脚本据此在页面画出来之前就设好，
+     不会先闪一下教师版。服务器的答复回来后再校正一次。 */
+  var ROLE_KEY = 'wp_role';
+  function setRole(role) {            /* role: 'admin' | 'student' | '' (未知，清掉) */
+    var h = document.documentElement;
+    h.classList.remove('role-pending', 'role-student', 'role-admin');
+    if (role) h.classList.add(role === 'admin' ? 'role-admin' : 'role-student');
+    try {
+      if (role) sessionStorage.setItem(ROLE_KEY, role === 'admin' ? 'admin' : 'student');
+      else sessionStorage.removeItem(ROLE_KEY);
+    } catch (e) { }
+  }
+
   function decorate(user) {
     document.body.classList.add('role-' + user.role);
     var controls = document.getElementById('portalHeaderControls');
@@ -198,7 +211,7 @@
       out.textContent = t('signOut');
       out.addEventListener('click', function () {
         out.disabled = true;
-        API.post('/api/auth/logout', {}).catch(function () {}).then(function () { go('login.html', false); });
+        API.post('/api/auth/logout', {}).catch(function () {}).then(function () { setRole(''); go('login.html', false); });
       });
       chip.appendChild(name);
       chip.appendChild(out);
@@ -206,7 +219,6 @@
     }
     /* 学生只看得到选题库和玩：题库管理、生成离线页等带 admin-only 的东西都不显示。
        服务端本来就会拒绝，这里是不让他们看到用不了的入口。 */
-    if (user.role !== 'admin') document.body.classList.add('role-student');
     var nav = document.querySelector('.portal-nav');
     if (nav && user.role === 'admin' && !document.getElementById('adminNavLink')) {
       var link = document.createElement('a');
@@ -224,19 +236,26 @@
     var mode = document.body.getAttribute('data-auth') || '';
     info = { enabled: !!res.auth_enabled, user: res.user || null };
     if (!info.enabled) {
+      setRole('admin');                       /* 局域网版没有账号，等同老师 */
       if (mode === 'admin' || mode === 'change') go('', false);
       return info;
     }
     if (!info.user) {
-      if (mode !== 'public') go('login.html', true);
+      setRole('');
+      if (mode === 'public') document.documentElement.classList.remove('role-pending');
+      else go('login.html', true);            /* 马上要跳走：页面保持不显示，免得先闪出内容 */
       return info;
     }
+    setRole(info.user.role);
     if (info.user.must_change && mode !== 'change') { go('change-password.html', true); return info; }
     if (mode === 'public' && !info.user.must_change) { location.replace(queryNext()); return info; }
     if (mode === 'admin' && info.user.role !== 'admin') { go('', false); return info; }
     decorate(info.user);
     return info;
-  }).catch(function () { return info; });
+  }).catch(function () {
+    setRole('student');                       /* 问不到服务器：按学生视图显示，总比一直空白、或露出教师控件好 */
+    return info;
+  });
 
   global.AuthUI = {
     ready: ready,

@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="wp-base" content="/word-puzzle">
 <meta name="robots" content="noindex">
@@ -10,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261112-auth">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-roleflash">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
 <body data-auth="admin">
@@ -91,7 +92,7 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/api.js?v=20261112-auth"></script>
-<script src="/word-puzzle/js/auth-ui.js?v=20261112-auth"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261115-roleflash"></script>
 <script src="/word-puzzle/js/page-admin.js?v=20261112-auth"></script>
 <script src="/shared/module-header.js"></script>
 </body>

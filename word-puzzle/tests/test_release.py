@@ -344,7 +344,7 @@ class TestPages(unittest.TestCase):
         for needle in (".modal-back", ".presets", ".chip", ".unit-row"):
             self.assertIn(needle, css)
         for page in ("index.html", "bank.html"):
-            self.assertIn("auth.css?v=20261114-release", (self.WEB / page).read_text(encoding="utf-8"), page)
+            self.assertIn("auth.css?v=20261115-roleflash", (self.WEB / page).read_text(encoding="utf-8"), page)
 
 
 @unittest.skipUnless(NODE, "本机没有 node，跳过预设范围的行为测试")
