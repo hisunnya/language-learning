@@ -27,6 +27,19 @@ the repository — see §2 for everything else.
 - Before pushing, `git rebase origin/main` — the remote often has commits that
   landed in the meantime.
 
+### Identity: never the company e-mail
+
+This is a **personal** repository and it is public: the author and committer e-mail of
+every commit is published with the history. Commits must carry the GitHub no-reply
+address (`<id>+<username>@users.noreply.github.com`), never a company or other private
+address. Before the first commit on a machine check `git config user.email`; if it is
+wrong, fix it (`git config --global user.email …`) *before* committing. The hygiene
+test fails on any e-mail address in tracked files, and a history check
+(`git log --all --format=%ae %ce | sort -u`) must show only the no-reply address.
+Rewriting published history to remove a leaked address needs the owner's explicit
+agreement (it requires a force-push) — it was done once, on the owner's request, to
+remove a company address.
+
 ### Branches and reverts
 
 - One logical change per commit. Do not mix a refactor with a behaviour change.
@@ -308,15 +321,15 @@ titles, headers, README and the hub.
 **Architecture (one backend, two fronts, one database).** There is a single Lexica backend,
 in the container `lexica` (the *student edition*, 学生版). It has two nginx entrances: the
 public one (Funnel → 127.0.0.1:8081) requires login for everything; the LAN one
-(`WP_LAN_ADDR`, `<container-ip>:8082`, also reached through pvehost's nginx at
-`http://192.168.1.93/word-puzzle/`) lets visitors play without login and records their
+(`WP_LAN_ADDR`, `<container-ip>:8082`, also reached through the host's nginx at
+`http://<host>/word-puzzle/`) lets visitors play without login and records their
 visits and scores by device — the *home edition* (家庭版, formerly "局域网版") — and asks for a
 teacher login only when a management function is used, with the same accounts because it
 is the same database. nginx marks the entrance with `X-Wp-Entry` (cleared on the public
 side); the backend honours it only from a loopback peer with `WP_LAN_GUEST=1`.
-The database lives **outside the container** (pvehost `/data01/lexica-data`, backups in
-`/data02/lexica-backup`, both bind-mounted); the container stays stateless. The old
-separate home backend on pvehost is retired. Other subjects plug in through
+The database lives **outside the container** (a host directory, backups on another disk,
+both bind-mounted; paths in `AGENTS.local.md`); the container stays stateless. The old
+separate home backend on the host is retired. Other subjects plug in through
 `server/modules.py`, `/api/records` and `server/policy.py`; see `docs/路线图.md`.
 
 
@@ -344,9 +357,8 @@ separate instance of the same code and is *not* part of `deploy-all`:
 127.0.0.1:8766 and nginx on 127.0.0.1:8081, and never touches the home edition or
 Tailscale. Install it in its own container or VM, not on the PVE host
 (`word-puzzle/deploy/family/部署说明.md`).
-Planned container: unprivileged LXC, hostname `lexica`, static address
-192.168.1.100/20 via gateway 192.168.1.1 on `vmbr0` (the PVE host is 192.168.1.93; guests
-100, 101 and 102 already exist, so pick a free id with `qm list; pct list`).
+Container: unprivileged LXC, hostname `lexica`, static address on `vmbr0` (the concrete
+id and addresses are in `AGENTS.local.md`; pick a free id with `qm list; pct list`).
 
 **Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
 previous one with `git mv` to the new timestamp (never keep two side by side),
@@ -357,31 +369,34 @@ new module is added to all three — and commit it together with the change.
 
 ## 6. Servers and network
 
+**Private facts are not in this file.** The repository is public, so addresses, host
+names, user names, the container id, the Funnel URL and the like live in
+`AGENTS.local.md` (git-ignored, on the developer machine — read it first if it exists)
+and, on the servers, in the git-ignored `deploy.local.env`
+(`deploy.local.env.example` shows the keys). Never write them into a tracked file, a
+commit message, a PR description or a test; `word-puzzle/tests/test_repo_hygiene.py`
+fails on private-looking addresses, tailnet host names and e-mail addresses.
+
 ### 6.1 The home network
 
-The household LAN is **192.168.0.0/20**.
-
-- **Both domestic and foreign sites are reachable directly.** There is no
-  corporate proxy and no whitelist to work around — do not set `HTTP_PROXY`,
-  `HTTPS_PROXY` or `NO_PROXY` here, and do not try to reach things "through"
-  a gateway.
+- **Both domestic and foreign sites are reachable directly from the servers.** There is
+  no corporate proxy and no whitelist to work around — do not set `HTTP_PROXY`,
+  `HTTPS_PROXY` or `NO_PROXY` there, and do not try to reach things "through" a gateway.
 - A script that downloads from the internet therefore just works. Bind an
   explicit timeout to every outbound call anyway, and make big downloads
   resumable so a dropped connection does not cost the whole file.
 - When a download fails, report **which URL failed and how** ("GitHub reset
   after 90 s" is an answer; "it timed out" is not).
-
-- **The home broadband is behind carrier-grade NAT** (router WAN address
-  100.64.x.x, the ISP no longer hands out public IPs, IPv6 is not used), so router
-  port forwarding cannot work. Public access goes through **Tailscale Funnel**
-  (`https://<name>.<tailnet>.ts.net`, HTTPS certificate handled by Tailscale, no
-  domain needed); it was tested from the company network and from a phone on
-  mobile data. Funnel's bandwidth is limited and its reachability from China is
-  not guaranteed.
+- **The home broadband is behind carrier-grade NAT** (the ISP no longer hands out
+  public IPs, IPv6 is not used), so router port forwarding cannot work. Public access
+  goes through **Tailscale Funnel** (`https://<name>.<tailnet>.ts.net`, HTTPS
+  certificate handled by Tailscale, no domain needed); it was tested from the company
+  network and from a phone on mobile data. Funnel's bandwidth is limited and its
+  reachability from China is not guaranteed.
 
 ### 6.2 The production server
 
-**192.168.1.93** — PVE (Proxmox VE) host, hostname `pvehost`.
+A PVE (Proxmox VE) host on the home network.
 
 It runs **Debian 13 (trixie)**, not Ubuntu — PVE is built on Debian. Anything
 that names a distribution must use `debian`/`trixie` there: the nginx.org apt
@@ -404,20 +419,21 @@ do not restart those services as a side effect of a deploy.
   Scripts must stay Debian/Ubuntu-neutral (`apt-get`, `www-data`, Python
   `venv` for pip packages — system pip is externally managed).
 - Deploy is `git pull` in the checkout (`/root/language-learning`), then
-  `sudo bash deploy-all-<timestamp>.sh`: the script copies the files into the
-  deployment paths and reloads. The checkout itself is never what nginx serves.
+  `sudo bash deploy-all-<timestamp>.sh`: the script reads its target from
+  `deploy.local.env`, copies the files into the deployment paths and reloads. The
+  checkout itself is never what nginx serves.
 
 ### 6.2.1 The development VM
 
-**192.168.1.5** — an Ubuntu 26.04 arm64 VM used as the test target for the
-deploy scripts. It is reachable over SSH as `devuser` with passwordless
-`sudo`, so `sudo env LINGUA_SERVER_NAME=192.168.1.5 bash deploy-all-<timestamp>.sh`
-runs there for real. Never grant passwordless `sudo` on 192.168.1.93.
+An Ubuntu 26.04 arm64 VM used as the test target for the deploy scripts. It is
+reachable over SSH with passwordless `sudo`, so `sudo bash deploy-all-<timestamp>.sh`
+(with its own `deploy.local.env`) runs there for real. Never grant passwordless
+`sudo` on the production host.
 
 ### 6.3 Where the work happens
 
 Development happens on a macOS workstation and on the development VM
-(6.2.1) in parallel; deployment is a copy to 192.168.1.93 plus a service reload.
+(6.2.1) in parallel; deployment is a copy to the production host plus a service reload.
 The scripts need root, systemd and nginx, so they cannot run on macOS: verify
 them on the development VM. A change that has only been verified on the
 workstation or the development VM has **not** been verified in production —

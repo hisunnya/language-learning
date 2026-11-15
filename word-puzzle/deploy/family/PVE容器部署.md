@@ -7,7 +7,7 @@ PVE 宿主机（管理界面、SSH、其他虚拟机）不在对外的路径上�
 学生手机 --HTTPS--> Tailscale Funnel --> [LXC 容器 lexica]
                                            tailscaled
                                            nginx 127.0.0.1:8081 --> 后端 127.0.0.1:8766
-PVE 宿主机 pvehost：只负责跑这个容器，不装本程序，不开 Funnel
+PVE 宿主机 PVE 宿主机：只负责跑这个容器，不装本程序，不开 Funnel
 ```
 
 下面的命令分两处执行：标「宿主机」的在 PVE 宿主机上（root），标「容器内」的在容器里（用 `pct enter $CTID` 进去，不需要密码，**也不要给容器开 SSH**）。
@@ -37,7 +37,7 @@ pveam download local debian-13-standard_13.6-1_amd64.tar.zst    # 模板名以�
 pvesm status                                              # 看存储名：下面的 local-lvm 要换成这里有的（需要「Content 含 rootdir」）
 ```
 
-确认 IP 没被占用：`ping -c 2 192.168.1.100` 应该全部丢包；同时进路由器把 `192.168.1.100` 排除出 DHCP 地址池
+确认 IP 没被占用：`ping -c 2 <容器IP>` 应该全部丢包；同时进路由器把 `<容器IP>` 排除出 DHCP 地址池
 （或者确认它不在池子里），否则以后某台手机可能被分到同一个地址。
 
 ```bash
@@ -50,18 +50,18 @@ pct create $CTID local:vztmpl/$TEMPLATE \
   --features nesting=1,keyctl=1 \
   --cores 1 --memory 1024 --swap 512 \
   --rootfs local-lvm:8 \
-  --net0 name=eth0,bridge=vmbr0,ip=192.168.1.100/20,gw=192.168.1.1 \
+  --net0 name=eth0,bridge=vmbr0,ip=<容器IP>/<前缀长度>,gw=<网关> \
   --onboot 1 --start 0
 ```
 
 - **一定要非特权容器**（`--unprivileged 1`）：容器里即使被攻破，也只是宿主机上一个没有权限的普通用户。
-- 网络：静态地址 `192.168.1.100`，掩码 `/20`（255.255.240.0），网关 `192.168.1.1`，桥接 `vmbr0`（和宿主机 `192.168.1.93` 同一个网络）。
+- 网络：静态地址 `<容器IP>`，掩码 `/20`（255.255.240.0），网关 `<网关>`，桥接 `vmbr0`（和宿主机 `<服务器IP>` 同一个网络）。
   换地址就改 `ip=` 和 `gw=` 两处。
 - DNS 不写就继承宿主机的设置。如果以后容器里能 ping 通 IP 却解析不了域名，再加一条
-  `pct set $CTID --nameserver 192.168.1.1`（路由器做 DNS 转发）或者你家实际在用的 DNS 服务器。
+  `pct set $CTID --nameserver <网关>`（路由器做 DNS 转发）或者你家实际在用的 DNS 服务器。
 - `--rootfs local-lvm:8` 的存储名按 `pvesm status` 的结果改，8 GB 足够。
 - 不用设 root 密码，也不要装 SSH，需要进去时在宿主机上 `pct enter $CTID`。
-- 创建完查看一下：`pct config $CTID`，应该能看到 `unprivileged: 1`、`net0: ...ip=192.168.1.100/20,gw=192.168.1.1`。
+- 创建完查看一下：`pct config $CTID`，应该能看到 `unprivileged: 1`、`net0: ...ip=<容器IP>/<前缀长度>,gw=<网关>`。
 
 ## 二、给容器放行 TUN 设备（宿主机）
 
@@ -83,7 +83,7 @@ CONF
 ```
 
 然后启动容器：`pct start $CTID`，进去确认设备在：`pct enter $CTID` → `ls -l /dev/net/tun`。
-再确认网络通：在容器里 `ip -4 addr show eth0`（应该是 192.168.1.100/20）、`ping -c 2 192.168.1.1`、`ping -c 2 debian.org`。
+再确认网络通：在容器里 `ip -4 addr show eth0`（应该是 <容器IP>/<前缀长度>）、`ping -c 2 <网关>`、`ping -c 2 debian.org`。
 
 > 如果不想给容器 TUN 设备，官方还提到一种「用户态网络」模式（不需要设备权限）。
 > **Funnel 在这个模式下能不能用我没有实测**，所以本文不用它；真遇到 TUN 放不通，改用虚拟机（VM）最省事。
@@ -186,7 +186,7 @@ tailscale funnel status                 # 应该只看到 8081 这一条
 
 ## 七、宿主机上已有的 Tailscale
 
-你之前在 pvehost 宿主机上试过 Tailscale（节点名 `pvehost`）。建议清理掉，免得宿主机的名字和节点留在 tailnet 里：
+你之前在 PVE 宿主机 宿主机上试过 Tailscale（节点名 `PVE 宿主机`）。建议清理掉，免得宿主机的名字和节点留在 tailnet 里：
 
 ```bash
 # 宿主机
@@ -195,7 +195,7 @@ tailscale logout
 apt-get -y remove tailscale
 ```
 
-然后在管理后台 Machines 页把 `pvehost` 这条记录也删掉。
+然后在管理后台 Machines 页把 `PVE 宿主机` 这条记录也删掉。
 如果你想保留它用来远程管理宿主机，也可以留在 tailnet 里，但**绝不要**在宿主机上开 Funnel，
 并确认 `tailscale funnel status` 显示 `No serve config`。
 
@@ -214,7 +214,7 @@ apt-get -y remove tailscale
 
 ## 九、网址会不会变，怎样让它不变
 
-网址 = `机器名.tailnet名.ts.net`，例如 `lexica.example-net.ts.net`。发给学生的链接和二维码都依赖它，所以要尽量不变。
+网址 = `机器名.tailnet名.ts.net`，例如 `lexica.<你的tailnet>.ts.net`。发给学生的链接和二维码都依赖它，所以要尽量不变。
 
 **1. 什么操作会让它变**
 
@@ -281,8 +281,8 @@ apt-get -y remove tailscale
 | `pct create` 报 `vmid: type check ('integer') failed - got 'CTID'` | 把 `CTID` 这几个字母当成编号写进了命令。先 `CTID=120`（一个没被占用的数字），命令里写 `$CTID`，见开头 |
 | `pct create` 报编号已存在 | 这个编号被虚拟机或容器占了：`qm list; pct list`，换一个 |
 | `pct create` 报存储不存在 / 不支持 rootdir | `pvesm status` 看实际的存储名，把 `--rootfs local-lvm:8` 里的 `local-lvm` 换掉；这个存储的 Content 要包含 Container（rootdir） |
-| 容器起来了，但 `ping 192.168.1.1` 不通 | 看 `pct config $CTID` 里 `net0` 的 `ip=`、`gw=` 有没有写对，桥是不是 `vmbr0`；地址被别的设备占了会时通时断（`ping` 它看看） |
-| 容器里 ping IP 通，ping 域名不通 | 没有 DNS：`pct set $CTID --nameserver 192.168.1.1` 后 `pct reboot $CTID` |
+| 容器起来了，但 `ping <网关>` 不通 | 看 `pct config $CTID` 里 `net0` 的 `ip=`、`gw=` 有没有写对，桥是不是 `vmbr0`；地址被别的设备占了会时通时断（`ping` 它看看） |
+| 容器里 ping IP 通，ping 域名不通 | 没有 DNS：`pct set $CTID --nameserver <网关>` 后 `pct reboot $CTID` |
 | `tailscale up` 报 `/dev/net/tun` 打不开 | 第二节没生效：确认配置后**重启容器**（`pct reboot $CTID`），再 `ls -l /dev/net/tun` |
 | `tailscale up` 一直卡着不出网址 | 容器出不了网：`curl -I https://login.tailscale.com`；检查 `--net0` 的网关和 DNS |
 | `tailscale funnel` 提示 Funnel 没开 | 按它给的网址在管理后台批准一次；或者 ACL 里缺 `funnel` 属性 |

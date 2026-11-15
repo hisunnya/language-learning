@@ -27,10 +27,10 @@ NGINX_PORT="${WP_FAMILY_NGINX_PORT:-8081}"
 TTS_VENV="${WP_FAMILY_TTS_VENV:-/opt/word-puzzle-family/tts-venv}"
 PUBLIC_URL="${WP_PUBLIC_URL:-}"
 PROXY_INC=/etc/nginx/word-puzzle-family-proxy.inc
-# 内网入口（可选）：WP_LAN_ADDR=容器的内网地址（例如 192.168.1.100），端口默认 8082。
+# 内网入口（可选）：WP_LAN_ADDR=容器的内网地址（例如 <容器IP>），端口默认 8082。
 # 同一个后端、同一个数据库、同一套账号，只是多一个只监听内网地址的入口（家庭版）：
 # 不登录就能做题并留下记录，点到管理功能才要老师登录。Funnel 只指向 127.0.0.1:$NGINX_PORT，到不了这里，公网仍然全部要登录。
-# WP_TRUSTED_PROXIES=我们自己的前置代理地址（逗号分隔，例如 pvehost 的 192.168.1.93），访问记录里会跳过它们。
+# WP_TRUSTED_PROXIES=我们自己的前置代理地址（逗号分隔，例如 PVE 宿主机 的 <服务器IP>），访问记录里会跳过它们。
 LAN_ADDR="${WP_LAN_ADDR:-}"
 LAN_PORT="${WP_LAN_PORT:-8082}"
 TRUSTED_PROXIES="${WP_TRUSTED_PROXIES:-}"

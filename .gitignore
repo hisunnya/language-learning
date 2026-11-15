@@ -47,3 +47,8 @@ word-puzzle/data/raw/ecdict.csv
 backups/
 lexica-data/
 lexica-backup/
+
+# 部署时用的私有地址（真实值只存在本机和服务器上）
+deploy.local.env
+AGENTS.local.md
+.private-patterns

@@ -129,8 +129,8 @@ FORWARD_HEADERS = (            # 收到什么存什么（只存有的）
 
 
 def trusted_proxies() -> set[str]:
-    """我们自己信任的前置代理地址（环境变量 WP_TRUSTED_PROXIES，逗号分隔）：例如 pvehost 上的 nginx 把请求转给容器时，
-    转发链最后一环是 pvehost，要跳过它才是真正的访客。"""
+    """我们自己信任的前置代理地址（环境变量 WP_TRUSTED_PROXIES，逗号分隔）：例如 PVE 宿主机 上的 nginx 把请求转给容器时，
+    转发链最后一环是 PVE 宿主机，要跳过它才是真正的访客。"""
     return {ip for ip in (_valid_ip(x) for x in os.environ.get("WP_TRUSTED_PROXIES", "").split(",")) if ip}
 
 

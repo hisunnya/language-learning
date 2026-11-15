@@ -11,7 +11,7 @@
       /topics/、/ham/、/chemistry/ 和 /physics/ 下。
 
    B) 不同端口
-      把 href 改成完整地址，例如 http://192.168.1.93:8765/
+      把 href 改成完整地址，例如 http://服务器地址:8765/
 
    C) 不同域名
       把 href 改成完整地址，例如 http://lexica.lan/

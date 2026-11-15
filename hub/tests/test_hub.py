@@ -400,7 +400,7 @@ class TestDeployment(unittest.TestCase):
         script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
         self.assertNotIn('chemistry/." ', script)
         self.assertIn('chemistry/js"', script)
-        self.assertIn('LINGUA_SERVER_NAME:-192.168.1.93', script)
+        self.assertIn('SERVER_NAME="${LINGUA_SERVER_NAME:-}"', script)      # 目标地址必须显式给，不在仓库里写死
 
     def test_shared_module_header_assets_have_a_common_url(self):
         self.assertIn("location ^~ /shared/", NGINX)
@@ -429,10 +429,27 @@ class TestDeployment(unittest.TestCase):
         self.assertIn('UPSTREAM_PATH="/word-puzzle/api/"', INSTALL_SCRIPT)
         self.assertIn("LEXICA_UPSTREAM", INSTALL_SCRIPT)
 
+    def test_deploy_all_reads_private_targets_from_the_untracked_env_file(self):
+        import glob, subprocess, tempfile
+        script = open(glob.glob(str(HUB.parent / "deploy-all-*.sh"))[0], encoding="utf-8").read()
+        start = script.index('if [[ -f "$REPO_DIR/deploy.local.env" ]]')
+        end = script.index("LEXICA_UPSTREAM=\"${LEXICA_UPSTREAM:-}\"") + len("LEXICA_UPSTREAM=\"${LEXICA_UPSTREAM:-}\"")
+        snippet = script[start:end]
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "deploy.local.env").write_text('# 注释\nLINGUA_SERVER_NAME="srv.example"\nLEXICA_UPSTREAM=up.example:8082\nEVIL=$(touch pwned)\n', encoding="utf-8")
+            def run(env_extra):
+                code = 'set -euo pipefail\nREPO_DIR=%s\n%s\necho "[$SERVER_NAME][$LEXICA_UPSTREAM][${EVIL:-}]"' % (tmp, snippet)
+                env = {"PATH": "/usr/bin:/bin", **env_extra}
+                return subprocess.run(["bash", "-c", code], capture_output=True, text=True, env=env).stdout.strip()
+            self.assertEqual(run({}), "[srv.example][up.example:8082][]")                        # 文件里的值生效，不认识的键被忽略
+            self.assertEqual(run({"LINGUA_SERVER_NAME": "cli.example"}), "[cli.example][up.example:8082][]")   # 环境变量优先
+            self.assertFalse((Path(tmp) / "pwned").exists())                                    # 值不会被当命令执行
+        self.assertNotRegex(script, r"10\.[0-9]+\.[0-9]+\.[0-9]+")
+
     def test_lexica_copy_uses_volume_terminology_without_fixed_server_ip(self):
         self.assertIn("册别", JS)
         self.assertIn("volume", JS)
-        self.assertNotIn("192.168.1.93", JS)
+        self.assertIsNone(re.search(r"(?<![0-9.])(10|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]+\.[0-9]+(\.[0-9]+)?", JS), "页面脚本里不能写内网地址")
 
 
 if __name__ == "__main__":

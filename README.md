@@ -128,13 +128,16 @@ language-learning/
 在生产服务器执行 `git pull` 后，从仓库根目录运行：
 
 ```bash
-sudo bash ./deploy-all-20261115_140000.sh
+sudo bash ./deploy-all-20261115_150000.sh
 ```
 
-脚本默认部署到 `192.168.1.93`，会更新词境后端、语林门户、每日话题、无线电执照和 nginx 统一入口（配置写入 `/etc/nginx/conf.d/lingua-grove.conf`），并检查四个页面及词境 API。缺少 `conf.d` 时会自动创建；词境现有数据库会保留。目标地址不同时可覆盖：
+脚本部署到你指定的服务器（地址写在不进 git 的 `deploy.local.env` 里，见下），会更新词境后端、语林门户、每日话题、无线电执照和 nginx 统一入口（配置写入 `/etc/nginx/conf.d/lingua-grove.conf`），并检查四个页面及词境 API。缺少 `conf.d` 时会自动创建；词境现有数据库会保留。目标服务器的地址不写在仓库里（仓库是公开的）：把 `deploy.local.env.example` 复制成 `deploy.local.env`（已在 `.gitignore` 里，不会提交）并改成自己的值，
+放在服务器上的仓库检出目录里；同名环境变量优先于文件：
 
 ```bash
-sudo env LINGUA_SERVER_NAME=服务器IP或域名 bash ./deploy-all-20261115_140000.sh
+cp deploy.local.env.example deploy.local.env     # 然后编辑：LINGUA_SERVER_NAME、LEXICA_UPSTREAM
+sudo bash ./deploy-all-20261115_150000.sh
+# 或临时覆盖：sudo env LINGUA_SERVER_NAME=服务器IP或域名 LEXICA_UPSTREAM=none bash ./deploy-all-20261115_150000.sh
 ```
 
 ---
@@ -244,8 +247,7 @@ game-adapter-*.js   存储适配：online 走后端 / offline 写 localStorage
 * 新增 `hub/`：语林 Lingua Grove 总主页，中英双语 + 五套配色 + 对角切半色块，
   配 `hub/tests/test_hub.py` 守住样式约定
 * 「单词消消乐」正式改名为「**词境 Lexica**」（目录名 `word-puzzle/` 不动）
-* `AGENTS.md` 重写：删掉原来的网络/服务器章节，换成家庭网络 192.168.0.0/20
-  和生产机 192.168.1.93（PVE + nginx）
+* `AGENTS.md` 重写：删掉原来的网络/服务器章节，换成家庭网络和生产机（PVE + nginx）的说明
 
 ### 2026-11-04 — word-puzzle 改造成网站
 

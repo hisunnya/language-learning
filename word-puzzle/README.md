@@ -268,7 +268,7 @@ SQLite（Python 标准库自带，**免费、开源、零运维**），默认在
 
 ```bash
 sudo bash ./deploy/check-deps.sh
-sudo env WP_SERVER_NAME=192.168.1.5 ./deploy/install.sh
+sudo env WP_SERVER_NAME=<开发机IP> ./deploy/install.sh
 ```
 
 依赖检查会逐个核对 Python、nginx、systemd、PDF/OCR 和语音组件；已安装的包会跳过，
@@ -278,8 +278,8 @@ sudo env WP_SERVER_NAME=192.168.1.5 ./deploy/install.sh
 → 代码放到 `/srv/word-puzzle` → 数据目录 `/var/lib/word-puzzle` → 生成内置词库
 → 装并启动 systemd 服务 → 将 nginx 配置写入 `/etc/nginx/conf.d/word-puzzle.conf`。
 
-`WP_SERVER_NAME` 用于指定 nginx 主机名；上例让首页通过 `http://192.168.1.5/` 访问。
-如果词境要作为语林总主页的子项目，完成后再运行 `sudo env LINGUA_SERVER_NAME=192.168.1.5 bash hub/deploy/install.sh`，
+`WP_SERVER_NAME` 用于指定 nginx 主机名；上例让首页通过 `http://<开发机IP>/` 访问。
+如果词境要作为语林总主页的子项目，完成后再运行 `sudo env LINGUA_SERVER_NAME=<开发机IP> bash hub/deploy/install.sh`，
 由总主页在 `/word-puzzle/` 提供词境前端并转发 API。
 
 可选工具装不上（离线机器）也不影响网站运行，只是：

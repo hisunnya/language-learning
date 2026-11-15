@@ -64,7 +64,7 @@ class TestStatic(unittest.TestCase):
         self.assertEqual(subprocess.run(["bash", "-n", str(FAMILY / "install.sh")]).returncode, 0)
         rx = re.search(r'LAN_ADDR" =~ (\^.*?\$) \]\]', self.INSTALL).group(1).replace("\\\\.", "\\.")
         rx = re.compile(rx)
-        for ok in ("192.168.1.100", "192.168.1.5", "172.16.0.9", "172.31.1.1"):
+        for ok in ("10.20.30.40", "192.168.1.5", "172.16.0.9", "172.31.1.1"):
             self.assertTrue(rx.match(ok), ok)
         for bad in ("8.8.8.8", "100.64.0.1", "172.32.0.1", "127.0.0.1", "lexica.ts.net", "0.0.0.0"):
             self.assertFalse(rx.match(bad), bad)

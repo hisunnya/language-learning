@@ -1,22 +1,32 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261115_140000.sh
-# 可通过 LINGUA_SERVER_NAME 覆盖默认的生产服务器地址。
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261115_150000.sh
+#
+# 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
+# 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
+#   LINGUA_SERVER_NAME  这台机器的地址（必填）
+#   LEXICA_UPSTREAM     词境后端的 主机:端口（必填；写 none = 用本机后端 127.0.0.1:8765）
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SERVER_NAME="${LINGUA_SERVER_NAME:-192.168.1.93}"
+if [[ -f "$REPO_DIR/deploy.local.env" ]]; then
+  # 只认 KEY=VALUE 行，已经在环境里设过的变量不被覆盖
+  while IFS='=' read -r key value; do
+    [[ "$key" =~ ^(LINGUA_SERVER_NAME|LEXICA_UPSTREAM)$ ]] || continue
+    [[ -n "${!key:-}" ]] || export "$key=${value//\"/}"
+  done < "$REPO_DIR/deploy.local.env"
+fi
+SERVER_NAME="${LINGUA_SERVER_NAME:-}"
 WP_PORT=8765
-# 词境后端只有一个：在学生版容器里（数据库放宿主机目录，见 word-puzzle/deploy/family/部署说明.md）。
-# 这台机器（家庭版入口）的 /word-puzzle/api/ 转给容器的内网入口；换了地址就用 LEXICA_UPSTREAM 覆盖。
-# 设成空（LEXICA_UPSTREAM=none）则退回本机后端 127.0.0.1:8765。
-LEXICA_UPSTREAM="${LEXICA_UPSTREAM:-192.168.1.100:8082}"
-[[ "$LEXICA_UPSTREAM" != "none" ]] || LEXICA_UPSTREAM=""
+LEXICA_UPSTREAM="${LEXICA_UPSTREAM:-}"
 
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
 [[ "$(id -u)" -eq 0 ]] || die "请使用 sudo 运行：sudo bash $0"
+[[ -n "$SERVER_NAME" ]] || die "没有 LINGUA_SERVER_NAME：请在 deploy.local.env 里写上这台机器的地址（见 deploy.local.env.example）"
 [[ "$SERVER_NAME" =~ ^[A-Za-z0-9.-]+$ ]] || die "LINGUA_SERVER_NAME 格式无效"
+[[ -n "$LEXICA_UPSTREAM" ]] || die "没有 LEXICA_UPSTREAM：写 主机:端口，或写 none 使用本机后端（见 deploy.local.env.example）"
+[[ "$LEXICA_UPSTREAM" != "none" ]] || LEXICA_UPSTREAM=""
 command -v curl >/dev/null 2>&1 || die "缺少 curl，请先安装 curl"
 
 for path in \

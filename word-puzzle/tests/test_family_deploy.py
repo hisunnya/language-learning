@@ -292,9 +292,9 @@ class TestPveCommandsCanBePasted(unittest.TestCase):
         self.assertLess(commands.index('WP_PUBLIC_URL="https://$(tailscale'), commands.index('env WP_PUBLIC_URL="$WP_PUBLIC_URL"'))
 
     def test_the_static_network_for_this_house_is_written_out(self):
-        self.assertIn("--net0 name=eth0,bridge=vmbr0,ip=192.168.1.100/20,gw=192.168.1.1", PVE)
+        self.assertIn("--net0 name=eth0,bridge=vmbr0,ip=<容器IP>/<前缀长度>,gw=<网关>", PVE)
         self.assertIn("pct config $CTID", PVE)
-        self.assertIn("ping -c 2 192.168.1.100", PVE)
+        self.assertIn("ping -c 2 <容器IP>", PVE)
         self.assertIn("DHCP 地址池", PVE)
 
     def test_the_template_and_storage_steps_come_before_creation(self):
@@ -303,7 +303,7 @@ class TestPveCommandsCanBePasted(unittest.TestCase):
 
     def test_the_errors_people_actually_hit_are_in_the_troubleshooting_table(self):
         table = PVE[PVE.index("## 十、常见问题"):PVE.index("## 十一、")]
-        for text in ("type check ('integer') failed", "编号已存在", "存储不存在", "ping 192.168.1.1",
+        for text in ("type check ('integer') failed", "编号已存在", "存储不存在", "ping <网关>",
                      "--nameserver", "/dev/net/tun"):
             self.assertIn(text, table)
 
@@ -343,7 +343,7 @@ class TestUrlStability(unittest.TestCase):
         self.assertIn("tailscale set --hostname=lexica", out)
 
     def test_a_renamed_machine_and_a_renamed_tailnet_are_told_apart(self):
-        code, out = self.run_check("pvehost.example-net.ts.net.", "https://lexica.example-net.ts.net")
+        code, out = self.run_check("otherhost.example-net.ts.net.", "https://lexica.example-net.ts.net")
         self.assertEqual(code, 1)
         self.assertIn("机器名变了", out)
         code, out = self.run_check("lexica.cat-crocodile.ts.net.", "https://lexica.example-net.ts.net")

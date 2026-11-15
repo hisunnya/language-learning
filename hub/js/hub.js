@@ -84,7 +84,7 @@
       "notes.a.title": "全部本地运行",
       "notes.a.body": "词汇游戏用 Python 标准库加 SQLite，话题和考试是纯前端，不依赖任何云服务，也不需要大模型。",
       "notes.b.title": "局域网内直连",
-      "notes.b.body": "家庭网络 192.168.0.0/20 内直接用浏览器打开，不需要 VPN。部署细节见仓库 README。",
+      "notes.b.body": "在家庭网络内直接用浏览器打开，不需要 VPN。部署细节见仓库 README。",
       "notes.c.title": "随时能带走",
       "notes.c.body": "题库可以导出成单个 HTML 离线页，拷到任何电脑上双击就能继续做题。",
 
@@ -161,7 +161,7 @@
       "notes.a.title": "Everything runs locally",
       "notes.a.body": "The vocabulary game is Python standard library plus SQLite; topics and the exam are pure front end. No cloud service, no language model.",
       "notes.b.title": "Straight over the LAN",
-      "notes.b.body": "Open it from any browser inside the 192.168.0.0/20 home network — no VPN involved. Deployment details live in the repository README.",
+      "notes.b.body": "Open it from any browser inside the home network — no VPN involved. Deployment details live in the repository README.",
       "notes.c.title": "Take it with you",
       "notes.c.body": "Any bank can be exported as one self-contained HTML page; copy it to any computer and keep playing by double-clicking.",
 

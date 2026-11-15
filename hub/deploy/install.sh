@@ -4,8 +4,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-# 默认是生产机；开发测试机请显式传 LINGUA_SERVER_NAME=192.168.1.5。
-SERVER_NAME="${LINGUA_SERVER_NAME:-192.168.1.93}"
+# 目标机器地址必须显式给出（环境变量 LINGUA_SERVER_NAME；根目录的 deploy-all 会从不进 git 的 deploy.local.env 读）。
+SERVER_NAME="${LINGUA_SERVER_NAME:-}"
+[[ -n "$SERVER_NAME" ]] || { printf '请用 LINGUA_SERVER_NAME 指定这台机器的地址\n' >&2; exit 1; }
 HUB_ROOT=/var/www/lingua-grove
 TOPICS_ROOT=/var/www/topic-app
 HAM_ROOT=/var/www/ham-exam
@@ -29,7 +30,7 @@ trap 'rm -rf "$BACKUP_DIR"; rm -f "$TEMP_CONF"' EXIT
 say "检查项目依赖"
 bash "$REPO_DIR/word-puzzle/deploy/check-deps.sh"
 
-# LEXICA_UPSTREAM=主机:端口（例如 192.168.1.100:8082）：词境后端在学生版容器里，这台机器的 /word-puzzle/api/ 转给它的内网入口；
+# LEXICA_UPSTREAM=主机:端口（例如 <容器IP>:8082）：词境后端在学生版容器里，这台机器的 /word-puzzle/api/ 转给它的内网入口；
 # 不设就是本机的 word-puzzle 服务（127.0.0.1:8765）。
 LEXICA_UPSTREAM="${LEXICA_UPSTREAM:-}"
 if [[ -n "$LEXICA_UPSTREAM" ]]; then
