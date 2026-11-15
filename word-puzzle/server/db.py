@@ -136,6 +136,69 @@ CREATE TABLE IF NOT EXISTS bank_tags (
 );
 CREATE INDEX IF NOT EXISTS ix_bank_tags_tag ON bank_tags(tag);
 
+-- 访问记录：谁、从哪个 IP、用什么设备和浏览器、看了哪些页面、停留多久。永久保留，不自动删除。
+-- 时间一律存 UTC 秒数（整数）：这几张表里的时间不受服务器时区影响，页面上由浏览器换成本地时间。
+-- 一行 page_views = 一次页面打开（vid 是页面自己生成的随机号）；sid 是同一个浏览器标签页的会话号，
+-- 把同一次访问里先后打开的页面串起来。
+CREATE TABLE IF NOT EXISTS page_views (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    vid            TEXT NOT NULL UNIQUE,
+    sid            TEXT NOT NULL,
+    user_id        INTEGER,
+    role           TEXT NOT NULL DEFAULT '',          -- student | admin | 空 = 没登录
+    student_no     TEXT NOT NULL DEFAULT '',          -- 当时的学号 / 姓名 / 班级（以后账号改了，这里还是当时的样子）
+    name           TEXT NOT NULL DEFAULT '',
+    class_name     TEXT NOT NULL DEFAULT '',
+    ip             TEXT NOT NULL DEFAULT '',
+    forwarded      TEXT NOT NULL DEFAULT '{}',        -- 收到的转发头（JSON），查 IP 来源用
+    user_agent     TEXT NOT NULL DEFAULT '',
+    browser        TEXT NOT NULL DEFAULT '',
+    browser_version TEXT NOT NULL DEFAULT '',
+    os             TEXT NOT NULL DEFAULT '',
+    os_version     TEXT NOT NULL DEFAULT '',
+    device_type    TEXT NOT NULL DEFAULT '',          -- mobile | tablet | desktop | bot
+    device_model   TEXT NOT NULL DEFAULT '',
+    in_app         TEXT NOT NULL DEFAULT '',          -- 微信 / 钉钉 / QQ …（内置浏览器）
+    accept_language TEXT NOT NULL DEFAULT '',
+    path           TEXT NOT NULL DEFAULT '',
+    title          TEXT NOT NULL DEFAULT '',
+    referrer       TEXT NOT NULL DEFAULT '',
+    client_info    TEXT NOT NULL DEFAULT '{}',        -- 页面报上来的屏幕、时区、语言、CPU 核数、网络类型 …（JSON）
+    started_at     INTEGER NOT NULL,
+    last_seen_at   INTEGER NOT NULL,
+    active_seconds INTEGER NOT NULL DEFAULT 0,        -- 页面在前台的累计秒数（最能代表「停留多久」）
+    pings          INTEGER NOT NULL DEFAULT 0,
+    ended          INTEGER NOT NULL DEFAULT 0         -- 1 = 页面关闭 / 离开时报过
+);
+CREATE INDEX IF NOT EXISTS ix_pv_started ON page_views(started_at);
+CREATE INDEX IF NOT EXISTS ix_pv_sid ON page_views(sid);
+CREATE INDEX IF NOT EXISTS ix_pv_user ON page_views(user_id, started_at);
+
+-- 登录记录：成功和失败都记（失败的也记下试的是哪个学号、从哪来）。
+CREATE TABLE IF NOT EXISTS login_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts          INTEGER NOT NULL,
+    student_no  TEXT NOT NULL DEFAULT '',             -- 输入的学号
+    user_id     INTEGER,                              -- 学号存在才有
+    name        TEXT NOT NULL DEFAULT '',
+    class_name  TEXT NOT NULL DEFAULT '',
+    success     INTEGER NOT NULL DEFAULT 0,
+    code        TEXT NOT NULL DEFAULT '',             -- 失败原因（invalid_credentials / rate_limited / 账号锁定 …）
+    ip          TEXT NOT NULL DEFAULT '',
+    forwarded   TEXT NOT NULL DEFAULT '{}',
+    user_agent  TEXT NOT NULL DEFAULT '',
+    browser     TEXT NOT NULL DEFAULT '',
+    browser_version TEXT NOT NULL DEFAULT '',
+    os          TEXT NOT NULL DEFAULT '',
+    os_version  TEXT NOT NULL DEFAULT '',
+    device_type TEXT NOT NULL DEFAULT '',
+    device_model TEXT NOT NULL DEFAULT '',
+    in_app      TEXT NOT NULL DEFAULT '',
+    accept_language TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS ix_login_ts ON login_events(ts);
+CREATE INDEX IF NOT EXISTS ix_login_user ON login_events(user_id, ts);
+
 CREATE TABLE IF NOT EXISTS sessions (
     token_hash TEXT PRIMARY KEY,             -- 只存令牌的哈希，库泄露也拿不到可用的令牌
     user_id    INTEGER NOT NULL,

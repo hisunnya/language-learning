@@ -12,6 +12,8 @@ Environment=WP_HOST=127.0.0.1
 Environment=WP_PORT=@PORT@
 Environment=WP_DB=@DATA_DIR@/app.db
 Environment=WP_QUIET=1
+# 老表里的时间是不带时区的字符串，按北京时间写才和用户看到的一致（新的访问记录表存 UTC 秒数，不受影响）
+Environment=TZ=Asia/Shanghai
 # 登录功能和安全相关设置：站点只通过 HTTPS 对外（Tailscale Funnel），所以 Cookie 必须带 Secure
 Environment=WP_AUTH=1
 Environment=WP_COOKIE_SECURE=1

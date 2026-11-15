@@ -107,3 +107,15 @@ html.role-student .student-only { display: block; }
 .detail-table th { color: var(--ink3); font-weight: 600; }
 .pill.done { background: color-mix(in srgb, var(--green) 15%, var(--card)); color: var(--green); }
 .pill.notdone { background: color-mix(in srgb, var(--ink3) 15%, var(--card)); color: var(--ink3); }
+
+/* 访问记录页 */
+.tabs { display: flex; gap: 6px; margin: 4px 0 12px; }
+.tab { border: 1px solid var(--line); background: var(--card); color: var(--ink2); padding: 6px 16px; border-radius: 8px; font: inherit; cursor: pointer; }
+.tab.active { background: var(--chip-bg); color: var(--ink); font-weight: 700; border-color: var(--ink3); }
+.check { display: flex; align-items: center; gap: 6px; padding-bottom: 8px; }
+.hint.warn { color: var(--orange); }
+.raw-row > td { padding: 0 10px 6px; white-space: normal; }
+.raw-row summary { cursor: pointer; color: var(--ink3); font-size: 12px; }
+.raw-row pre { margin: 6px 0 0; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+.admin-filters input[type=date] { width: 100%; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--field-bg); color: var(--field-ink); font: inherit; }
+.btn[hidden], .check[hidden], .hint[hidden], .tbl[hidden] { display: none !important; }

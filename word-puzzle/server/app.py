@@ -33,7 +33,7 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
 
 from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
-from server import hierarchy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
+from server import accesslog, hierarchy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -117,6 +117,8 @@ class Handler(BaseHTTPRequestHandler):
     auth: "auth_mod.AuthService | None" = None     # None = 局域网版，不需要登录
     user: dict | None = None
     _body_read = False
+    track_throttle = accesslog.Throttle(limit=900, seconds=60)     # 每个来源地址每分钟最多收这么多条上报
+    login_throttle = accesslog.Throttle(limit=300, seconds=60)
 
     # ---------------- 基础响应 ----------------
 
@@ -346,6 +348,11 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 登录相关（不需要已登录） ----
         if path.startswith("/api/auth/"):
             self.handle_auth(method, path)
+            return
+
+        # ---- 访问记录上报（没登录也收：登录页的访问也要记；局域网版不记） ----
+        if path == "/api/track" and method == "POST":
+            self.handle_track()
             return
 
         self._gate(path)
@@ -589,7 +596,13 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path == "/api/auth/login" and method == "POST":
                 body = self.read_json()
-                user, token = self.auth.login(body.get("student_no", ""), body.get("password", ""))
+                typed = body.get("student_no", "")
+                try:
+                    user, token = self.auth.login(typed, body.get("password", ""))
+                except auth_mod.AuthError as exc:
+                    self._record_login(typed, None, False, exc.code)
+                    raise
+                self._record_login(typed, user, True, "")
                 self.send_json_with_cookie({"ok": True, "user": self.auth.public(user)},
                                            self.auth.cookie_header(token))
                 return
@@ -611,6 +624,32 @@ class Handler(BaseHTTPRequestHandler):
         except auth_mod.AuthError as exc:
             raise HttpError(exc.status, exc.message, exc.code) from exc
         raise HttpError(404, f"未知接口 {path}")
+
+    def _peer(self) -> str:
+        return self.client_address[0] if self.client_address else ""
+
+    def _record_login(self, typed, user: dict | None, success: bool, code: str) -> None:
+        """登录成功和失败都记；记录出错绝不能影响登录本身。"""
+        try:
+            info = accesslog.request_info(self.headers, self._peer())
+            if user is None and typed:       # 失败的也尽量带上账号信息，老师才知道是谁在试
+                user = self.auth.get_by_student_no(self.auth.normalize_student_no(typed)) \
+                    if len(str(typed)) <= 64 else None
+            accesslog.record_login(self.db, str(typed or ""), user, success, code, info)
+        except Exception:      # pragma: no cover
+            traceback.print_exc()
+
+    def handle_track(self) -> None:
+        """页面上报：打开、每 15 秒一次的在线心跳、离开。无效的悄悄丢掉；永远回 204。"""
+        body = self.read_json()
+        if self.auth is not None:
+            info = accesslog.request_info(self.headers, self._peer())
+            if self.track_throttle.allow(info["ip"]):
+                try:
+                    accesslog.track(self.db, self.user, info, body)
+                except Exception:      # pragma: no cover
+                    traceback.print_exc()
+        self._send(204, b"", "text/plain")
 
     def send_json_with_cookie(self, obj, cookie: str, status: int = 200) -> None:
         self._send(status, json_bytes(obj), "application/json; charset=utf-8", {"Set-Cookie": cookie})
@@ -706,6 +745,34 @@ class Handler(BaseHTTPRequestHandler):
                     "Content-Disposition": 'attachment; filename="lexica-score-summary.csv"'})
                 return
 
+            if path == "/api/admin/visits" and method == "GET":
+                self.send_json(dict(ok=True, **accesslog.sessions(
+                    self.db, role=query.get("role", ""), class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
+                    since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"),
+                    limit=int_param(query.get("limit"), "limit", 100, 1, 500),
+                    offset=int_param(query.get("offset"), "offset", 0, 0))))
+                return
+
+            if path == "/api/admin/visits/pages" and method == "GET":
+                uid = int_param(query.get("user_id"), "user_id")
+                self.send_json({"ok": True, "pages": accesslog.session_pages(self.db, query.get("sid", ""), uid)})
+                return
+
+            if path == "/api/admin/logins" and method == "GET":
+                self.send_json(dict(ok=True, **accesslog.logins(
+                    self.db, role=query.get("role", ""), class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
+                    only_failed=query.get("failed") == "1",
+                    since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"),
+                    limit=int_param(query.get("limit"), "limit", 100, 1, 500),
+                    offset=int_param(query.get("offset"), "offset", 0, 0))))
+                return
+
+            if path in ("/api/admin/export/page-views.csv", "/api/admin/export/logins.csv") and method == "GET":
+                table = "page_views" if "page-views" in path else "login_events"
+                self._send(200, self._access_csv(table, query), "text/csv; charset=utf-8", {
+                    "Content-Disposition": 'attachment; filename="lexica-%s.csv"' % ("page-views" if table == "page_views" else "logins")})
+                return
+
             if path == "/api/admin/export/scores.csv" and method == "GET":
                 data = self._scores_csv(query)
                 self._send(200, data, "text/csv; charset=utf-8", {
@@ -728,6 +795,25 @@ class Handler(BaseHTTPRequestHandler):
                      r["best"], r["worst"], r["avg_score"], r["avg_duration"], r["last_at"]]
             # 以 = + - @ 开头的单元格在 Excel 里会被当成公式，前面补一个单引号
             writer.writerow([("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in cells])
+        return ("\ufeff" + out.getvalue()).encode("utf-8")
+
+    def _access_csv(self, table: str, query: dict) -> bytes:
+        """访问记录 / 登录记录的完整导出：所有列，时间换成 UTC+8 的可读时间。"""
+        cols, rows = accesslog.all_rows(self.db, table, class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
+                                        since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"))
+        stamps = {"ts", "started_at", "last_seen_at"}
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(cols)
+        for row in rows:
+            cells = []
+            for col, v in zip(cols, row):
+                if col in stamps and isinstance(v, int):
+                    v = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(v + 8 * 3600))
+                if isinstance(v, str) and v[:1] in "=+-@":
+                    v = "'" + v
+                cells.append(v)
+            writer.writerow(cells)
         return ("\ufeff" + out.getvalue()).encode("utf-8")
 
     def _scores_csv(self, query: dict) -> bytes:

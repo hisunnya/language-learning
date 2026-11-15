@@ -446,11 +446,16 @@ were requesting `/.env`, `/AGENTS.md`, `/CLAUDE.md`, `/config.js` (observed).
 - Funnel hides the client address (everything arrives from 127.0.0.1), so there is
   no per-IP rate limit; login is protected by per-account lockout (5 failures →
   15 min) and per-student / site-wide attempt limits in the backend.
-- Student data is minimised: **student number, name, class, college, department
-  and game results only. Phone numbers are never stored** — the roster importer
-  recognises such columns and drops them. Passwords are stored as scrypt hashes;
-  initial passwords exist in clear only in the one-off credentials list handed to
-  the administrator.
+- The family edition stores what the roster provides (student number, name, class,
+  college, department) and everything the site observes: game results and a
+  permanent **access log** (`page_views`, `login_events`) with account, IP address,
+  device, browser, pages visited and time on page. Nothing is deleted
+  automatically and there is no "keep as little as possible" rule — more detail is
+  better. The login page tells users that this is recorded. The roster importer
+  still drops phone-number columns (they are not needed), and passwords are stored
+  as scrypt hashes, never in the log. Initial passwords are shared with the
+  students by the administrator and every account must change its password at the
+  first login (`must_change`).
 - Browser-facing text that comes from a roster (names, classes) is untrusted:
   escape it on output, and prefix `= + - @` cells in every CSV export.
 - Client-supplied `Host` / `X-Forwarded-Host` must not decide any link the

@@ -18,6 +18,7 @@
       signOut: '退出',
       changePassword: '修改密码',
       adminLink: '账号管理',
+      visitsLink: '访问记录',
       signingIn: '登录中…',
       signIn: '登录',
       saving: '保存中…',
@@ -79,6 +80,7 @@
       signOut: 'Sign out',
       changePassword: 'Change password',
       adminLink: 'Accounts',
+      visitsLink: 'Visits',
       signingIn: 'Signing in…',
       signIn: 'Sign in',
       saving: 'Saving…',
@@ -230,6 +232,16 @@
       if (document.body.getAttribute('data-auth') === 'admin') link.className = 'active';
       nav.appendChild(link);
     }
+    if (nav && user.role === 'admin' && !document.getElementById('visitsNavLink')) {
+      var visits = document.createElement('a');
+      visits.id = 'visitsNavLink';
+      visits.href = BASE + '/visits.html';
+      visits.setAttribute('data-module-zh', TEXT.zh.visitsLink);
+      visits.setAttribute('data-module-en', TEXT.en.visitsLink);
+      visits.textContent = t('visitsLink');
+      if (document.body.getAttribute('data-auth') === 'visits') visits.className = 'active';
+      nav.appendChild(visits);
+    }
   }
 
   var ready = API.get('/api/auth/me').then(function (res) {
@@ -237,7 +249,7 @@
     info = { enabled: !!res.auth_enabled, user: res.user || null };
     if (!info.enabled) {
       setRole('admin');                       /* 局域网版没有账号，等同老师 */
-      if (mode === 'admin' || mode === 'change') go('', false);
+      if (mode === 'admin' || mode === 'visits' || mode === 'change') go('', false);
       return info;
     }
     if (!info.user) {
@@ -249,7 +261,7 @@
     setRole(info.user.role);
     if (info.user.must_change && mode !== 'change') { go('change-password.html', true); return info; }
     if (mode === 'public' && !info.user.must_change) { location.replace(queryNext()); return info; }
-    if (mode === 'admin' && info.user.role !== 'admin') { go('', false); return info; }
+    if ((mode === 'admin' || mode === 'visits') && info.user.role !== 'admin') { go('', false); return info; }
     decorate(info.user);
     return info;
   }).catch(function () {

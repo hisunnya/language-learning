@@ -20,6 +20,10 @@ for path in \
   word-puzzle/web/js/release-presets.js \
   word-puzzle/web/js/i18n.js \
   word-puzzle/web/js/i18n-lexica.js \
+  word-puzzle/server/accesslog.py \
+  word-puzzle/web/js/tracker.js \
+  word-puzzle/web/visits.html \
+  word-puzzle/web/js/page-visits.js \
   hub/deploy/install.sh \
   hub/deploy/lingua-grove.conf \
   topic-app/topic-app/index.html \

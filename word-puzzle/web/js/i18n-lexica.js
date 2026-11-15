@@ -3,7 +3,7 @@
    ------------------------------------------------------------
    zh 和 en 必须是同一组键、同一组 {占位符}（tests/test_i18n.py 会检查）。
    用法：WPI18N.t('键', {n: 3})。
-   命名：home_ 首页 · field_ 分类 / 标签面板 · rel_ 批量开放面板 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
+   命名：home_ 首页 · field_ 分类 / 标签面板 · rel_ 批量开放面板 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · visits_ 访问记录 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
    ============================================================ */
 (function (global) {
   'use strict';
@@ -204,6 +204,35 @@
     stats_notDone: '未完成',
     stats_pair: '{a} / {b}',
     stats_levelsOf: '{n} / {total}',
+    visits_loading: '加载中…',
+    visits_empty: '还没有符合条件的记录',
+    visits_count: '共 {n} 条，已显示 {shown} 条',
+    visits_fail: '加载失败，请稍后再试',
+    visits_anon: '未登录',
+    visits_roleAdmin: '老师',
+    visits_expand: '展开这次访问的每一页',
+    visits_collapse: '收起',
+    visits_dtMobile: '手机',
+    visits_dtTablet: '平板',
+    visits_dtDesktop: '电脑',
+    visits_dtBot: '机器人 / 脚本',
+    visits_dTime: '打开时间',
+    visits_dPath: '页面',
+    visits_dTitle: '标题',
+    visits_dStay: '停留',
+    visits_dFrom: '来自',
+    visits_dMore: '更多信息',
+    visits_resOk: '成功',
+    visits_resFail: '失败',
+    visits_codeBad: '学号或密码不对',
+    visits_codeLimit: '尝试太频繁被拒绝',
+    visits_codeMissing: '没填学号或密码',
+    visits_ipUnknown: '未知',
+    visits_ipMany: '{ip} 等 {n} 个',
+    visits_sec: '{n} 秒',
+    visits_min: '{m} 分 {s} 秒',
+    visits_hour: '{h} 小时 {m} 分',
+    visits_proxyOnly: '提示：最近的记录里 IP 都是本机地址（127.0.0.1）——说明前面的转发服务没有把访客的真实 IP 传过来。',
     // @@zh-end
   }, {
     home_play: 'Play',
@@ -401,6 +430,35 @@
     stats_notDone: 'Not completed',
     stats_pair: '{a} / {b}',
     stats_levelsOf: '{n} / {total}',
+    visits_loading: 'Loading…',
+    visits_empty: 'No matching records',
+    visits_count: '{n} records, {shown} shown',
+    visits_fail: 'Could not load, please try again later',
+    visits_anon: 'Not signed in',
+    visits_roleAdmin: 'Teacher',
+    visits_expand: 'Show every page of this visit',
+    visits_collapse: 'Collapse',
+    visits_dtMobile: 'Phone',
+    visits_dtTablet: 'Tablet',
+    visits_dtDesktop: 'Computer',
+    visits_dtBot: 'Bot / script',
+    visits_dTime: 'Opened at',
+    visits_dPath: 'Page',
+    visits_dTitle: 'Title',
+    visits_dStay: 'Time on page',
+    visits_dFrom: 'Came from',
+    visits_dMore: 'More details',
+    visits_resOk: 'Success',
+    visits_resFail: 'Failed',
+    visits_codeBad: 'Wrong number or password',
+    visits_codeLimit: 'Refused: too many attempts',
+    visits_codeMissing: 'Number or password left empty',
+    visits_ipUnknown: 'Unknown',
+    visits_ipMany: '{ip} and {n} in all',
+    visits_sec: '{n} s',
+    visits_min: '{m} min {s} s',
+    visits_hour: '{h} h {m} min',
+    visits_proxyOnly: 'Note: every recent record shows a local address (127.0.0.1) as the IP — the forwarding service in front did not pass the visitor’s real IP.',
     // @@en-end
   });
 })(window);
