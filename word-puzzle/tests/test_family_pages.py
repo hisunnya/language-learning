@@ -319,6 +319,8 @@ class TestLevelSizeDefault(unittest.TestCase):
         for page in ("index.html", "bank.html"):
             html = (root / "web" / page).read_text(encoding="utf-8")
             self.assertRegex(html, r'id="pairsPerLevel"[^>]*value="9"', page)
+            self.assertNotIn("默认 12", html, page)                       # 提示文字也要跟着改
+            self.assertNotIn("default 12", html, page)
         for js in ("page-home.js", "page-bank.js"):
             text = (root / "web" / "js" / js).read_text(encoding="utf-8")
             self.assertEqual(len(re.findall(r"\b12\b", text.split("function pairsPerLevel()")[1].split("}")[0])), 0, js)
