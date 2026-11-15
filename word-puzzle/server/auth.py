@@ -428,15 +428,15 @@ class AuthService:
 
     # ---- Cookie ----
 
-    def cookie_header(self, token: str) -> str:
+    def cookie_header(self, token: str, secure: bool | None = None) -> str:
         parts = ["%s=%s" % (SESSION_COOKIE, token), "Path=/", "HttpOnly", "SameSite=Lax",
                  "Max-Age=%d" % int(self.session_seconds)]
-        if self.cookie_secure:
+        if self.cookie_secure if secure is None else secure:
             parts.append("Secure")
         return "; ".join(parts)
 
-    def clear_cookie_header(self) -> str:
+    def clear_cookie_header(self, secure: bool | None = None) -> str:
         parts = ["%s=" % SESSION_COOKIE, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"]
-        if self.cookie_secure:
+        if self.cookie_secure if secure is None else secure:
             parts.append("Secure")
         return "; ".join(parts)

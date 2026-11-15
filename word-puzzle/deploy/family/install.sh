@@ -27,6 +27,13 @@ NGINX_PORT="${WP_FAMILY_NGINX_PORT:-8081}"
 TTS_VENV="${WP_FAMILY_TTS_VENV:-/opt/word-puzzle-family/tts-venv}"
 PUBLIC_URL="${WP_PUBLIC_URL:-}"
 PROXY_INC=/etc/nginx/word-puzzle-family-proxy.inc
+# 内网入口（可选）：WP_LAN_ADDR=容器的内网地址（例如 192.168.1.100），端口默认 8082。
+# 同一个网站、同一个数据库、同一套账号，只是多一个只监听内网地址的入口：老师在家直接访问，不绕公网。
+# 照样要登录；Funnel 只指向 127.0.0.1:$NGINX_PORT，到不了这里。
+LAN_ADDR="${WP_LAN_ADDR:-}"
+LAN_PORT="${WP_LAN_PORT:-8082}"
+LAN_PROXY_INC=/etc/nginx/word-puzzle-family-proxy-lan.inc
+LAN_CONF_FILE=/etc/nginx/conf.d/word-puzzle-family-lan.conf
 CONF_FILE=/etc/nginx/conf.d/$SITE_NAME.conf
 
 say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
@@ -36,7 +43,8 @@ die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 [[ $(id -u) -eq 0 ]] || die "请用 sudo 运行"
 [[ -n "$PUBLIC_URL" ]] || die "请用 WP_PUBLIC_URL 指定对外的 https 地址，例如 https://lexica.tailXXXX.ts.net（没有它，离线页里的链接会信客户端传来的主机名）"
 [[ "$PUBLIC_URL" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{2,5})?$ ]] || die "WP_PUBLIC_URL 必须是 https://主机名[:端口]，结尾不要带斜杠"
-[[ "$PORT" =~ ^[0-9]+$ && "$NGINX_PORT" =~ ^[0-9]+$ ]] || die "端口必须是数字"
+[[ "$PORT" =~ ^[0-9]+$ && "$NGINX_PORT" =~ ^[0-9]+$ && "$LAN_PORT" =~ ^[0-9]+$ ]] || die "端口必须是数字"
+[[ -z "$LAN_ADDR" || "$LAN_ADDR" =~ ^(10|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9.]+$ ]] || die "WP_LAN_ADDR 必须是内网地址（10.x / 172.16-31.x / 192.168.x），不能是公网地址"
 [[ -f "$REPO_DIR/hub/shared/module-header.js" ]] || die "找不到 hub/shared（页眉和配色切换用）：请在完整的仓库里运行"
 
 say "检查并安装系统依赖"
@@ -109,6 +117,27 @@ if ! nginx -t; then
   [[ "$had_old" -eq 0 ]] || mv "$CONF_FILE.bak" "$CONF_FILE"
   die "nginx 配置检查失败；已恢复原样"
 fi
+
+if [[ -n "$LAN_ADDR" ]]; then
+  say "安装内网入口 $LAN_ADDR:$LAN_PORT（同一个网站，照样要登录，只给内网）"
+  # 在公网配置的基础上：换监听地址；告诉后端这是明文 http（会话 Cookie 不带 Secure）；访问记录里记真实的内网 IP
+  sed -e 's|^proxy_set_header X-Forwarded-Proto .*|proxy_set_header X-Forwarded-Proto http;|' \
+      -e 's|^proxy_set_header X-Wp-Edge-Xff .*|proxy_set_header X-Wp-Edge-Xff $remote_addr;|' \
+      "$PROXY_INC" > "$LAN_PROXY_INC"
+  chmod 0644 "$LAN_PROXY_INC"
+  sed -n '/^server {/,$p' "$INSTALL_DIR/deploy/family/nginx/word-puzzle-family.conf" \
+    | sed -e "s|listen 127.0.0.1:@NGINX_PORT@;|listen $LAN_ADDR:$LAN_PORT;|" -e "s|@PROXY_INC@|$LAN_PROXY_INC|g" \
+          -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@PORT@|$PORT|g" -e "s|word-puzzle-family\\.|word-puzzle-family-lan.|g" \
+    > "$LAN_CONF_FILE.tmp.$$"
+  if [[ -e "$LAN_CONF_FILE" ]]; then cp -a "$LAN_CONF_FILE" "$LAN_CONF_FILE.bak"; fi
+  mv "$LAN_CONF_FILE.tmp.$$" "$LAN_CONF_FILE"
+  if ! nginx -t; then
+    rm -f "$LAN_CONF_FILE"; if [[ -e "$LAN_CONF_FILE.bak" ]]; then mv "$LAN_CONF_FILE.bak" "$LAN_CONF_FILE"; fi
+    die "内网入口的 nginx 配置检查失败；已恢复原样"
+  fi
+else
+  rm -f "$LAN_CONF_FILE" "$LAN_PROXY_INC"
+fi
 systemctl reload nginx
 
 say "安装管理命令 wp-family-admin"
@@ -151,6 +180,7 @@ cat <<EOF2
 部署完成（还没有对外开放）。
 
   本机入口 ： http://127.0.0.1:$NGINX_PORT/word-puzzle/
+$( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/word-puzzle/   （同一个网站，照样要登录）" )
   对外地址 ： $PUBLIC_URL/word-puzzle/   （要先开 Tailscale Funnel，见 部署说明.md）
   数据库   ： $DATA_DIR/app.db
   服务     ： systemctl status $SITE_NAME

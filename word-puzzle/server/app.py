@@ -136,7 +136,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "same-origin")
-        if self.auth is not None and self.auth.cookie_secure:
+        if self.auth is not None and self._secure_cookie():
             self.send_header("Strict-Transport-Security", "max-age=31536000")
         if self.auth is not None and ctype.startswith(("application/json", "text/csv")):
             self.send_header("Cache-Control", "no-store")     # 带个人信息的响应不要被缓存
@@ -611,12 +611,12 @@ class Handler(BaseHTTPRequestHandler):
                     raise
                 self._record_login(typed, user, True, "")
                 self.send_json_with_cookie({"ok": True, "user": self.auth.public(user)},
-                                           self.auth.cookie_header(token))
+                                           self.auth.cookie_header(token, self._secure_cookie()))
                 return
             if path == "/api/auth/logout" and method == "POST":
                 self.read_body()
                 self.auth.logout(self._session_token())
-                self.send_json_with_cookie({"ok": True}, self.auth.clear_cookie_header())
+                self.send_json_with_cookie({"ok": True}, self.auth.clear_cookie_header(self._secure_cookie()))
                 return
             if path == "/api/auth/change-password" and method == "POST":
                 body = self.read_json()
@@ -626,11 +626,18 @@ class Handler(BaseHTTPRequestHandler):
                                                   body.get("new_password", ""), self._session_token())
                 fresh = self.auth.get_by_id(self.user["id"])
                 self.send_json_with_cookie({"ok": True, "user": self.auth.public(fresh)},
-                                           self.auth.cookie_header(token))
+                                           self.auth.cookie_header(token, self._secure_cookie()))
                 return
         except auth_mod.AuthError as exc:
             raise HttpError(exc.status, exc.message, exc.code) from exc
         raise HttpError(404, f"未知接口 {path}")
+
+    def _secure_cookie(self) -> bool:
+        """会话 Cookie 带 Secure 吗：配置要求带，除非我们自己的 nginx 明确说这条请求是明文 http
+        （内网入口 http://内网地址:8082 没有证书；带着 Secure 浏览器会直接丢掉 Cookie，登不上）。公网入口恒为 https。"""
+        if not (self.auth is not None and self.auth.cookie_secure):
+            return False
+        return not (self._peer() in accesslog.LOOPBACK and self.headers.get("X-Forwarded-Proto") == "http")
 
     def _peer(self) -> str:
         return self.client_address[0] if self.client_address else ""

@@ -314,6 +314,10 @@ only when a management function is used. The teacher account is the student
 edition's: the home edition forwards the login to `WP_AUTH_REMOTE` and keeps only a
 shadow admin row with a random password (`WP_AUTH=guest`). Data (banks, scores,
 access log) is **not** shared between the two.
+To manage the student edition's own data from home, the student edition has an optional
+LAN-only entrance (`WP_LAN_ADDR`, nginx on `<container-ip>:8082`): same site, same
+database, same accounts, login still required, session cookie without `Secure`
+(plain http), real LAN IP in the access log. Funnel only points at the loopback entrance.
 
 | Path | Holds |
 |---|---|
