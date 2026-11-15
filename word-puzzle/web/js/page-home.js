@@ -69,10 +69,20 @@
     }).join('');
   }
 
-  /* 最近玩过：这台设备上记的、并且现在还看得到的题库，最多 4 个 */
+  /* 最近玩过：登录的账号取服务器上的记录（换设备也看得到）；没登录的访客、或者服务器取不到时，用这台设备上记的。
+     都只显示现在还看得到的题库，最多 4 个 */
+  var recent = [];
+  function loadRecent() {
+    var local = function () { return WPRecent.list(localStorage, WPRecent.userKey(AuthUI.info()), banks, 4); };
+    if (!AuthUI.info().user) { recent = local(); return Promise.resolve(); }
+    return API.get('/api/recent?limit=4').then(function (res) {
+      recent = (res.recent || []).map(function (x) { return { bank: x.bank, t: x.last_at * 1000 }; });
+    }).catch(function () { recent = local(); });
+  }
+
   function renderRecent() {
     var card = document.getElementById('recentCard');
-    var items = loaded ? WPRecent.list(localStorage, WPRecent.userKey(AuthUI.info()), banks, 4) : [];
+    var items = loaded ? recent : [];
     card.hidden = !items.length;
     var now = Date.now();
     document.getElementById('recentList').innerHTML = items.map(function (x) {
@@ -86,7 +96,7 @@
       banks = res.banks || [];
       loaded = true;
       renderBanks();
-      renderRecent();
+      return loadRecent().then(renderRecent);
     }).catch(function (e) { API.toast(e.message); });
   }
 

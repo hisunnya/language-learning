@@ -327,6 +327,7 @@ nginx 做的事：**静态文件直接托管**，`/api/` 反代给后端（默�
 | GET | `/api/banks/<id>` | 题库内容（游戏用） |
 | DELETE | `/api/banks/<id>` | 删除题库 |
 | POST | `/api/banks/<id>/offline` | 生成离线测试页 |
+| GET / POST | `/api/recent` | 首页「最近玩过」：按账号存在服务器上（换设备也看得到），只给现在还看得到的题库；没登录的访客返回 `device_only`，页面改用本机记录 |
 | GET | `/api/offline` | 已生成的离线文件列表 |
 | GET | `/api/offline/<文件名>` | 下载（加 `?inline=1` 直接在浏览器里预览） |
 | GET | `/api/scores?limit=&bank_id=` | 成绩列表 + 统计 |

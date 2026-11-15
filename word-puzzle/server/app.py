@@ -435,6 +435,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/records":
             self.handle_records(method, query)
             return
+        if path == "/api/recent":
+            self.handle_recent(method, query)
+            return
 
         # ---- 题库 ----
         if path == "/api/banks":
@@ -830,6 +833,41 @@ class Handler(BaseHTTPRequestHandler):
             # 以 = + - @ 开头的单元格在 Excel 里会被当成公式，前面补一个单引号
             writer.writerow([("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in cells])
         return ("\ufeff" + out.getvalue()).encode("utf-8")
+
+    def handle_recent(self, method: str, query: dict) -> None:
+        """首页「最近玩过」，按账号存在服务器上，换设备也看得到。没登录的访客（家庭版内网入口）没有账号，
+        接口告诉页面 device_only，页面就改用这台设备浏览器里的记录。"""
+        db = self.db
+        uid = self._uid()
+        if method == "POST":
+            body = self.read_json()
+            try:
+                bank_id = int(body.get("bank_id"))
+            except (TypeError, ValueError):
+                raise HttpError(400, "bank_id 不合法", "bad_bank") from None
+            bank = db.get_bank(bank_id)
+            if not self._bank_visible(bank):
+                raise HttpError(404, "题库不存在")
+            if uid is None:
+                self.send_json({"ok": True, "stored": False, "device_only": True})
+                return
+            db.touch_recent(uid, bank_id, int(time.time()))
+            self.send_json({"ok": True, "stored": True})
+            return
+        if method == "GET":
+            if uid is None:
+                self.send_json({"ok": True, "recent": [], "device_only": True})
+                return
+            limit = int_param(query.get("limit"), "limit", 4, 1, db.RECENT_KEEP)
+            by_id = {b["id"]: b for b in db.list_banks()}
+            out = []
+            for row in db.recent_rows(uid):
+                bank = by_id.get(row["bank_id"])
+                if bank and self._bank_visible(bank) and len(out) < limit:      # 现在看不到的（被收回标签）不给
+                    out.append({"bank": bank, "last_at": row["last_at"]})
+            self.send_json({"ok": True, "recent": out})
+            return
+        raise HttpError(405, "不支持的方法")
 
     def handle_records(self, method: str, query: dict) -> None:
         """各学科通用的成绩 / 进度：POST 存一条，GET 取（学生只看自己的，老师按 policy 看全部）。"""

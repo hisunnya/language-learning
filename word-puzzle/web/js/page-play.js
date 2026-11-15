@@ -47,7 +47,8 @@
       if (!levels.length) { fail('play_noWords', true); return; }
 
       bankTitle = bank.title;
-      AuthUI.ready.then(function () {        /* 记进「最近玩过」（首页最上面显示），存不了就算了 */
+      AuthUI.ready.then(function () {        /* 记进「最近玩过」（首页最上面显示）：登录的记在服务器上（换设备也看得到），访客记在这台设备上 */
+        if (AuthUI.info().user) API.post('/api/recent', { bank_id: bank.id }).catch(function () { });
         try { WPRecent.add(localStorage, WPRecent.userKey(AuthUI.info()), bank.id, Date.now()); } catch (e) { }
       });
       document.title = t('play_title', { title: bankTitle });

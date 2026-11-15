@@ -136,6 +136,17 @@ CREATE TABLE IF NOT EXISTS bank_tags (
 );
 CREATE INDEX IF NOT EXISTS ix_bank_tags_tag ON bank_tags(tag);
 
+-- 每个账号最近打开过的题库（首页「最近玩过」，跨设备）：同一个题库一行，只留最近 8 个。
+CREATE TABLE IF NOT EXISTS recent_banks (
+    user_id INTEGER NOT NULL,
+    bank_id INTEGER NOT NULL,
+    last_at INTEGER NOT NULL,                        -- UTC 秒
+    opens   INTEGER NOT NULL DEFAULT 1,
+    seq     INTEGER NOT NULL DEFAULT 0,              -- 全表递增的顺序号：同一秒里先后打开的，也分得出谁更近
+    PRIMARY KEY (user_id, bank_id)
+);
+CREATE INDEX IF NOT EXISTS ix_recent_user ON recent_banks(user_id, last_at);
+
 -- 各学科（化学、物理、话题、无线电……）通用的成绩 / 进度记录：模块只管 POST，不用各建一张表。
 CREATE TABLE IF NOT EXISTS subject_records (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -524,8 +535,31 @@ class Database:
         with self._tx() as conn:
             conn.execute("DELETE FROM bank_words WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM bank_tags WHERE bank_id=?", (bid,))
+            conn.execute("DELETE FROM recent_banks WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM banks WHERE id=?", (bid,))
         return True
+
+    # ---------------- 最近打开过的题库 ----------------
+
+    RECENT_KEEP = 8
+
+    def touch_recent(self, user_id: int, bank_id: int, now: int) -> None:
+        """记一笔：这个账号刚打开了这个题库。同一个题库只有一行；每个账号只留最近 RECENT_KEEP 个。"""
+        with self._tx() as conn:
+            conn.execute(
+                "INSERT INTO recent_banks(user_id, bank_id, last_at, opens, seq) "
+                "VALUES (?,?,?,1,(SELECT COALESCE(MAX(seq),0)+1 FROM recent_banks)) "
+                "ON CONFLICT(user_id, bank_id) DO UPDATE SET last_at=excluded.last_at, opens=opens+1, seq=excluded.seq",
+                (user_id, bank_id, now))
+            conn.execute(
+                "DELETE FROM recent_banks WHERE user_id=? AND bank_id NOT IN "
+                "(SELECT bank_id FROM recent_banks WHERE user_id=? ORDER BY last_at DESC, seq DESC LIMIT ?)",
+                (user_id, user_id, self.RECENT_KEEP))
+
+    def recent_rows(self, user_id: int) -> list[dict]:
+        rows = self.query("SELECT bank_id, last_at FROM recent_banks WHERE user_id=? ORDER BY last_at DESC, seq DESC",
+                          (user_id,))
+        return [dict(r) for r in rows]
 
     # ---------------- scores ----------------
 

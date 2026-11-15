@@ -148,14 +148,17 @@ class TestHomeGroupsAndRecent(unittest.TestCase):
 
     def test_playing_a_bank_records_it_and_home_shows_it_on_top(self):
         play = self.read("js/page-play.js")
-        self.assertIn("WPRecent.add(localStorage, WPRecent.userKey(AuthUI.info()), bank.id, Date.now())", play)
+        self.assertIn("API.post('/api/recent', { bank_id: bank.id })", play)           # 登录的记在服务器上，换设备也看得到
+        self.assertIn("WPRecent.add(localStorage, WPRecent.userKey(AuthUI.info()), bank.id, Date.now())", play)    # 访客记在这台设备上
         html = self.read("play.html")
         self.assertLess(html.index("js/recent.js"), html.index("js/page-play.js"))
         index = self.read("index.html")
         self.assertIn('id="recentCard"', index)
         self.assertLess(index.index('id="recentCard"'), index.index('id="bankList"'), "最近玩过在题库列表上面")
         self.assertLess(index.index("js/recent.js"), index.index("js/page-home.js"))
-        self.assertIn("WPRecent.list(localStorage, WPRecent.userKey(AuthUI.info()), banks, 4)", self.read("js/page-home.js"))
+        home = self.read("js/page-home.js")
+        self.assertIn("API.get('/api/recent?limit=4')", home)
+        self.assertIn("WPRecent.list(localStorage, WPRecent.userKey(AuthUI.info()), banks, 4)", home)      # 访客、或服务器取不到时
 
     def test_the_offline_page_does_not_use_it(self):
         self.assertNotIn("recent.js", (ROOT / "server" / "offline.py").read_text(encoding="utf-8"))
