@@ -223,6 +223,14 @@
     bank_needTitle: '请给题库起个名字。',
     bank_willMake: '；将按单元生成 {n} 个题库',
     bank_matRange: '词表：{name} · {units} 个单元 · {words} 个词条 · 每关最多 {per} 词（约 {levels} 关）',
+    home_groupCount: '{n} 个题库',
+    home_groupCountOne: '1 个题库',
+    home_recentMeta: '{ago} · {words} 词',
+    home_agoNow: '刚刚',
+    home_agoMin: '{n} 分钟前',
+    home_agoHour: '{n} 小时前',
+    home_agoYesterday: '昨天',
+    home_agoDays: '{n} 天前',
     // @@zh-end
   }, {
     home_play: 'Play',
@@ -439,6 +447,14 @@
     bank_needTitle: 'Please give the word bank a name.',
     bank_willMake: '; will make {n} word banks, one per unit',
     bank_matRange: 'Word list: {name} · {units} units · {words} words · at most {per} words per level (about {levels} levels)',
+    home_groupCount: '{n} word banks',
+    home_groupCountOne: '1 word bank',
+    home_recentMeta: '{ago} · {words} words',
+    home_agoNow: 'just now',
+    home_agoMin: '{n} min ago',
+    home_agoHour: '{n} h ago',
+    home_agoYesterday: 'yesterday',
+    home_agoDays: '{n} days ago',
     // @@en-end
   });
 })(window);

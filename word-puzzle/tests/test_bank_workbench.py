@@ -132,10 +132,44 @@ class TestHeaderAndEnglishWording(unittest.TestCase):
         self.assertEqual(problems, [])
 
 
+class TestHomeGroupsAndRecent(unittest.TestCase):
+    def read(self, name):
+        return (WEB / name).read_text(encoding="utf-8")
+
+    def test_each_book_is_its_own_block_and_other_is_grey(self):
+        home = self.read("js/page-home.js")
+        self.assertIn("'<section class=\"bank-group' + (g.name ? '' : ' other') + '\">'", home)
+        self.assertIn("home_groupCount", home)
+        css = self.read("css/auth.css")
+        for needle in (".bank-group {", ".bank-group-head {", ".bank-group.other .bank-group-head", ".recent-card"):
+            self.assertIn(needle, css)
+        block = css[css.index(".bank-group {"):css.index(".recent-card .list")]
+        self.assertNotRegex(block, r"#[0-9a-fA-F]{3,6}\b", "色块用配色变量，不写死颜色")
+
+    def test_playing_a_bank_records_it_and_home_shows_it_on_top(self):
+        play = self.read("js/page-play.js")
+        self.assertIn("WPRecent.add(localStorage, WPRecent.userKey(AuthUI.info()), bank.id, Date.now())", play)
+        html = self.read("play.html")
+        self.assertLess(html.index("js/recent.js"), html.index("js/page-play.js"))
+        index = self.read("index.html")
+        self.assertIn('id="recentCard"', index)
+        self.assertLess(index.index('id="recentCard"'), index.index('id="bankList"'), "最近玩过在题库列表上面")
+        self.assertLess(index.index("js/recent.js"), index.index("js/page-home.js"))
+        self.assertIn("WPRecent.list(localStorage, WPRecent.userKey(AuthUI.info()), banks, 4)", self.read("js/page-home.js"))
+
+    def test_the_offline_page_does_not_use_it(self):
+        self.assertNotIn("recent.js", (ROOT / "server" / "offline.py").read_text(encoding="utf-8"))
+
+
 @unittest.skipUnless(NODE, "本机没有 node，跳过题库工作台的行为测试")
 class TestBehaviour(unittest.TestCase):
     def test_behaviour(self):
         proc = subprocess.run([NODE, str(ROOT / "tests" / "js" / "bank_workbench.test.js")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("项通过", proc.stdout)
+
+    def test_recent_banks(self):
+        proc = subprocess.run([NODE, str(ROOT / "tests" / "js" / "recent.test.js")], capture_output=True, text=True, timeout=60)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("项通过", proc.stdout)
 

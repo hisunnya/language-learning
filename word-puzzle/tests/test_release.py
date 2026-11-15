@@ -351,7 +351,7 @@ class TestPages(unittest.TestCase):
         css = (self.WEB / "css" / "auth.css").read_text(encoding="utf-8")
         for needle in (".modal-back", ".presets", ".chip", ".unit-row"):
             self.assertIn(needle, css)
-        for page, version in (("index.html", "20261115-roleflash"), ("bank.html", "20261116-bank")):
+        for page, version in (("index.html", "20261116-groups"), ("bank.html", "20261116-bank")):
             self.assertIn("auth.css?v=" + version, (self.WEB / page).read_text(encoding="utf-8"), page)
 
 

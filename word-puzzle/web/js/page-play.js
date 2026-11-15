@@ -47,6 +47,9 @@
       if (!levels.length) { fail('play_noWords', true); return; }
 
       bankTitle = bank.title;
+      AuthUI.ready.then(function () {        /* 记进「最近玩过」（首页最上面显示），存不了就算了 */
+        try { WPRecent.add(localStorage, WPRecent.userKey(AuthUI.info()), bank.id, Date.now()); } catch (e) { }
+      });
       document.title = t('play_title', { title: bankTitle });
 
       var game = new WPGame.Game({ levels: levels });

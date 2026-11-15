@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-roleflash">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261116-groups">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
 <body data-page="home">
@@ -47,10 +47,17 @@
     </div>
   </div>
 
+  <!-- 最近玩过（这台设备上的记录；没有记录就不显示） -->
+  <div class="card recent-card" id="recentCard" hidden>
+    <h2 data-module-zh="最近玩过" data-module-en="Recently played">最近玩过</h2>
+    <p class="sub" data-module-zh="点一下接着玩" data-module-en="Tap to continue">点一下接着玩</p>
+    <div class="list" id="recentList"></div>
+  </div>
+
   <!-- 题库列表 -->
   <div class="card">
     <h2 class="admin-only" data-module-zh="题库" data-module-en="Word banks">题库</h2>
-    <p class="sub admin-only" data-module-zh="所有题库都在这里，点「开始游戏」就能玩。管理题库请去题库工作台。" data-module-en="All word banks are here; press “Play” to start. Manage word banks in the word bank workbench.">所有题库都在这里，可以直接玩，也可以下载成离线网页。点「设置标签」决定哪些学生能看到（学生有一个相同的标签就能看到），点「设置分类」把题库归到一本书下面。</p>
+    <p class="sub admin-only" data-module-zh="所有题库都在这里，点「开始游戏」就能玩。管理题库请去题库工作台。" data-module-en="All word banks are here; press “Play” to start. Manage word banks in the word bank workbench.">所有题库都在这里，点「开始游戏」就能玩。管理题库请去题库工作台。</p>
     <h2 class="student-only" data-module-zh="选个题库" data-module-en="Pick a word bank">选个题库</h2>
     <p class="sub student-only" data-module-zh="老师开放给你的题库都在这里，点「开始游戏」就能玩" data-module-en="The word banks your teacher has opened for you are here. Press “Play” to start.">老师开放给你的题库都在这里，点「开始游戏」就能玩</p>
     <div class="list" id="bankList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
@@ -67,7 +74,8 @@
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261115-roleflash"></script>
 <script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
-<script src="/word-puzzle/js/page-home.js?v=20261116-bank"></script>
+<script src="/word-puzzle/js/recent.js?v=20261116-recent"></script>
+<script src="/word-puzzle/js/page-home.js?v=20261116-recent"></script>
 <script src="/shared/module-header.js"></script>
 </body>
 </html>

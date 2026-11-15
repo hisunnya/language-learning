@@ -47,12 +47,13 @@
     });
   }
 
-  function bankItem(b) {
+  function bankItem(b, extra) {
     return '<div class="item">' +
-      '  <div class="main"><b>' + esc(b.title) + '</b> <small>' + esc(counts(b)) + '</small></div>' +
+      '  <div class="main"><b>' + esc(b.title) + '</b> <small>' + esc(extra || counts(b)) + '</small></div>' +
       '  <div class="ops"><a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('home_play')) + '</a></div></div>';
   }
 
+  /* 每本书（分类）一个色块：带名字的书用主色标题条，「其他」用灰色标题条，一眼分得开 */
   function renderBanks() {
     var box = document.getElementById('bankList');
     var student = isStudentView();
@@ -61,8 +62,22 @@
       return;
     }
     box.innerHTML = groupByCategory(banks).map(function (g) {
-      var head = '<div class="sub" style="margin:14px 0 4px"><b>' + esc(g.name || t(student ? 'home_catOther' : 'home_catNone')) + '</b></div>';
-      return head + g.banks.map(bankItem).join('');
+      return '<section class="bank-group' + (g.name ? '' : ' other') + '">' +
+        '<div class="bank-group-head"><b>' + esc(g.name || t(student ? 'home_catOther' : 'home_catNone')) + '</b>' +
+        '<span class="pill gray">' + esc(t(g.banks.length === 1 ? 'home_groupCountOne' : 'home_groupCount', { n: g.banks.length })) + '</span></div>' +
+        g.banks.map(function (b) { return bankItem(b); }).join('') + '</section>';
+    }).join('');
+  }
+
+  /* 最近玩过：这台设备上记的、并且现在还看得到的题库，最多 4 个 */
+  function renderRecent() {
+    var card = document.getElementById('recentCard');
+    var items = loaded ? WPRecent.list(localStorage, WPRecent.userKey(AuthUI.info()), banks, 4) : [];
+    card.hidden = !items.length;
+    var now = Date.now();
+    document.getElementById('recentList').innerHTML = items.map(function (x) {
+      var a = WPRecent.ago(x.t, now);
+      return bankItem(x.bank, t('home_recentMeta', { ago: t(a.key, { n: a.n }), words: x.bank.word_count }));
     }).join('');
   }
 
@@ -71,11 +86,12 @@
       banks = res.banks || [];
       loaded = true;
       renderBanks();
+      renderRecent();
     }).catch(function (e) { API.toast(e.message); });
   }
 
   /* 切换语言：列表是脚本画的，要重画（静态文字由页眉换） */
-  WPI18N.onChange(function () { if (loaded) renderBanks(); });
+  WPI18N.onChange(function () { if (loaded) { renderBanks(); renderRecent(); } });
 
   document.addEventListener('DOMContentLoaded', function () {
     API.get('/api/meta').then(function (meta) {
