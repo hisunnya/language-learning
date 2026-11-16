@@ -456,6 +456,12 @@ This is a product requirement, not a preference.
   building an offline page, all English words in the selected bank are sent for
   synthesis and embedded in the HTML. On network or install failure, use local
   espeak-ng `-v en-us+f3` consistently for the whole offline page.
+- Teaching abbreviations are spoken as whole words (`word-puzzle/server/tts.py`
+  `speakable()`): `sb.` → somebody, `sth.` → something, `etc.` → et cetera, `e.g.` →
+  for example, `i.e.` → that is, `vs` → versus; `…` / `...` placeholders become a
+  gap and ` / ` alternatives become "or". Cards still show the original text; the
+  audio cache and the offline pages are keyed so the card text finds the clip. Add
+  new abbreviations there, with a test.
 - The browser TTS fallback must pick an `en-US` locale and prefer a
   female-named local voice.
 

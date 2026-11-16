@@ -47,6 +47,32 @@ def is_valid_word(word: str) -> bool:
     return not any(ord(ch) < 32 or ord(ch) == 127 for ch in word)
 
 
+_TEACHING_ABBREVIATIONS = {"sb": "somebody", "sth": "something", "etc": "et cetera", "vs": "versus"}
+_ABBREV_RE = re.compile(r"\b(sb|sth|etc|vs)\b\.?", re.I)
+_PHRASE_ABBREVIATIONS = ((re.compile(r"\be\.g\.", re.I), "for example"), (re.compile(r"\bi\.e\.", re.I), "that is"))
+_ELLIPSIS_RE = re.compile(r"\s*(?:…|\.{2,})\s*")
+_SLASH_RE = re.compile(r"(?<=[A-Za-z.])\s*/\s*(?=[A-Za-z])")
+
+
+def speakable(text: str) -> str:
+    """真正交给语音引擎念的文字。词库和教学资料里的缩写要念成完整的词，否则引擎会一个字母一个字母地念：
+
+    * ``sb.`` → somebody，``sth.`` → something（``sb's`` → somebody's），``etc.`` → et cetera，``e.g.`` → for example，
+      ``i.e.`` → that is，``vs`` → versus；
+    * ``…`` / ``...``（lift…out of…）只是占位，念的时候当作词间的空隙；
+    * ``a / b``（sth. / sb.、itself / themselves）念成 a or b，而不是 slash。
+    显示在卡片上的文字不变；缓存也按念出来的文字存，「sth」和「something」共用同一段音频。
+    """
+    out = text or ""
+    for rx, spoken in _PHRASE_ABBREVIATIONS:
+        out = rx.sub(spoken, out)
+    out = _ELLIPSIS_RE.sub(" ", out)
+    out = _SLASH_RE.sub(" or ", out)
+    out = _ABBREV_RE.sub(lambda m: _TEACHING_ABBREVIATIONS[m.group(1).lower()], out)
+    out = re.sub(r"\s+", " ", out).strip()
+    return out or (text or "").strip()
+
+
 def _prune_cache() -> None:
     """缓存文件超过上限时删掉最旧的一成，避免被不同单词刷满磁盘。"""
     try:
@@ -281,14 +307,18 @@ def synth(word: str) -> bytes | None:
     word = (word or "").strip()
     if not is_valid_word(word):
         return None
+    spoken = speakable(word)
     edge = find_edge_tts()
     if edge:
-        return _synth_edge(word, edge)
-    return _synth_espeak(word)
+        return _synth_edge(spoken, edge)
+    return _synth_espeak(spoken)
 
 
 def synth_many(words: list[str], workers: int = 4) -> dict[str, bytes]:
-    """用同一个引擎合成所有词，避免离线题库混用神经声线和 eSpeak。"""
+    """用同一个引擎合成所有词，避免离线题库混用神经声线和 eSpeak。
+
+    返回的字典用**原来的词**做键（页面按卡片上的文字找音频）；实际合成的是 :func:`speakable` 之后的文字，
+    所以 ``sth.`` 和 ``something`` 只合成一次。"""
     unique = list(dict.fromkeys(word.strip() for word in words if word.strip()))
     if not unique:
         return {}
@@ -296,26 +326,29 @@ def synth_many(words: list[str], workers: int = 4) -> dict[str, bytes]:
     if bad:
         raise SynthesisError(f"这些词无法合成语音（{', '.join(bad[:5])}）：不能以 - 开头")
 
+    spoken = {word: speakable(word) for word in unique}
+    texts = list(dict.fromkeys(spoken.values()))
     edge = find_edge_tts()
     if edge:
-        with ThreadPoolExecutor(max_workers=min(workers, len(unique))) as pool:
-            audio = list(pool.map(lambda word: _synth_edge(word, edge), unique))
-        failed = [word for word, data in zip(unique, audio) if not data]
+        with ThreadPoolExecutor(max_workers=min(workers, len(texts))) as pool:
+            clips = list(pool.map(lambda text: _synth_edge(text, edge), texts))
+        by_text = dict(zip(texts, clips))
+        failed = [word for word in unique if not by_text[spoken[word]]]
         if failed:
             sample = ", ".join(failed[:5])
             raise SynthesisError(
                 f"Edge Neural 语音生成失败（{sample}）。未混用其他声音，请稍后重试。")
-        return dict(zip(unique, audio))  # type: ignore[arg-type]
+        return {word: by_text[spoken[word]] for word in unique}  # type: ignore[misc]
 
     exe = find_espeak()
     if not exe:
         raise SynthesisError("服务器没有可用的语音合成器，无法生成带语音的离线题库")
-    audio = [_synth_espeak(word, exe) for word in unique]
-    failed = [word for word, data in zip(unique, audio) if not data]
+    by_text = {text: _synth_espeak(text, exe) for text in texts}
+    failed = [word for word in unique if not by_text[spoken[word]]]
     if failed:
         sample = ", ".join(failed[:5])
         raise SynthesisError(f"本地 eSpeak 语音生成失败（{sample}）")
-    return dict(zip(unique, audio))  # type: ignore[arg-type]
+    return {word: by_text[spoken[word]] for word in unique}  # type: ignore[misc]
 
 
 def content_type(data: bytes) -> str:
@@ -327,9 +360,10 @@ def cache_path(word: str) -> Path | None:
     """某个词对应的缓存文件路径（不存在返回 None）。"""
     if not word:
         return None
+    spoken = speakable(word.strip())
     candidates = (
-        _cache_file(word.strip(), "edge-tts", voice(), "mp3"),
-        _cache_file(word.strip(), "espeak-ng", FALLBACK_VOICE, "wav"),
+        _cache_file(spoken, "edge-tts", voice(), "mp3"),
+        _cache_file(spoken, "espeak-ng", FALLBACK_VOICE, "wav"),
     )
     return next((target for target in candidates if target.exists()), None)
 
