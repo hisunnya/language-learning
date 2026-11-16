@@ -44,11 +44,12 @@ UNIT_CN_RE = re.compile(
 # 一个英文单词（允许 U.S.A / Mr. / well-used / don't）
 EN_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z'’\-]*(?:\.[A-Za-z]+)*")
 
-# 中文片段（含中文标点与数字；**不含** ASCII 字母，
-# 这样「苹果apple」会拆成中文 + 英文两个 token）
+# 中文片段（含中文标点、数字，以及释义里常见的括号、省略号、英文标点；**不含** ASCII 字母和空格，
+# 这样「苹果apple」会拆成中文 + 英文两个 token）。
+# 可以以括号开头：「（动物）驯化的，(植物)人工培养的」「(食物)有营养的」是一整条释义，不能在括号处截断。
 CN_RUN_RE = re.compile(
-    r"[㐀-䶿一-鿿豈-﫿]"
-    r"(?:[㐀-䶿一-鿿豈-﫿　-〿＀-￯0-9])*")
+    r"[(\[（【]*[㐀-䶿一-鿿豈-﫿]"
+    r"(?:[㐀-䶿一-鿿豈-﫿　-〿＀-￯0-9()\[\]{}.,;:!?~…·\-—–/+=]|…)*")
 
 # 音标
 IPA_RE = re.compile(r"[/\[]\s*([^/\[\]]{1,60}?)\s*[/\]]")
@@ -101,6 +102,18 @@ def _tokenize(line: str) -> list[_Token]:
             tokens.append(_Token("pos", m.group(0).lower()))
             i = m.end()
             continue
+        # 英文短语里的省略号（lift...out of...）和「 / 」备选（sth. / sb.）：留在短语里，不丢
+        if line.startswith("...", i) or ch == "…":
+            j = i
+            while j < n and line[j] == ".":
+                j += 1
+            tokens.append(_Token("en", "…"))
+            i = max(j, i + 1)
+            continue
+        if ch == "/" and tokens and tokens[-1].kind == "en" and i + 1 < n and line[i + 1].isspace():
+            tokens.append(_Token("en", "/"))
+            i += 1
+            continue
         # 英文词
         m = EN_TOKEN_RE.match(line, i)
         if m:
@@ -117,18 +130,47 @@ def _tokenize(line: str) -> list[_Token]:
     return tokens
 
 
+_OPEN, _CLOSE = "(（[【{", ")）]】}"
+_PAIRS = {"(": ")", "（": "）", "[": "]", "【": "】", "{": "}"}
+
+
+def _drop_unbalanced_brackets(t: str) -> str:
+    """去掉行首没有配对的开括号、行尾没有配对的闭括号；成对的（「（动物）驯化的」「(食物)有营养的」）一律保留。"""
+    changed = True
+    while changed and t:
+        changed = False
+        if t[0] in _OPEN:
+            close = _PAIRS[t[0]]
+            if close not in t:
+                t, changed = t[1:].lstrip(), True
+        if t and t[-1] in _CLOSE:
+            opens = [o for o, c in _PAIRS.items() if c == t[-1]]
+            if not any(o in t[:-1] for o in opens):
+                t, changed = t[:-1].rstrip(), True
+    return t
+
+
+def _unwrap(t: str) -> str:
+    """整条释义被一对括号完整包住（「(苹果)」）：去掉这一层。「（动物）驯化的」不是整条被包住，保留。"""
+    if len(t) > 2 and t[0] in _OPEN and t[-1] == _PAIRS[t[0]] and _PAIRS[t[0]] not in t[:-1]:
+        return t[1:-1].strip()
+    return t
+
+
 def _clean_en(text: str) -> str:
     """清理英文部分。"""
     t = text.strip()
-    t = t.strip(" \t.,;:!?'\"()[]{}、，。；：！？")
+    t = t.strip(" \t.,;:!?'\"()[]{}、，。；：！？/")
     return t.strip()
 
 
 def _clean_cn(text: str) -> str:
-    """清理中文部分。"""
-    t = text.strip()
-    t = re.sub(r"\s+", " ", t)
-    t = t.strip(" \t.,;:!?'\"()[]{}、，。；：！？")
+    """清理中文部分：去掉两头多余的标点，保留成对的括号和结尾的省略号（「谈到…」「使…摆脱，免受…」）。"""
+    t = re.sub(r"\s+", " ", text.strip())
+    t = re.sub(r"\.{3,}|…+", "…", t)                      # 省略号统一成 …
+    t = t.strip(" \t.,;:!?'\"、，。；：！？/-—–")
+    t = _drop_unbalanced_brackets(t)
+    t = _unwrap(t).strip(" \t.,;:!?'\"、，。；：！？/-—–")
     return t.strip()
 
 
@@ -167,43 +209,52 @@ def split_entries(line: str) -> list[dict]:
 
     pairs: list[dict] = []
     pending_en: list[str] = []
+    pending_cn: list[str] = []
     pending_ipa = ""
     pending_pos = ""
     leading_cn = ""
 
+    def flush() -> None:
+        nonlocal pending_en, pending_cn, pending_ipa, pending_pos
+        if pending_en and pending_cn:
+            en = " ".join(pending_en)
+            en = re.sub(r"\s+(?:n|v|vt|vi|adj|adv|prep|conj|pron|num|art|"
+                        r"int|aux|abbr)\.$", "", en, flags=re.I)
+            en = re.sub(r"\s*/\s*$", "", _clean_en(en)).strip()
+            cn = " ".join(pending_cn)
+            if en and cn:
+                pairs.append({"en": en, "cn": cn, "ipa": pending_ipa, "pos": pending_pos})
+        pending_en, pending_cn, pending_ipa, pending_pos = [], [], "", ""
+
     for tok in tokens:
         if tok.kind == "en":
-            word = _clean_en(tok.text)
+            if pending_cn:                       # 上一条的中文已经收完，这个英文词开始下一条
+                flush()
+            word = _clean_en(tok.text) if tok.text not in ("…", "/") else tok.text
             if word:
                 pending_en.append(word)
         elif tok.kind == "ipa":
+            if pending_cn:
+                flush()
             if not pending_ipa and tok.text:
                 pending_ipa = "/" + tok.text + "/"
         elif tok.kind == "pos":
+            if pending_cn:
+                flush()
             if not pending_pos:
                 pending_pos = tok.text
         elif tok.kind == "cn":
             cn = _clean_cn(tok.text)
+            if not cn:
+                continue
             if pending_en:
-                en = " ".join(pending_en)
-                en = re.sub(r"\s+(?:n|v|vt|vi|adj|adv|prep|conj|pron|num|art|"
-                            r"int|aux|abbr)\.$", "", en, flags=re.I)
-                en = _clean_en(en)
-                if en and cn:
-                    pairs.append({"en": en, "cn": cn,
-                                  "ipa": pending_ipa, "pos": pending_pos})
-                pending_en = []
-                pending_ipa = ""
-                pending_pos = ""
-            elif not leading_cn and cn:
+                pending_cn.append(cn)            # 同一条的中文可以被空格隔成几段，合起来
+            elif not leading_cn:
                 leading_cn = cn
-
-    # 中文在前、英文在后：苹果 apple
-    if not pairs and pending_en and leading_cn:
-        en = _clean_en(" ".join(pending_en))
-        if en and leading_cn:
-            pairs.append({"en": en, "cn": leading_cn,
-                          "ipa": pending_ipa, "pos": pending_pos})
+    # 中文在前、英文在后：苹果 apple（必须在收尾之前，收尾会把还没配上的英文清掉）
+    if not pairs and pending_en and not pending_cn and leading_cn:
+        pending_cn = [leading_cn]
+    flush()
 
     return pairs
 

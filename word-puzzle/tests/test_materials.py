@@ -12,6 +12,7 @@ import io
 import shutil
 import struct
 import sys
+import tempfile
 import unittest
 import wave
 import zipfile
@@ -292,6 +293,72 @@ class TestWordlist(unittest.TestCase):
 
 
 # ---------------------------------------------------------------- Word
+
+# 老师第一次真正上传的 Word（10 个词）：括号、省略号、英文逗号、「 / 」备选以前都会把中文截掉
+TEACHER_LINES = [
+    "domesticated （动物）驯化的，(植物)人工培养的",
+    "sterile (生物)不育的，(土地)贫瘠的",
+    " nutritious (食物)有营养的，营养丰富的",
+    " tolerant 能耐...的",
+    "work on sth. 从事；致力于",
+    "lift...out of... 使...摆脱，免受...",
+    "turn one’s attention to sth. / sb. 开始关注",
+    "as well as （除...之外）也，还",
+    "talk of . 谈到...",
+    "speak for itself / themselves 不言而喻；不辩自明",
+]
+TEACHER_EXPECTED = [
+    ("domesticated", "（动物）驯化的，(植物)人工培养的"),
+    ("sterile", "(生物)不育的，(土地)贫瘠的"),
+    ("nutritious", "(食物)有营养的，营养丰富的"),
+    ("tolerant", "能耐…的"),
+    ("work on sth", "从事；致力于"),
+    ("lift … out of …", "使…摆脱，免受…"),
+    ("turn one’s attention to sth / sb", "开始关注"),
+    ("as well as", "（除…之外）也，还"),
+    ("talk of", "谈到…"),
+    ("speak for itself / themselves", "不言而喻；不辩自明"),
+]
+
+
+class TestMeaningsKeepTheirPunctuation(unittest.TestCase):
+    def pairs(self, lines):
+        return [(e["en"], e["cn"]) for e in wordlist.parse_lines(lines)]
+
+    def test_the_teachers_ten_words_come_out_whole(self):
+        self.assertEqual(self.pairs(TEACHER_LINES), TEACHER_EXPECTED)
+
+    def test_the_same_through_a_real_docx(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "t.docx"
+            _make_docx(path, TEACHER_LINES, [])
+            fmt, words = materials.parse_material("词表.docx", path.read_bytes())
+        self.assertEqual(fmt, "docx")
+        self.assertEqual([(w["en"], w["cn"]) for w in words], TEACHER_EXPECTED)
+
+    def test_brackets_are_kept_when_paired_and_dropped_when_not(self):
+        self.assertEqual(self.pairs(["apple （水果）苹果"]), [("apple", "（水果）苹果")])
+        self.assertEqual(self.pairs(["apple (苹果)"]), [("apple", "苹果")], "整条被一对括号包住：去掉这一层")
+        self.assertEqual(self.pairs(["apple 苹果）"]), [("apple", "苹果")], "没有配对的闭括号去掉")
+        self.assertEqual(self.pairs(["apple （苹果"]), [("apple", "苹果")], "没有配对的开括号去掉")
+
+    def test_a_meaning_split_by_a_space_is_joined_not_cut(self):
+        self.assertEqual(self.pairs(["apple 苹果 一种水果"]), [("apple", "苹果 一种水果")])
+
+    def test_english_ascii_punctuation_inside_a_meaning_stays(self):
+        self.assertEqual(self.pairs(["apple 苹果,水果;食品"]), [("apple", "苹果,水果;食品")])
+
+    def test_older_layouts_still_split_correctly(self):
+        self.assertEqual(self.pairs(["apple 苹果 orange 橙子"]), [("apple", "苹果"), ("orange", "橙子")])    # 一行两组
+        self.assertEqual(self.pairs(["苹果 apple"]), [("apple", "苹果")])                                      # 中文在前
+        self.assertEqual(self.pairs(["苹果apple"]), [("apple", "苹果")])
+        self.assertEqual(self.pairs(["1. apple 苹果"]), [("apple", "苹果")])                                   # 序号
+        self.assertEqual([e["ipa"] for e in wordlist.parse_lines(["apple /ˈæpl/ n. 苹果"])], ["/ˈæpl/"])       # 音标、词性
+
+    def test_trailing_noise_is_still_trimmed(self):
+        self.assertEqual(self.pairs(["apple 苹果。"]), [("apple", "苹果")])
+        self.assertEqual(self.pairs(["apple 苹果 ,"]), [("apple", "苹果")])
+
 
 def _make_docx(path: Path, paragraphs: list[str], tables: list[list[list[str]]]) -> None:
     """造一个最小可用的 .docx（OOXML 是 zip + xml）。"""
