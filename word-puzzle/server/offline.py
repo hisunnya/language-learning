@@ -27,6 +27,8 @@ I18N_FILE = WEB / "js" / "i18n.js"
 I18N_TEXT_FILE = WEB / "js" / "i18n-lexica.js"
 UI_FILE = WEB / "js" / "game-ui.js"
 ADAPTER_FILE = WEB / "js" / "game-adapter-offline.js"
+PRACTICE_CSS_FILE = WEB / "css" / "practice.css"
+PRACTICE_UI_FILE = WEB / "js" / "practice-ui.js"
 
 TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -122,8 +124,9 @@ def safe_filename(text: str, fallback: str = "题库") -> str:
     return s or fallback
 
 
-def build_filename(bank: dict, when: time.struct_time | None = None) -> str:
-    """层级 + 日期 + 时间。例：初中-九年级-上册-全部单元-20261104-153012.html"""
+def build_filename(bank: dict, when: time.struct_time | None = None, kind: str = "game") -> str:
+    """层级 + 日期 + 时间。例：初中-九年级-上册-全部单元-20261104-153012.html
+    读音练习的文件名在层级后面多一段「读音练习」，和配对游戏的离线页一眼分得开。"""
     tm = when or time.localtime()
     parts = [
         safe_filename(bank.get("level1", ""), "层级1"),
@@ -131,6 +134,8 @@ def build_filename(bank: dict, when: time.struct_time | None = None) -> str:
         safe_filename(bank.get("level3", ""), "层级3"),
         safe_filename(bank.get("level4", ""), "层级4"),
     ]
+    if kind == "practice":
+        parts.append("读音练习")
     parts.append(time.strftime("%Y%m%d", tm))
     parts.append(time.strftime("%H%M%S", tm))
     return "-".join(parts) + ".html"
@@ -207,6 +212,115 @@ def build_offline_html(bank: dict, groups: list[dict],
         levels=len(levels),
     )
     return build_filename(bank, when), html
+
+
+PRACTICE_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="generator" content="word-puzzle offline generator">
+<title>{title}</title>
+<style>
+:root {{ --card:#fff; --bg:#f4f6fb; --ink:#172033; --ink2:#5b6d85; --ink3:#8793a7; --heading:#1e1b4b; --line:#dce3ef; --soft-line:#e6ebf7;
+  --blue:#4f46e5; --blue-l:#eef2ff; --orange:#d97706; --on-primary:#fff; }}
+* {{ box-sizing: border-box; }}
+body {{ margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; }}
+.wrap {{ max-width: 760px; margin: 0 auto; padding: 14px 14px 40px; }}
+h1 {{ font-size: 20px; margin: 6px 0 2px; color: var(--heading); }}
+.sub {{ margin: 0 0 8px; color: var(--ink2); font-size: 13px; }}
+.btn {{ appearance: none; border: 1px solid var(--blue); background: var(--blue); color: var(--on-primary); border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; }}
+.btn.ghost {{ background: var(--card); color: var(--ink2); border-color: var(--line); }}
+.hint {{ font-size: 12px; color: var(--ink2); margin: 6px 0 10px; line-height: 1.6; }}
+.toast {{ position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #172033; color: #fff; padding: 8px 14px; border-radius: 10px; opacity: 0; pointer-events: none; transition: opacity .2s; }}
+.toast.on {{ opacity: 1; }}
+{css}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="pracTitle"></h1>
+  <p class="sub" id="pracSub"></p>
+  <div class="prac-toolbar">
+    <button type="button" class="btn ghost" id="pracToggle"></button>
+    <button type="button" class="btn ghost" id="btn-lang" data-module-zh="English" data-module-en="中文">English</button>
+  </div>
+  <p class="hint" data-module-zh="点单词听发音；点右边一列、或在这一行上向右滑（手指、鼠标都行）显示中文意思，再点或向左滑藏起来。" data-module-en="Tap a word to hear it; tap the right column, or swipe right on the row (finger or mouse), to show the Chinese meaning; tap or swipe left to hide it again.">点单词听发音；点右边一列、或在这一行上向右滑（手指、鼠标都行）显示中文意思，再点或向左滑藏起来。</p>
+  <div id="pracMount"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+/* ---------------- 词表和语音（全部内嵌，不联网） ---------------- */
+var WP_DATA = {data};
+</script>
+<script>
+{i18n}
+</script>
+<script>
+{i18n_text}
+</script>
+<script>
+{ui}
+</script>
+<script>
+/* ---------------- 启动 ---------------- */
+(function () {{
+  function t(key, params) {{ return WPI18N.t(key, params); }}
+  function toast(text) {{
+    var el = document.getElementById('toast');
+    el.textContent = text; el.classList.add('on');
+    clearTimeout(toast.timer); toast.timer = setTimeout(function () {{ el.classList.remove('on'); }}, 2400);
+  }}
+  var player = WPPractice.createPlayer({{ audio: WP_DATA.audio, onError: function () {{ toast(t('prac_audioFail')); }} }});
+  var view = WPPractice.init({{ mount: document.getElementById('pracMount'), groups: WP_DATA.groups, player: player }});
+  function head() {{
+    document.title = t('prac_title', {{ title: WP_DATA.title }});
+    document.getElementById('pracTitle').textContent = t('prac_heading', {{ title: WP_DATA.title }});
+    document.getElementById('pracSub').textContent = WP_DATA.subtitle;
+    document.getElementById('pracToggle').textContent = t(view.allRevealed() ? 'prac_hideAll' : 'prac_showAll');
+    document.documentElement.lang = WPI18N.lang() === 'en' ? 'en' : 'zh-CN';
+    document.getElementById('btn-lang').textContent = WPI18N.lang() === 'en' ? '中文' : 'English';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-module-zh]'), function (el) {{
+      if (el.id !== 'btn-lang') el.textContent = el.getAttribute(WPI18N.lang() === 'en' ? 'data-module-en' : 'data-module-zh');
+    }});
+  }}
+  document.getElementById('pracToggle').onclick = function () {{ view.revealAll(!view.allRevealed()); head(); }};
+  document.getElementById('pracMount').addEventListener('click', function () {{ setTimeout(head, 0); }});
+  document.getElementById('pracMount').addEventListener('pointerup', function () {{ setTimeout(head, 0); }});
+  document.getElementById('btn-lang').onclick = function () {{ WPI18N.setLang(WPI18N.lang() === 'en' ? 'zh' : 'en'); }};
+  WPI18N.onChange(head);
+  head();
+}})();
+</script>
+</body>
+</html>
+"""
+
+
+def build_practice_html(bank: dict, groups: list[dict],
+                        when: time.struct_time | None = None,
+                        audio: dict[str, bytes] | None = None) -> tuple[str, str]:
+    """返回 ``(文件名, HTML 内容)``：读音练习的离线单文件版，词表和语音全部内嵌，双击就能用。"""
+    levels = build_levels(groups)
+    if not levels:
+        raise ValueError("题库里没有单词，无法生成离线读音练习")
+    title = bank.get("title") or "词境 Lexica"
+    subtitle = " · ".join([bank.get("level1", ""), bank.get("level2", ""),
+                           bank.get("level3", ""), bank.get("level4", "")]).strip(" ·")
+    embedded_audio = {}
+    for word, clip in (audio or {}).items():
+        if clip:
+            embedded_audio[_audio_slug(word)] = "data:%s;base64,%s" % (tts.content_type(clip), base64.b64encode(clip).decode("ascii"))
+    data = {
+        "title": title, "subtitle": subtitle,
+        "groups": [{"unit": lv["name"], "words": lv["words"]} for lv in levels],
+        "audio": embedded_audio,
+        "generated": time.strftime("%Y-%m-%d %H:%M:%S", when or time.localtime()),
+    }
+    html = PRACTICE_TEMPLATE.format(
+        title=_escape(title), css=_read(PRACTICE_CSS_FILE), i18n=_read(I18N_FILE), i18n_text=_read(I18N_TEXT_FILE),
+        ui=_read(PRACTICE_UI_FILE), data=_json_for_script(data))
+    return build_filename(bank, when, kind="practice"), html
 
 
 def _json_for_script(data) -> str:

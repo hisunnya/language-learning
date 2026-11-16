@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
+<title data-module-zh="读音练习 · 词境 Lexica" data-module-en="Pronunciation practice · Lexica">读音练习 · 词境 Lexica</title>
+<link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
+<link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261116-groups">
+<link rel="stylesheet" href="/word-puzzle/css/practice.css?v=20261116-practice">
+<link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
+      <span class="portal-brand-mark portal-brand-mark--logo" aria-hidden="true"><img src="/word-puzzle/img/icon.svg" alt="" width="40" height="40"></span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="Vocabulary practice">英语词汇练习</small></span>
+    </a>
+    <nav class="portal-nav">
+      <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
+      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Word banks">题库工作台</a>
+      <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <div class="card">
+    <h2 id="pracTitle" data-module-zh="读音练习" data-module-en="Pronunciation practice">读音练习</h2>
+    <p class="sub" id="pracSub"></p>
+    <div class="prac-toolbar">
+      <a class="btn ghost" id="pracBack" href="/word-puzzle/" data-module-zh="返回" data-module-en="Back">返回</a>
+      <a class="btn" id="pracGame" href="#" data-module-zh="开始游戏" data-module-en="Play the game">开始游戏</a>
+      <button type="button" class="btn ghost" id="pracToggle" data-module-zh="显示全部中文" data-module-en="Show all meanings">显示全部中文</button>
+      <button type="button" class="btn ghost admin-only" id="pracOffline" data-module-zh="下载离线版" data-module-en="Download offline version">下载离线版</button>
+    </div>
+    <p class="hint" data-module-zh="点单词听发音；点右边一列、或在这一行上向右滑（手指、鼠标都行）显示中文意思，再点或向左滑藏起来。" data-module-en="Tap a word to hear it; tap the right column, or swipe right on the row (finger or mouse), to show the Chinese meaning; tap or swipe left to hide it again.">点单词听发音；点右边一列、或在这一行上向右滑（手指、鼠标都行）显示中文意思，再点或向左滑藏起来。</p>
+    <div class="msg" id="pracMsg" role="status"></div>
+  </div>
+  <div id="pracMount" aria-live="off"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
+
+  <footer class="foot">
+    <span data-module-zh="发音是美式英语女声；sb. / sth. 这类缩写会念成 somebody / something。" data-module-en="The voice is an American-English female voice; abbreviations such as sb. / sth. are read as somebody / something.">发音是美式英语女声；sb. / sth. 这类缩写会念成 somebody / something。</span>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261116-practice"></script>
+<script src="/word-puzzle/js/api.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261115-roleflash"></script>
+<script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
+<script src="/word-puzzle/js/recent.js?v=20261116-recent"></script>
+<script src="/word-puzzle/js/practice-ui.js?v=20261116-practice"></script>
+<script src="/word-puzzle/js/page-practice.js?v=20261116-practice"></script>
+<script src="/shared/module-header.js"></script>
+</body>
+</html>

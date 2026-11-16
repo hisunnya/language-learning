@@ -151,7 +151,16 @@
   <section id="panelOffline" role="tabpanel" aria-labelledby="tabOffline" hidden>
     <div class="card">
       <h2 data-module-zh="离线测试" data-module-en="Offline test">离线测试</h2>
-      <p class="sub" data-module-zh="把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。" data-module-en="Export an existing word bank as a single HTML file: word list, styles, scripts and audio are all built in, so you can double-click it on a computer without internet; scores stay in that computer’s browser. Good for classrooms without network or for USB sticks. Exporting does not create a word bank.">把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。</p>
+      <p class="sub" data-module-zh="把一个已有的题库导出成单个 HTML 文件（配对游戏，或读音练习）：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。" data-module-en="Export an existing word bank as a single HTML file (the matching game or the pronunciation practice): word list, styles, scripts and audio are all built in, so you can double-click it on a computer without internet; scores stay in that computer’s browser. Good for classrooms without network or for USB sticks. Exporting does not create a word bank.">把一个已有的题库导出成单个 HTML 文件：词表、样式、脚本和语音全部内嵌，双击就能在没有网络的电脑上玩，成绩只存在那台电脑的浏览器里。适合没有网络的教室或用 U 盘分发。导出不会新建题库。</p>
+      <div class="field" role="radiogroup" aria-label="类型">
+        <label data-module-zh="类型" data-module-en="Type">类型</label>
+        <div class="source-choice">
+          <label class="choice"><input type="radio" name="offKind" value="game" checked> <b data-module-zh="配对游戏" data-module-en="Matching game">配对游戏</b>
+            <small data-module-zh="和网站上的游戏一样：中英配对、计时、得分，成绩存在那台电脑的浏览器里" data-module-en="Same as the game on the website: match, timer, score; scores stay in that computer’s browser">和网站上的游戏一样：中英配对、计时、得分，成绩存在那台电脑的浏览器里</small></label>
+          <label class="choice"><input type="radio" name="offKind" value="practice"> <b data-module-zh="读音练习" data-module-en="Pronunciation practice">读音练习</b>
+            <small data-module-zh="单词一列，点哪个读哪个，中文默认藏着，点一下或向右滑显示；语音也内嵌" data-module-en="One word per row, tap to hear it, the Chinese is hidden until you tap or swipe right; the audio is built in too">单词一列，点哪个读哪个，中文默认藏着，点一下或向右滑显示；语音也内嵌</small></label>
+        </div>
+      </div>
       <div class="row">
         <div class="field"><label for="offBank" data-module-zh="选择题库" data-module-en="Word bank">选择题库</label><select id="offBank"></select></div>
       </div>

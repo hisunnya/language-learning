@@ -3,7 +3,7 @@
    ------------------------------------------------------------
    zh 和 en 必须是同一组键、同一组 {占位符}（tests/test_i18n.py 会检查）。
    用法：WPI18N.t('键', {n: 3})。
-   命名：home_ 首页 · field_ 分类 / 标签面板 · rel_ 批量开放面板 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · visits_ 访问记录 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
+   命名：home_ 首页 · field_ 分类 / 标签面板 · rel_ 批量开放面板 · sel_ 层级选择器 · bank_ 题库工作台 · stats_ 成绩 · prac_ 读音练习 · visits_ 访问记录 · play_ 游戏页 · g_ 游戏界面 · api_ 通用错误
    ============================================================ */
 (function (global) {
   'use strict';
@@ -231,6 +231,23 @@
     home_agoHour: '{n} 小时前',
     home_agoYesterday: '昨天',
     home_agoDays: '{n} 天前',
+    prac_play: '播放 {word} 的发音',
+    prac_reveal: '显示中文意思',
+    prac_hide: '隐藏中文意思',
+    prac_hint: '点击或向右滑',
+    prac_count: '{n} 词',
+    prac_countOne: '1 词',
+    prac_showAll: '显示全部中文',
+    prac_hideAll: '隐藏全部中文',
+    prac_title: '读音练习 · {title}',
+    prac_heading: '读音练习：{title}',
+    prac_noBank: '没有指定题库。请回首页选一个题库。',
+    prac_empty: '这个题库里没有单词',
+    prac_synth: '正在合成离线语音，可能需要几分钟，请勿关闭此页。',
+    prac_generated: '已生成离线读音练习：{name}',
+    prac_dlBlocked: '下载被浏览器拦截了；请在题库工作台的「离线测试」里打开文件后另存。',
+    prac_audioFail: '这个词的发音没有播出来',
+    bank_practice: '读音练习',
     // @@zh-end
   }, {
     home_play: 'Play',
@@ -455,6 +472,23 @@
     home_agoHour: '{n} h ago',
     home_agoYesterday: 'yesterday',
     home_agoDays: '{n} days ago',
+    prac_play: 'Play the pronunciation of {word}',
+    prac_reveal: 'Show the Chinese meaning',
+    prac_hide: 'Hide the Chinese meaning',
+    prac_hint: 'Tap or swipe right',
+    prac_count: '{n} words',
+    prac_countOne: '1 word',
+    prac_showAll: 'Show all meanings',
+    prac_hideAll: 'Hide all meanings',
+    prac_title: 'Pronunciation practice · {title}',
+    prac_heading: 'Pronunciation practice: {title}',
+    prac_noBank: 'No word bank given. Go back to the home page and pick one.',
+    prac_empty: 'This word bank has no words',
+    prac_synth: 'Synthesising the offline audio; this can take a few minutes, please keep this page open.',
+    prac_generated: 'Offline pronunciation practice generated: {name}',
+    prac_dlBlocked: 'The browser blocked the download; open the file in “Offline test” of the word bank workbench and save it.',
+    prac_audioFail: 'The pronunciation of this word did not play',
+    bank_practice: 'Pronunciation',
     // @@en-end
   });
 })(window);

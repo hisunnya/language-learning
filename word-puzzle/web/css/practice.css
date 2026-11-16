@@ -1,0 +1,28 @@
+/* 读音练习（practice.html 和离线单文件版共用）。颜色全部取自页面的配色变量，离线版在 <style> 里给了一份默认值。 */
+.prac-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 6px; }
+.prac-group { margin: 14px 0; }
+.prac-unit { margin: 0 0 6px; font-size: 14px; color: var(--ink2, #5b6d85); }
+.prac-unit small { color: var(--ink3, #8793a7); font-weight: 400; }
+.prac-list { border: 1px solid var(--line, #dce3ef); border-radius: 14px; overflow: hidden; background: var(--card, #fff); }
+.prac-row { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); border-top: 1px solid var(--soft-line, #e6ebf7);
+  touch-action: pan-y; -webkit-user-select: none; user-select: none; transition: background .2s; }
+.prac-row:first-child { border-top: 0; }
+.prac-row.speaking { background: color-mix(in srgb, var(--blue, #4f46e5) 9%, var(--card, #fff)); }
+.prac-word, .prac-cn { appearance: none; border: 0; background: transparent; font: inherit; color: inherit; text-align: left;
+  padding: 14px 14px; min-height: 58px; cursor: pointer; display: flex; align-items: center; gap: 10px; -webkit-tap-highlight-color: transparent; }
+.prac-word:focus-visible, .prac-cn:focus-visible { outline: 2px solid var(--blue, #4f46e5); outline-offset: -2px; }
+.prac-icon { font-size: 18px; opacity: .55; flex: none; }
+.prac-row.speaking .prac-icon { opacity: 1; }
+.prac-text { display: flex; flex-direction: column; min-width: 0; }
+.prac-en { font-size: clamp(16px, 4.2vw, 20px); font-weight: 800; color: var(--heading, #172033); word-break: break-word; line-height: 1.25; }
+.prac-ipa { font-size: 12px; color: var(--ink3, #8793a7); font-family: "Times New Roman", Georgia, serif; margin-top: 2px; }
+.prac-cn { border-left: 1px dashed var(--soft-line, #e6ebf7); background: color-mix(in srgb, var(--ink3, #8793a7) 8%, var(--card, #fff)); }
+.prac-cn-text { display: none; font-size: clamp(15px, 3.9vw, 18px); font-weight: 700; color: var(--orange, #d97706); line-height: 1.35; word-break: break-word; }
+.prac-cn-hint { font-size: 12px; color: var(--ink3, #8793a7); letter-spacing: .5px; }
+.prac-row.on .prac-cn { background: transparent; }
+.prac-row.on .prac-cn-text { display: block; }
+.prac-row.on .prac-cn-hint { display: none; }
+@media (max-width: 480px) {
+  .prac-word, .prac-cn { padding: 12px 10px; }
+  .prac-cn-hint { font-size: 11px; }
+}

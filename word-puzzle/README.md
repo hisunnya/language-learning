@@ -43,7 +43,8 @@ python3 -m server.app --host 0.0.0.0 --port 8000
 | 页面 | 地址 | 干什么 |
 | --- | --- | --- |
 | 首页 | `/` | 看默认题库、按层级生成题库、列出已有题库 |
-| 题库工作台 | `/bank.html#banks` `#new` `#offline` | 三个标签页：**当前题库**（分类、标签、批量开放、删除）· **新建题库**（Step 1 词表从哪来 → Step 2 定义题库 → Step 3 开放给谁；含「快速上传并生成」）· **离线测试**（只导出，不新建题库）|
+| 读音练习 | `/practice.html?bank=<id>` | 单词纵向排列，点哪个读哪个（美式女声，sb. / sth. 念成 somebody / something）；第二列中文默认藏着，点一下或手指 / 鼠标向右滑显示；老师能下载语音内嵌的离线版 |
+| 题库工作台 | `/bank.html#banks` `#new` `#offline` | 三个标签页：**当前题库**（分类、标签、批量开放、删除）· **新建题库**（Step 1 词表从哪来 → Step 2 定义题库 → Step 3 开放给谁；含「快速上传并生成」）· **离线测试**（只导出，不新建题库；可选配对游戏或读音练习）|
 | 在线游玩 | `/play.html?bank=<id>` | 玩，成绩写回数据库 |
 | 成绩记录 | `/stats.html` | 总览、按题库统计、逐条明细 |
 
@@ -326,7 +327,7 @@ nginx 做的事：**静态文件直接托管**，`/api/` 反代给后端（默�
 | POST | `/api/banks` | 生成题库（body 是层级选择） |
 | GET | `/api/banks/<id>` | 题库内容（游戏用） |
 | DELETE | `/api/banks/<id>` | 删除题库 |
-| POST | `/api/banks/<id>/offline` | 生成离线测试页 |
+| POST | `/api/banks/<id>/offline` | 生成离线单文件页：`{"kind":"game"}`（默认，配对游戏）或 `{"kind":"practice"}`（读音练习）；语音都内嵌 |
 | GET / POST | `/api/recent` | 首页「最近玩过」：按账号存在服务器上（换设备也看得到），只给现在还看得到的题库；没登录的访客返回 `device_only`，页面改用本机记录 |
 | GET | `/api/offline` | 已生成的离线文件列表 |
 | GET | `/api/offline/<文件名>` | 下载（加 `?inline=1` 直接在浏览器里预览） |

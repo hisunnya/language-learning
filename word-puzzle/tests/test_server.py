@@ -684,6 +684,40 @@ class TestHTTP(unittest.TestCase):
         self.assertIn("data:audio/mpeg;base64,SUQzbW9jaw==", html)
         self.assertIn('"backHref":"' + self.base + '/"', html)
 
+    def test_offline_practice_page_is_self_contained_and_carries_the_audio(self):
+        """读音练习的离线版：词表、脚本、样式和每个词的语音都在一个 HTML 里，不联网；sb. / sth. 照样有语音。"""
+        bid = self.post("/api/banks", {"source": "seed", "level1": "初中", "level2": "九年级", "level3": "上册",
+                                       "level4": "all", "unit_mode": "all"})["bank"]["id"]
+        words = [w["en"] for w in __import__("server.app", fromlist=["Handler"]).Handler.db.bank_words(bid)]
+        seen = {}
+
+        def fake(ws, workers=4):
+            seen["words"] = list(ws)
+            return {w: b"ID3" + w.encode() for w in dict.fromkeys(ws)}
+        with mock.patch.object(tts, "synth_many", side_effect=fake):
+            off = self.post(f"/api/banks/{bid}/offline", {"kind": "practice"})
+            game = self.post(f"/api/banks/{bid}/offline", {})
+        self.assertIn("读音练习", off["filename"])
+        self.assertNotIn("读音练习", game["filename"], "默认还是配对游戏")
+        with urllib.request.urlopen(self.base + off["url"], timeout=10) as r:
+            html = r.read().decode()
+        self.assertIn("WPPractice.createPlayer", html)
+        self.assertNotIn("WPGame", html, "读音练习页不带游戏脚本")
+        self.assertRegex(html, r"data:audio/mpeg;base64,")
+        self.assertIsNone(re.search(r"(src|href)=[\"']https?://", html), "不能引用外部资源")
+        self.assertEqual(set(seen["words"]), set(words), "题库里的每个词都送去合成")
+        data = re.search(r"var WP_DATA = (\{.*?\});\s*</script>", html, re.S).group(1)
+        embedded = json.loads(data)["audio"]
+        for w in words[:50]:
+            self.assertIn(w.strip().lower(), embedded, w)
+
+    def test_offline_kind_must_be_game_or_practice(self):
+        bid = self.post("/api/banks", {"source": "seed", "level1": "初中", "level2": "九年级", "level3": "上册",
+                                       "level4": "all", "unit_mode": "all"})["bank"]["id"]
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            self.post(f"/api/banks/{bid}/offline", {"kind": "exam"})
+        self.assertEqual(ctx.exception.code, 400)
+
     def test_offline_export_never_creates_a_bank(self):
         """工作台的「离线测试」只导出已有的题库；以前顶部那个按钮每点一次就悄悄多出一个题库。"""
         bid = self.post("/api/banks", {"source": "seed", "level1": "初中", "level2": "九年级",

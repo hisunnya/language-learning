@@ -82,7 +82,8 @@
     if (tagsEnabled()) {
       tagPart = ' ' + (BankPanels.tagPills(b) || '<span class="pill warn">' + esc(t('home_noTags')) + '</span>');
     }
-    var ops = '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('bank_play')) + '</a>';
+    var ops = '<a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +
+      '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('bank_play')) + '</a>';
     if (tagsEnabled()) {
       ops += '<button class="btn sm ghost" data-cat="' + b.id + '">' + esc(t('home_catBtn')) + '</button>' +
              '<button class="btn sm ghost" data-tags="' + b.id + '">' + esc(t('home_tagsBtn')) + '</button>';
@@ -197,10 +198,15 @@
     });
   }
 
+  function offlineKind() {
+    var r = document.querySelector('input[name="offKind"]:checked');
+    return r && r.value === 'practice' ? 'practice' : 'game';
+  }
+
   function makeOffline(bankId, button) {
     if (button) { button.disabled = true; button.textContent = t('bank_synthesizing'); }
     API.toast(t('bank_synthToast'), 600000);
-    return API.post('/api/banks/' + bankId + '/offline', {}).then(function (res) {
+    return API.post('/api/banks/' + bankId + '/offline', { kind: offlineKind() }).then(function (res) {
       API.toast(t('bank_generated', { name: res.filename }));
       API.download(res.url, res.filename).catch(function () { API.toast(t('bank_dlBlocked2'), 6000); });
       loadFiles();

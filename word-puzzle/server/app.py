@@ -525,9 +525,11 @@ class Handler(BaseHTTPRequestHandler):
             self._need_admin()
         m = re.fullmatch(r"/api/banks/(\d+)/offline", path)
         if m and method == "POST":
-            self.read_json()
+            kind = self.read_json().get("kind") or "game"          # game = 配对游戏，practice = 读音练习
+            if kind not in ("game", "practice"):
+                raise HttpError(400, "kind 只能是 game 或 practice", "bad_kind")
             with self._heavy():
-                self._make_offline(int(m.group(1)))
+                self._make_offline(int(m.group(1)), kind)
             return
 
         if path == "/api/offline" and method == "GET":
@@ -997,7 +999,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"ok": True, "material": self.db.get_material(mid),
                         "summary": info}, status=201)
 
-    def _make_offline(self, bid: int) -> None:
+    def _make_offline(self, bid: int, kind: str = "game") -> None:
         db = self.db
         bank = db.get_bank(bid)
         if not bank:
@@ -1010,9 +1012,12 @@ class Handler(BaseHTTPRequestHandler):
         words = db.bank_words(bid)
         try:
             audio = tts.synth_many([word["en"] for word in words])
-            filename, html = offline.build_offline_html(
-                bank, payload, audio=audio,
-                back_href=self._offline_home_href())
+            if kind == "practice":
+                filename, html = offline.build_practice_html(bank, payload, audio=audio)
+            else:
+                filename, html = offline.build_offline_html(
+                    bank, payload, audio=audio,
+                    back_href=self._offline_home_href())
         except tts.SynthesisError as exc:
             raise HttpError(503, str(exc)) from exc
         except ValueError as exc:

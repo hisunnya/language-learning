@@ -50,7 +50,8 @@
   function bankItem(b, extra) {
     return '<div class="item">' +
       '  <div class="main"><b>' + esc(b.title) + '</b> <small>' + esc(extra || counts(b)) + '</small></div>' +
-      '  <div class="ops"><a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('home_play')) + '</a></div></div>';
+      '  <div class="ops"><a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +
+      '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('home_play')) + '</a></div></div>';
   }
 
   /* 每本书（分类）一个色块：带名字的书用主色标题条，「其他」用灰色标题条，一眼分得开 */
