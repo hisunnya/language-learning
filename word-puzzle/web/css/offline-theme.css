@@ -1,0 +1,12 @@
+/* 离线单文件页的配色选择器：小方块，斜着对半分（右上主色、左下页面底色），选中的有一圈。和网站页眉里的是同一种样子。 */
+.theme-picker { display: inline-flex; align-items: center; gap: 6px; }
+.theme-chip { appearance: none; padding: 3px; margin: 0; border: 0; background: transparent; border-radius: 7px; cursor: pointer; line-height: 0; -webkit-tap-highlight-color: transparent; }
+.theme-chip[aria-pressed="true"] { outline: 2px solid var(--blue, var(--game-primary, #4f46e5)); outline-offset: 1px; }
+.theme-chip:focus-visible { outline: 2px solid var(--blue, var(--game-primary, #4f46e5)); outline-offset: 1px; }
+.theme-chip .swatch { display: block; width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(128, 128, 128, .45);
+  background: linear-gradient(to top right, var(--swatch-bg) 0 50%, var(--swatch-main) 50% 100%); }
+
+/* 配对游戏离线页底部那一排按钮：加了配色选择器之后在窄屏上会被挤出屏幕，所以允许换行，窄屏上和语言按钮一起占第二行 */
+.bar { flex-wrap: wrap; align-items: center; }
+#offline-theme { margin-left: auto; display: flex; align-items: center; }
+@media (max-width: 560px) { #offline-theme { flex: 1 1 0; justify-content: center; margin-left: 0; } }     /* 窄屏：语言按钮和配色选择器同占一行 */

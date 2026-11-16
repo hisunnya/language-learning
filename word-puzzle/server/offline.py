@@ -27,6 +27,9 @@ I18N_FILE = WEB / "js" / "i18n.js"
 I18N_TEXT_FILE = WEB / "js" / "i18n-lexica.js"
 UI_FILE = WEB / "js" / "game-ui.js"
 ADAPTER_FILE = WEB / "js" / "game-adapter-offline.js"
+APP_CSS_FILE = WEB / "css" / "app.css"
+THEME_JS_FILE = WEB / "js" / "offline-theme.js"
+THEME_CSS_FILE = WEB / "css" / "offline-theme.css"
 PRACTICE_CSS_FILE = WEB / "css" / "practice.css"
 PRACTICE_UI_FILE = WEB / "js" / "practice-ui.js"
 
@@ -40,7 +43,12 @@ TEMPLATE = """<!DOCTYPE html>
 <title>{title}</title>
 <style>
 {css}
+{theme_css}
 </style>
+<script>
+{theme_js}
+WPTheme.early();
+</script>
 </head>
 <body>
 <div class="app">
@@ -62,6 +70,7 @@ TEMPLATE = """<!DOCTYPE html>
     <button class="btn warn" id="btn-replay" data-module-zh="重玩本关" data-module-en="Replay level">重玩本关</button>
     <button class="btn" id="btn-restart" data-module-zh="从头开始" data-module-en="Start over">从头开始</button>
     <button class="btn ghost sm" id="btn-lang" data-module-zh="English" data-module-en="中文">English</button>
+    <span id="offline-theme"></span>
   </div>
 </div>
 <div id="fx"></div>
@@ -94,6 +103,7 @@ var WP_DATA = {data};
   if (langButton) langButton.onclick = function () {{
     WPI18N.setLang(WPI18N.lang() === 'en' ? 'zh' : 'en');
   }};
+  WPTheme.init(document.getElementById('offline-theme'));
   var game = new WPGame.Game({{ levels: WP_DATA.levels }});
   WPGameUI.init({{
     game: game,
@@ -203,6 +213,8 @@ def build_offline_html(bank: dict, groups: list[dict],
     html = TEMPLATE.format(
         title=_escape(title),
         css=_read(CSS_FILE),
+        theme_css=_read(THEME_CSS_FILE),
+        theme_js=_read(THEME_JS_FILE),
         core=_read(CORE_FILE),
         i18n=_read(I18N_FILE),
         i18n_text=_read(I18N_TEXT_FILE),
@@ -222,20 +234,27 @@ PRACTICE_TEMPLATE = """<!DOCTYPE html>
 <meta name="generator" content="word-puzzle offline generator">
 <title>{title}</title>
 <style>
-:root {{ --card:#fff; --bg:#f4f6fb; --ink:#172033; --ink2:#5b6d85; --ink3:#8793a7; --heading:#1e1b4b; --line:#dce3ef; --soft-line:#e6ebf7;
+/* 默认值（靛蓝）；五套配色在下面 html[data-theme=…] 里，页面一打开按上次的选择设好 */
+:root {{ --card:#fff; --bg1:#f4f6fb; --ink:#172033; --ink2:#68758a; --ink3:#8793a7; --heading:#1e1b4b; --line:#dce3ef; --soft-line:#e6ebf7;
   --blue:#4f46e5; --blue-l:#eef2ff; --orange:#d97706; --on-primary:#fff; }}
+{themes}
 * {{ box-sizing: border-box; }}
-body {{ margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; }}
+body {{ margin: 0; background: var(--bg1); color: var(--ink); font: 15px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; }}
 .wrap {{ max-width: 760px; margin: 0 auto; padding: 14px 14px 40px; }}
 h1 {{ font-size: 20px; margin: 6px 0 2px; color: var(--heading); }}
 .sub {{ margin: 0 0 8px; color: var(--ink2); font-size: 13px; }}
 .btn {{ appearance: none; border: 1px solid var(--blue); background: var(--blue); color: var(--on-primary); border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 700; cursor: pointer; }}
 .btn.ghost {{ background: var(--card); color: var(--ink2); border-color: var(--line); }}
 .hint {{ font-size: 12px; color: var(--ink2); margin: 6px 0 10px; line-height: 1.6; }}
-.toast {{ position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #172033; color: #fff; padding: 8px 14px; border-radius: 10px; opacity: 0; pointer-events: none; transition: opacity .2s; }}
+.toast {{ position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--heading); color: var(--card); padding: 8px 14px; border-radius: 10px; opacity: 0; pointer-events: none; transition: opacity .2s; }}
 .toast.on {{ opacity: 1; }}
 {css}
+{theme_css}
 </style>
+<script>
+{theme_js}
+WPTheme.early();
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -244,6 +263,7 @@ h1 {{ font-size: 20px; margin: 6px 0 2px; color: var(--heading); }}
   <div class="prac-toolbar">
     <button type="button" class="btn ghost" id="pracToggle"></button>
     <button type="button" class="btn ghost" id="btn-lang" data-module-zh="English" data-module-en="中文">English</button>
+    <span id="offline-theme"></span>
   </div>
   <p class="hint" data-module-zh="点单词听发音；点右边一列、或在这一行上向右滑（手指、鼠标都行）显示中文意思，再点或向左滑藏起来。" data-module-en="Tap a word to hear it; tap the right column, or swipe right on the row (finger or mouse), to show the Chinese meaning; tap or swipe left to hide it again.">点单词听发音；点右边一列、或在这一行上向右滑（手指、鼠标都行）显示中文意思，再点或向左滑藏起来。</p>
   <div id="pracMount"></div>
@@ -289,12 +309,21 @@ var WP_DATA = {data};
   document.getElementById('pracMount').addEventListener('pointerup', function () {{ setTimeout(head, 0); }});
   document.getElementById('btn-lang').onclick = function () {{ WPI18N.setLang(WPI18N.lang() === 'en' ? 'zh' : 'en'); }};
   WPI18N.onChange(head);
+  WPTheme.init(document.getElementById('offline-theme'));
   head();
 }})();
 </script>
 </body>
 </html>
 """
+
+
+def theme_blocks() -> str:
+    """网站样式里五套配色的变量块（html[data-theme=…] { … }），读练习页的离线版内嵌这几行，配色和网站完全一样。"""
+    lines = [l for l in _read(APP_CSS_FILE).splitlines() if l.startswith("html[data-theme=")]
+    if len(lines) < 5:
+        raise ValueError("app.css 里没找到五套配色")
+    return "\n".join(lines)
 
 
 def build_practice_html(bank: dict, groups: list[dict],
@@ -318,7 +347,8 @@ def build_practice_html(bank: dict, groups: list[dict],
         "generated": time.strftime("%Y-%m-%d %H:%M:%S", when or time.localtime()),
     }
     html = PRACTICE_TEMPLATE.format(
-        title=_escape(title), css=_read(PRACTICE_CSS_FILE), i18n=_read(I18N_FILE), i18n_text=_read(I18N_TEXT_FILE),
+        title=_escape(title), css=_read(PRACTICE_CSS_FILE), themes=theme_blocks(), theme_css=_read(THEME_CSS_FILE),
+        theme_js=_read(THEME_JS_FILE), i18n=_read(I18N_FILE), i18n_text=_read(I18N_TEXT_FILE),
         ui=_read(PRACTICE_UI_FILE), data=_json_for_script(data))
     return build_filename(bank, when, kind="practice"), html
 
