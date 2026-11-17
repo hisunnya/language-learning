@@ -297,19 +297,26 @@ check('从头开始后 duration 重新计', () => {
 
 /* ---------- 暂停：切到后台不扣时间 ---------- */
 
+check('每关基础时间是 60 秒（网站和小程序一致，见 core_parity）', () => {
+  const { game } = newGame();
+  eq(game.levelTime, 60);
+  eq(game.state.timeLeft, 60);
+  eq(game.state.limit, 60);
+});
+
 check('暂停期间剩余时间冻结，恢复后接着走', () => {
   const { game } = newGame();
   clock.now += 20 * 1000;
   game.tick();
   const left = game.state.timeLeft;
-  ok(Math.abs(left - 100) < 0.01, '用掉 20 秒应剩 100 秒');
+  ok(Math.abs(left - (game.levelTime - 20)) < 0.01, '用掉 20 秒应剩 每关时间 - 20 秒');
   ok(game.pause(), '应当暂停成功');
   clock.now += 90 * 1000;              /* 玩家切走 90 秒 */
   eq(game.tick(), null, '暂停时 tick 不应推进');
   ok(game.resume(), '应当恢复成功');
   clock.now += 10 * 1000;
   game.tick();
-  ok(Math.abs(game.state.timeLeft - 90) < 0.01, '恢复后只扣实际玩的 10 秒，实际 ' + game.state.timeLeft);
+  ok(Math.abs(game.state.timeLeft - (game.levelTime - 30)) < 0.01, '恢复后只扣实际玩的 10 秒，实际 ' + game.state.timeLeft);
   eq(game.state.playing, true, '不应因为切走而超时');
 });
 

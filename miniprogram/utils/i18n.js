@@ -43,8 +43,8 @@ var STRINGS = {
       '英文和中文都可以先点，点第二张时配对。\n\n' +
       '每对 +100 分；连击每多一次 +20 分，最高 +100。\n' +
       '配错扣 20 分、扣 3 秒，连击清零。\n\n' +
-      '每关 120 秒，过关后剩余时间每秒折算 10 分，' +
-      '并按剩余时间给下一关加时，最多 150 秒。\n\n' +
+      '每关 60 秒，过关后剩余时间每秒折算 10 分，' +
+      '并按剩余时间给下一关加时，最多 90 秒。\n\n' +
       '切到别的应用时计时会暂停；重玩本关会收回这一关已得的分。',
     gotIt: '知道了',
     restartTitle: '从头开始',
@@ -91,8 +91,8 @@ var STRINGS = {
       'Tap an English or a Chinese card first, then tap its partner.\n\n' +
       'Each pair scores 100; every extra combo adds 20, up to +100.\n' +
       'A wrong pair costs 20 points and 3 seconds, and resets the combo.\n\n' +
-      'Each level lasts 120 seconds. Leftover time scores 10 per second ' +
-      'and carries over to the next level, up to 150 seconds.\n\n' +
+      'Each level lasts 60 seconds. Leftover time scores 10 per second ' +
+      'and carries over to the next level, up to 90 seconds.\n\n' +
       'The clock pauses when you leave the app. Replaying a level takes back the points earned in it.',
     gotIt: 'Got it',
     restartTitle: 'Restart',

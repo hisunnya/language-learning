@@ -7,7 +7,7 @@
    导出成绩时可以直接统计「错词榜」。
    ============================================================ */
 
-var LEVEL_TIME = 120;
+var LEVEL_TIME = 60;
 var LEVEL_BONUS_MAX = 30;
 var LEVEL_LIMIT_MAX = LEVEL_TIME + LEVEL_BONUS_MAX;
 var PAIR_SCORE = 100;
