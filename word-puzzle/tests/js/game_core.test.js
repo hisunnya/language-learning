@@ -302,6 +302,7 @@ check('每关基础时间是 60 秒（网站和小程序一致，见 core_parity
   eq(game.levelTime, 60);
   eq(game.state.timeLeft, 60);
   eq(game.state.limit, 60);
+  eq(WPGame.LEVEL_BONUS_MAX, 20, '结转的加时最多 20 秒，所以每关最长 80 秒');
 });
 
 check('暂停期间剩余时间冻结，恢复后接着走', () => {

@@ -8,7 +8,7 @@
    ============================================================ */
 
 var LEVEL_TIME = 60;
-var LEVEL_BONUS_MAX = 30;
+var LEVEL_BONUS_MAX = 20;
 var LEVEL_LIMIT_MAX = LEVEL_TIME + LEVEL_BONUS_MAX;
 var PAIR_SCORE = 100;
 var COMBO_STEP = 20;
