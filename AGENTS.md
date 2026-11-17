@@ -166,7 +166,7 @@ page in the repository that implements all of §3 today, and the hub test
 | `word-puzzle/web/*.html` | `data-module-zh/en` + `WPI18N` | 5 (shared header) | top-right, square swatches (shared header) | ✅ every page, including the game and the offline page |
 | `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
 | `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
-| `word-puzzle/web/{login,change-password,admin}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
+| `word-puzzle/web/{login,change-password,admin,tenants}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
 | `miniprogram/` (WeChat) | `utils/i18n.js` | 5 (same names) | top-right, square swatches (tap, name shown below) | ✅ adapted, see 3.4.1 |
 
 The two ⚠️ pages predate this convention. When you touch one of them, bring
@@ -331,6 +331,31 @@ The database lives **outside the container** (a host directory, backups on anoth
 both bind-mounted; paths in `AGENTS.local.md`); the container stays stateless. The old
 separate home backend on the host is retired. Other subjects plug in through
 `server/modules.py`, `/api/records` and `server/policy.py`; see `docs/路线图.md`.
+
+**Teachers as tenants (one database, visibility by relation).** Roles are `admin` (the
+*super administrator*: sees and manages everything, including other teachers' work and
+deleted rows), `teacher` and `student`. All rows live in the same tables; what a person
+sees is decided in one place, `word-puzzle/server/tenancy.py` (`Scope`, `bank_where`,
+`student_where`, `people_where`, `material_where`) — add a new list endpoint through it,
+never with its own ad-hoc filter.
+
+- A teacher sees the students linked to them (`teacher_students`), the banks they own
+  (`banks.owner_id`), banks shared with them (`teacher_banks`) and the built-in banks
+  (`owner_id IS NULL`, usable by every teacher, editable only by the super administrator),
+  their own uploaded materials, and the scores / visits of their students.
+- Tags are **per teacher** (`user_tags.teacher_id`, `bank_tags.teacher_id`): a student sees a
+  bank only when one teacher gave both the same tag. Removing a student or a bank from a
+  teacher also removes that teacher's tags on it.
+- Importing a student number that already belongs to another teacher links the student to
+  both (written to `audit_log` as `student.auto_share`); the other teacher's data is not
+  changed.
+- **Deletes are soft** (`deleted_at` / `deleted_by` on users, banks, materials): hidden from
+  teachers and students, restorable by the super administrator on `tenants.html`. A
+  teacher "deleting" something that is only shared with them just unlinks it. The hard
+  `Database.delete_bank` is for internal rebuilds of the built-in banks only.
+- Sharing, moving, deleting, restoring and adding teachers go to `audit_log`.
+- The LAN guest (home edition, not logged in) sees the built-in banks and the super
+  administrator's banks.
 
 
 | Path | Holds |

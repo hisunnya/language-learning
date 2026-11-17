@@ -1,7 +1,9 @@
 """学生版的管理命令行：在服务器上用，不经过网络。
 
-    python3 -m server.admin create-admin 20260001 --name 张老师
+    python3 -m server.admin create-admin 20260001 --name 张老师     # 超级管理员
+    python3 -m server.admin create-teacher T002 --name 李老师       # 普通老师（只看得到自己名下的学生和题库）
     python3 -m server.admin import 名单.xlsx --out 初始密码.csv     # 文件名写 - 表示从标准输入读
+    python3 -m server.admin import 名单.xlsx --teacher T002          # 学生挂到这位老师名下（默认：第一位超级管理员）
     python3 -m server.admin reset-password 2026001
     python3 -m server.admin unlock 2026001
     python3 -m server.admin disable 2026001        # enable 同理
@@ -52,15 +54,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--db", default=os.environ.get("WP_DB", ""), help="数据库文件（默认读 WP_DB）")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("create-admin", help="创建管理员账号")
-    p.add_argument("student_no")
-    p.add_argument("--name", required=True)
-    p.add_argument("--password", help="不给就会提示输入（推荐，避免留在命令历史里）")
+    for name, text in (("create-admin", "创建超级管理员账号"), ("create-teacher", "创建老师账号")):
+        p = sub.add_parser(name, help=text)
+        p.add_argument("student_no")
+        p.add_argument("--name", required=True)
+        p.add_argument("--password", help="不给就会提示输入（推荐，避免留在命令历史里）")
 
     p = sub.add_parser("import", help="导入学生名单（csv / xlsx）")
     p.add_argument("file")
     p.add_argument("--out", default="初始密码.csv", help="初始密码清单的保存位置")
     p.add_argument("--reset-existing", action="store_true", help="已存在的学号也重置密码")
+    p.add_argument("--teacher", default="", help="学生挂到这位老师（工号）名下，默认第一位超级管理员")
 
     for name in ("reset-password", "unlock", "disable", "enable"):
         p = sub.add_parser(name)
@@ -77,10 +81,11 @@ def main(argv: list[str] | None = None) -> int:
     db = Database(args.db)
     svc = auth_mod.AuthService(db)
     try:
-        if args.cmd == "create-admin":
+        if args.cmd in ("create-admin", "create-teacher"):
+            role = "admin" if args.cmd == "create-admin" else "teacher"
             password = args.password
             if not password:
-                password = getpass.getpass("管理员密码: ")
+                password = getpass.getpass("密码: ")
                 if getpass.getpass("再输一遍: ") != password:
                     print("两次输入不一致", file=sys.stderr)
                     return 1
@@ -89,17 +94,27 @@ def main(argv: list[str] | None = None) -> int:
                 print(problem, file=sys.stderr)
                 return 1
             user, _ = svc.create_user(args.student_no, args.name, password=password,
-                                      role="admin", must_change=False)
-            print("已创建管理员 %s（%s）" % (user["student_no"], user["name"]))
+                                      role=role, must_change=role == "teacher")
+            print("已创建%s %s（%s）" % ("超级管理员" if role == "admin" else "老师（第一次登录要改密码）",
+                                      user["student_no"], user["name"]))
             return 0
 
         if args.cmd == "import":
             data = sys.stdin.buffer.read() if args.file == "-" else Path(args.file).read_bytes()
+            teacher_id = None
+            if args.teacher:
+                teacher = svc.get_by_student_no(args.teacher)
+                if not teacher or teacher["role"] not in ("admin", "teacher") or teacher.get("deleted_at"):
+                    print("没有工号为 %s 的老师" % args.teacher, file=sys.stderr)
+                    return 1
+                teacher_id = teacher["id"]
             table = roster.parse_roster(args.file, data)
-            report = svc.import_roster(table["rows"], reset_existing=args.reset_existing)
+            report = svc.import_roster(table["rows"], reset_existing=args.reset_existing, teacher_id=teacher_id)
             if table["ignored_columns"]:
                 print("注意：这些列不会被保存：" + "、".join(table["ignored_columns"]))
             print("新建 %d，更新 %d，跳过 %d" % (report["created"], report["updated"], report["skipped"]))
+            if report.get("shared"):
+                print("其中 %d 个学号原来属于别的老师，现在两位老师共享（已记进操作记录）" % report["shared"])
             for e in report["errors"]:
                 print("  第 %s 行 %s：%s" % (e["row"], e["student_no"] or "-", e["reason"]))
             if report["credentials"]:
@@ -110,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "list":
             for u in svc.list_users(class_name=args.class_name, college=args.college,
                                     department=args.department):
-                flags = "".join([" [管理员]" if u["role"] == "admin" else "",
+                flags = "".join([{"admin": " [超级管理员]", "teacher": " [老师]"}.get(u["role"], ""),
                                  " [停用]" if u["disabled"] else "", " [锁定]" if u["locked"] else "",
                                  " [待改密码]" if u["must_change"] else ""])
                 print("%s\t%s\t%s\t%s%s" % (u["student_no"], u["name"], u["class_name"],

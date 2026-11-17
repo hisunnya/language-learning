@@ -221,7 +221,7 @@ $( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/w
   服务     ： systemctl status $SITE_NAME
 
 下一步：
-  1) 创建管理员：  sudo wp-family-admin create-admin 你的工号 --name 你的名字
+  1) 创建管理员：  sudo wp-family-admin create-admin 你的工号 --name 你的名字   （超级管理员；老师在网页「老师与分配」里加）
   2) 导入名单：    sudo wp-family-admin import /tmp/名单.xlsx --out /tmp/初始密码.csv
      （或者登录后在「账号管理」页面上传名单）
   3) 开 Funnel：   tailscale funnel --bg $NGINX_PORT      （确认过再开，见 部署说明.md 的检查清单）

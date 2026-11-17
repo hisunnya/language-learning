@@ -689,10 +689,43 @@ class TestAdminCli(unittest.TestCase):
             self.assertIn("新的初始密码", out)
             code, out, _ = self.run_cli(db, "list")
             self.assertIn("A001", out)
-            self.assertIn("[管理员]", out)
+            self.assertIn("[超级管理员]", out)
             self.assertIn("[待改密码]", out)
             code, _, err = self.run_cli(db, "unlock", "nobody")
             self.assertEqual(code, 1)
+
+    def test_create_teacher_and_import_into_that_teacher(self):
+        """命令行加老师、把名单导进这位老师名下；已经属于别人的学号变成两位老师共享。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / "c.db")
+            self.assertEqual(self.run_cli(db, "create-admin", "A001", "--name", "孙", "--password", "Tr0ub4dor!")[0], 0)
+            code, out, _ = self.run_cli(db, "create-teacher", "T002", "--name", "李", "--password", "Tr0ub4dor!")
+            self.assertEqual(code, 0, out)
+            self.assertIn("老师", out)
+            roster_file = Path(tmp) / "名单.csv"
+            roster_file.write_text("学号,姓名,班级\n2026001,张三,一班\n", encoding="utf-8-sig")
+            creds = str(Path(tmp) / "creds.csv")
+            self.assertEqual(self.run_cli(db, "import", str(roster_file), "--out", creds)[0], 0)
+            code, out, _ = self.run_cli(db, "import", str(roster_file), "--out", creds, "--teacher", "T002")
+            self.assertEqual(code, 0, out)
+            self.assertIn("共享", out)
+            code, _, err = self.run_cli(db, "import", str(roster_file), "--teacher", "2026001")
+            self.assertEqual(code, 1, "学生的学号不能当老师用")
+            self.assertIn("没有工号", err)
+            code, out, _ = self.run_cli(db, "list")
+            self.assertIn("[老师]", out)
+            self.assertIn("[待改密码]", out.split("T002")[1].splitlines()[0], "命令行建的老师第一次登录也要改密码")
+            d = Database(db)
+            try:
+                teacher = d.one("SELECT id, role, must_change FROM users WHERE student_no='T002'")
+                self.assertEqual(teacher["role"], "teacher")
+                student = d.one("SELECT id FROM users WHERE student_no='2026001'")
+                owners = sorted(r["teacher_id"] for r in d.query(
+                    "SELECT teacher_id FROM teacher_students WHERE student_id=?", (student["id"],)))
+                admin = d.one("SELECT id FROM users WHERE student_no='A001'")
+                self.assertEqual(owners, sorted([admin["id"], teacher["id"]]))
+            finally:
+                d.close()
 
 
 if __name__ == "__main__":
