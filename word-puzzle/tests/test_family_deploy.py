@@ -25,6 +25,26 @@ NGINX = shutil.which("nginx")
 CHECK_URL = FAMILY / "check-url.sh"
 
 
+class TestPreDeploy(unittest.TestCase):
+    SCRIPT = (ROOT.parent / "pre-deploy.sh").read_text(encoding="utf-8")
+
+    def test_it_snapshots_backs_up_consistently_and_prints_the_rollback(self):
+        self.assertIn('pct snapshot "$CTID" "$SNAP"', self.SCRIPT)
+        self.assertIn(".backup(", self.SCRIPT, "WAL 模式的库不能直接 cp，要用 SQLite 的 backup 接口")
+        self.assertIn("integrity_check", self.SCRIPT)
+        self.assertIn("pct rollback", self.SCRIPT)
+        self.assertIn("exit 1", self.SCRIPT, "快照失败就不该让人继续部署")
+
+    def test_it_takes_the_container_id_from_the_private_env_file_not_the_repo(self):
+        self.assertIn("LEXICA_CTID", self.SCRIPT)
+        self.assertNotRegex(self.SCRIPT, r"CTID=\"?\d")
+        self.assertIn("LEXICA_CTID", (ROOT.parent / "deploy.local.env.example").read_text(encoding="utf-8"))
+
+    def test_the_script_parses(self):
+        done = subprocess.run(["bash", "-n", str(ROOT.parent / "pre-deploy.sh")], capture_output=True, text=True)
+        self.assertEqual(done.returncode, 0, done.stderr)
+
+
 class TestSystemdUnit(unittest.TestCase):
     def test_login_is_on_and_cookies_are_secure(self):
         for line in ("Environment=WP_AUTH=1", "Environment=WP_COOKIE_SECURE=1",

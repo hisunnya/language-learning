@@ -125,10 +125,11 @@ language-learning/
 
 ## 生产服务器一键部署整站
 
-在生产服务器执行 `git pull` 后，从仓库根目录运行：
+在生产服务器执行 `git pull` 后，先运行 `sudo bash ./pre-deploy.sh`（给学生版容器打快照、备份数据库，并打印出问题时的回滚命令；
+需要 `deploy.local.env` 里有 `LEXICA_CTID`），再从仓库根目录运行：
 
 ```bash
-sudo bash ./deploy-all-20261117_130000.sh
+sudo bash ./deploy-all-20261117_140000.sh
 ```
 
 脚本部署到你指定的服务器（地址写在不进 git 的 `deploy.local.env` 里，见下），会更新词境后端、语林门户、每日话题、无线电执照和 nginx 统一入口（配置写入 `/etc/nginx/conf.d/lingua-grove.conf`），并检查四个页面及词境 API。缺少 `conf.d` 时会自动创建；词境现有数据库会保留。目标服务器的地址不写在仓库里（仓库是公开的）：把 `deploy.local.env.example` 复制成 `deploy.local.env`（已在 `.gitignore` 里，不会提交）并改成自己的值，
@@ -136,8 +137,8 @@ sudo bash ./deploy-all-20261117_130000.sh
 
 ```bash
 cp deploy.local.env.example deploy.local.env     # 然后编辑：LINGUA_SERVER_NAME、LEXICA_UPSTREAM
-sudo bash ./deploy-all-20261117_130000.sh
-# 或临时覆盖：sudo env LINGUA_SERVER_NAME=服务器IP或域名 LEXICA_UPSTREAM=none bash ./deploy-all-20261117_130000.sh
+sudo bash ./deploy-all-20261117_140000.sh
+# 或临时覆盖：sudo env LINGUA_SERVER_NAME=服务器IP或域名 LEXICA_UPSTREAM=none bash ./deploy-all-20261117_140000.sh
 ```
 
 ---
