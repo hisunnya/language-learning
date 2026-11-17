@@ -99,7 +99,7 @@ class TestTeacherLandingPage(unittest.TestCase):
     def test_the_other_pages_hide_it_for_teachers_only(self):
         ui = self.read("js/auth-ui.js")
         self.assertIn("function hideHomeLink()", ui)
-        self.assertIn("if (user.role === 'admin') { hideHomeLink(); addNavLinks(); }", ui)
+        self.assertIn("if (isStaffRole(user.role)) { hideHomeLink(); addNavLinks(user.role === 'admin'); }", ui)
         for page in ("stats.html", "index.html"):
             self.assertIn('href="/word-puzzle/" ', self.read(page).replace('class="active" ', ""), page + "：学生和访客仍然有首页链接")
 

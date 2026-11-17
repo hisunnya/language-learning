@@ -37,7 +37,7 @@ class TestHeadScript(unittest.TestCase):
         for page in PROTECTED:
             html = (WEB / page).read_text(encoding="utf-8")
             self.assertRegex(html, r"auth\.css\?v=\d{8}-\w+", page)        # 带版本号：改了样式，浏览器才会丢掉旧的
-            self.assertIn("auth-ui.js?v=20261115-roleflash", html, page)
+            self.assertIn("auth-ui.js?v=20261117-tenants", html, page)
 
 
 @unittest.skipUnless(NODE, "本机没有 node，跳过换页面不闪教师版的行为测试")

@@ -19,6 +19,7 @@
       changePassword: '修改密码',
       adminLink: '账号管理',
       visitsLink: '访问记录',
+      tenantsLink: '老师与分配',
       teacherSignIn: '教师登录',
       signingIn: '登录中…',
       signIn: '登录',
@@ -52,6 +53,12 @@
       credsDownload: '下载初始密码清单（{n} 人）',
       credsHeader: '学号,姓名,班级,初始密码',
       statusAdmin: '管理员',
+      statusTeacher: '老师',
+      importShared: '其中 {n} 个学号已属于其他老师，现在由你们共享（不改对方那边的资料）',
+      deleteUser: '删除',
+      confirmDeleteOne: '删除「{name}」？只属于你的学生会被删除（管理员能恢复）；也属于别的老师的，只从你名下移走。',
+      confirmBulkDelete: '删除下面列表里的 {n} 个学生？只属于你的会被删除（管理员能恢复）；也属于别的老师的，只从你名下移走。',
+      deleteDone: '已删除 {deleted} 个；{unlinked} 个也属于别的老师，只从你名下移走',
       statusMustChange: '待改密码',
       statusLocked: '已锁定',
       statusDisabled: '已停用',
@@ -84,6 +91,7 @@
       changePassword: 'Change password',
       adminLink: 'Accounts',
       visitsLink: 'Visits',
+      tenantsLink: 'Teachers',
       teacherSignIn: 'Teacher sign-in',
       signingIn: 'Signing in…',
       signIn: 'Sign in',
@@ -117,6 +125,12 @@
       credsDownload: 'Download initial passwords ({n})',
       credsHeader: 'Student no.,Name,Class,Initial password',
       statusAdmin: 'Admin',
+      statusTeacher: 'Teacher',
+      importShared: '{n} of these numbers already belong to another teacher and are now shared with you (their details are left unchanged)',
+      deleteUser: 'Delete',
+      confirmDeleteOne: 'Delete “{name}”? A student who is only yours is deleted (the administrator can restore it); one who also belongs to another teacher is only removed from your list.',
+      confirmBulkDelete: 'Delete the {n} students in the list below? Students who are only yours are deleted (the administrator can restore them); those who also belong to another teacher are only removed from your list.',
+      deleteDone: '{deleted} deleted; {unlinked} also belong to another teacher and were only removed from your list',
       statusMustChange: 'Must change password',
       statusLocked: 'Locked',
       statusDisabled: 'Disabled',
@@ -194,7 +208,11 @@
   function setTeacher(on) {
     try { if (on) sessionStorage.setItem(TEACHER_KEY, '1'); else sessionStorage.removeItem(TEACHER_KEY); } catch (e) { }
   }
-  function setRole(role) {            /* role: 'admin' | 'student' | '' (未知，清掉) */
+  /* 超级管理员（admin）和老师（teacher）在页面上都是「老师视图」：管理功能都在，只是老师只看得到自己名下的数据（服务端保证） */
+  function isStaffRole(role) { return role === 'admin' || role === 'teacher'; }
+
+  function setRole(role) {            /* role: 'admin' | 'teacher' | 'student' | '' (未知，清掉) */
+    if (isStaffRole(role)) role = 'admin';
     var h = document.documentElement;
     h.classList.remove('role-pending', 'role-student', 'role-admin');
     if (role) h.classList.add(role === 'admin' ? 'role-admin' : 'role-student');
@@ -233,7 +251,7 @@
     }
     /* 学生只看得到选题库和玩：题库管理、生成离线页等带 admin-only 的东西都不显示。
        服务端本来就会拒绝，这里是不让他们看到用不了的入口。 */
-    if (user.role === 'admin') { hideHomeLink(); addNavLinks(); }
+    if (isStaffRole(user.role)) { hideHomeLink(); addNavLinks(user.role === 'admin'); }
   }
 
   /* 老师登录后没有「首页」：题库工作台就是首页（首页和它的内容重复） */
@@ -246,11 +264,11 @@
   /* 登录后去哪：默认回首页；老师的首页是题库工作台 */
   function landing(user) {
     var next = queryNext();
-    return user && user.role === 'admin' && next === BASE + '/' ? workbench() : next;
+    return user && isStaffRole(user.role) && next === BASE + '/' ? workbench() : next;
   }
 
   /* 老师才用得到的两个入口：账号管理、访问记录 */
-  function addNavLinks() {
+  function addNavLinks(isSuper) {
     var nav = document.querySelector('.portal-nav');
     if (nav && !document.getElementById('adminNavLink')) {
       var link = document.createElement('a');
@@ -271,6 +289,16 @@
       visits.textContent = t('visitsLink');
       if (document.body.getAttribute('data-auth') === 'visits') visits.className = 'active';
       nav.appendChild(visits);
+    }
+    if (nav && isSuper && !document.getElementById('tenantsNavLink')) {
+      var tenants = document.createElement('a');
+      tenants.id = 'tenantsNavLink';
+      tenants.href = BASE + '/tenants.html';
+      tenants.setAttribute('data-module-zh', TEXT.zh.tenantsLink);
+      tenants.setAttribute('data-module-en', TEXT.en.tenantsLink);
+      tenants.textContent = t('tenantsLink');
+      if (document.body.getAttribute('data-auth') === 'super') tenants.className = 'active';
+      nav.appendChild(tenants);
     }
   }
 
@@ -298,11 +326,11 @@
     info = { enabled: !!res.auth_enabled, user: res.user || null, guest: !!res.guest_mode };
     if (!info.enabled) {
       setRole('admin');                       /* 家庭版没有账号，等同老师 */
-      if (mode === 'admin' || mode === 'visits' || mode === 'change') go('', false);
+      if (mode === 'admin' || mode === 'visits' || mode === 'super' || mode === 'change') go('', false);
       return info;
     }
     if (!info.user && info.guest) {                /* 家庭版：不登录也能用，管理页才要登录 */
-      if (mode === 'admin' || mode === 'visits' || mode === 'change') { setRole(''); go('login.html', true); return info; }
+      if (mode === 'admin' || mode === 'visits' || mode === 'super' || mode === 'change') { setRole(''); go('login.html', true); return info; }
       if (mode === 'public') document.documentElement.classList.remove('role-pending');
       else { setRole('admin'); setTeacher(false); decorateGuest(); }
       return info;
@@ -314,11 +342,12 @@
       return info;
     }
     setRole(info.user.role);
-    if (info.user.role === 'admin') setTeacher(true);
+    if (isStaffRole(info.user.role)) setTeacher(true);
     if (info.user.must_change && mode !== 'change') { go('change-password.html', true); return info; }
     if (mode === 'public' && !info.user.must_change) { location.replace(landing(info.user)); return info; }
-    if (info.user.role === 'admin' && document.body.getAttribute('data-page') === 'home') { location.replace(workbench()); return info; }
-    if ((mode === 'admin' || mode === 'visits') && info.user.role !== 'admin') { go('', false); return info; }
+    if (isStaffRole(info.user.role) && document.body.getAttribute('data-page') === 'home') { location.replace(workbench()); return info; }
+    if ((mode === 'admin' || mode === 'visits') && !isStaffRole(info.user.role)) { go('', false); return info; }
+    if (mode === 'super' && info.user.role !== 'admin') { go(isStaffRole(info.user.role) ? 'bank.html#banks' : '', false); return info; }
     decorate(info.user);
     return info;
   }).catch(function () {
@@ -336,7 +365,9 @@
     go: go,
     info: function () { return info; },
     /* 家庭版没有账号，等同管理员（行为不变） */
-    isAdmin: function () { return !info.enabled || (info.guest && !info.user) || !!(info.user && info.user.role === 'admin'); },
+    isAdmin: function () { return !info.enabled || (info.guest && !info.user) || !!(info.user && isStaffRole(info.user.role)); },
+    /* 超级管理员（能加老师、共享 / 分配、恢复删除）；家庭版没有账号体系时也算 */
+    isSuper: function () { return !info.enabled || !!(info.user && info.user.role === 'admin'); },
     TEXT: TEXT
   };
 })(window);

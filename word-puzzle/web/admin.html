@@ -30,7 +30,7 @@
   </header>
 
   <h1 class="page" data-module-zh="账号管理" data-module-en="Accounts">账号管理</h1>
-  <p class="lead" data-module-zh="没有自助注册：账号都由你导入名单创建。学生第一次登录用初始密码，登录后必须先改成自己的密码。" data-module-en="There is no self-registration: you create accounts by importing a roster. Students sign in with the initial password and must replace it right away.">没有自助注册：账号都由你导入名单创建。学生第一次登录用初始密码，登录后必须先改成自己的密码。</p>
+  <p class="lead" data-module-zh="没有自助注册：账号都由你导入名单创建，导入的学生归在你名下（别的老师看不到）。学生第一次登录用初始密码，登录后必须先改成自己的密码。" data-module-en="There is no self-registration: you create accounts by importing a roster, and imported students are yours (other teachers cannot see them). Students sign in with the initial password and must replace it right away.">没有自助注册：账号都由你导入名单创建，导入的学生归在你名下（别的老师看不到）。学生第一次登录用初始密码，登录后必须先改成自己的密码。</p>
 
   <div class="card">
     <h2 data-module-zh="导入名单" data-module-en="Import roster">导入名单</h2>
@@ -67,6 +67,10 @@
       <button class="btn ghost" id="btnBulkAdd" type="button" data-module-zh="加上这些标签" data-module-en="Add these tags">加上这些标签</button>
       <button class="btn ghost" id="btnBulkRemove" type="button" data-module-zh="去掉这些标签" data-module-en="Remove these tags">去掉这些标签</button>
     </div>
+    <div class="admin-filters">
+      <button class="btn danger" id="btnBulkDelete" type="button" data-module-zh="删除下面列表里的学生" data-module-en="Delete the students in the list below">删除下面列表里的学生</button>
+      <span class="hint" data-module-zh="上面选了班级，就是删除整个班。只属于你的学生会被删除（管理员能恢复）；也属于别的老师的，只从你名下移走。" data-module-en="With a class selected above this deletes the whole class. Students who are only yours are deleted (the administrator can restore them); those who also belong to another teacher are only removed from your list.">上面选了班级，就是删除整个班。只属于你的学生会被删除（管理员能恢复）；也属于别的老师的，只从你名下移走。</span>
+    </div>
     <div class="msg" id="userMsg" role="status"></div>
     <div class="secret-box" id="secretBox" hidden></div>
     <div class="scroll"><table class="tbl" id="userTable">
@@ -77,6 +81,7 @@
         <th data-module-zh="学院" data-module-en="College">学院</th>
         <th data-module-zh="院系" data-module-en="Department">院系</th>
         <th data-module-zh="标签" data-module-en="Tags">标签</th>
+        <th id="thTeachers" hidden data-module-zh="所属老师" data-module-en="Teachers">所属老师</th>
         <th data-module-zh="状态" data-module-en="Status">状态</th>
         <th data-module-zh="局数" data-module-en="Games">局数</th>
         <th data-module-zh="最高分" data-module-en="Best">最高分</th>
@@ -91,9 +96,9 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/api.js?v=20261112-auth"></script>
-<script src="/word-puzzle/js/auth-ui.js?v=20261115-roleflash"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261117-tenants"></script>
 <script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
-<script src="/word-puzzle/js/page-admin.js?v=20261112-auth"></script>
+<script src="/word-puzzle/js/page-admin.js?v=20261117-tenants"></script>
 <script src="/shared/module-header.js"></script>
 </body>
 </html>

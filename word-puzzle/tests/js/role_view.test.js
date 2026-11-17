@@ -90,6 +90,27 @@ const sorted = (set) => Array.from(set).sort();
         /bank\.html#banks$/.test(p.landing({ role: 'admin' })) && p.landing({ role: 'student' }) === '/word-puzzle/' &&
         (p.location.search = '?next=%2Fword-puzzle%2Fstats.html', p.landing({ role: 'admin' }) === '/word-puzzle/stats.html'));
 
+  // 3c) 老师（role=teacher）：和超管一样是「老师视图」，首页是题库工作台；超管专属页面（老师与分配）把他送回工作台
+  const teacher = { auth_enabled: true, user: { role: 'teacher', must_change: false, student_no: 'TA', name: '甲老师' } };
+  p = makePage({}, teacher, '', 'home');
+  await p.ready;
+  check('老师：老师视图（role-admin），首页跳去题库工作台，并记住是老师', JSON.stringify(sorted(p.classes)) === '["role-admin"]' && p.store.wp_role === 'admin' && p.store.wp_teacher === '1' && /bank\.html#banks$/.test(p.redirects[0] || ''));
+  p = makePage({}, teacher, 'admin');
+  await p.ready;
+  check('老师能进账号管理 / 题库工作台（data-auth=admin），不被送走', p.redirects.length === 0);
+  p = makePage({}, teacher, 'super');
+  await p.ready;
+  check('老师打开超管专属页面：被送回题库工作台', p.redirects.length === 1 && /bank\.html#banks$/.test(p.redirects[0]));
+  p = makePage({}, { auth_enabled: true, user: { role: 'student', must_change: false, student_no: 'S1', name: '学生' } }, 'super');
+  await p.ready;
+  check('学生打开超管专属页面：被送回首页', p.redirects.length === 1 && /\/word-puzzle\/$/.test(p.redirects[0]));
+  p = makePage({}, { auth_enabled: true, user: { role: 'admin', must_change: false, student_no: 'T1', name: '孙老师' } }, 'super');
+  await p.ready;
+  check('超管打开超管专属页面：留下', p.redirects.length === 0);
+  p = makePage({}, { auth_enabled: true, guest_mode: true, user: null }, 'super');
+  await p.ready;
+  check('家庭版访客打开超管专属页面：去登录', p.redirects.length === 1 && /login\.html/.test(p.redirects[0]));
+
   // 4) 问不到服务器
   p = makePage({}, 'network-error');
   await p.ready;

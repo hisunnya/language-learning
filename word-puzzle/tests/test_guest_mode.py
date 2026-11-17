@@ -131,7 +131,7 @@ class TestPages(unittest.TestCase):
         self.assertIn("info.guest && !info.user", self.ui)
 
     def test_management_pages_send_a_visitor_to_the_login_page(self):
-        self.assertIn("mode === 'admin' || mode === 'visits' || mode === 'change') { setRole(''); go('login.html', true)", self.ui)
+        self.assertIn("mode === 'admin' || mode === 'visits' || mode === 'super' || mode === 'change') { setRole(''); go('login.html', true)", self.ui)
 
     def test_the_login_page_explains_the_home_edition(self):
         html = (WEB / "login.html").read_text(encoding="utf-8")

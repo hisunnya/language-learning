@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
+<meta name="robots" content="noindex">
+<title data-module-zh="老师与分配 · 词境 Lexica" data-module-en="Teachers · Lexica">老师与分配 · 词境 Lexica</title>
+<link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
+<link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261117-tenants">
+<link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
+</head>
+<body data-auth="super">
+<div class="wrap">
+
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/word-puzzle/" aria-label="词境 Lexica">
+      <span class="portal-brand-mark portal-brand-mark--logo" aria-hidden="true"><img src="/word-puzzle/img/icon.svg" alt="" width="40" height="40"></span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="Vocabulary practice">英语词汇练习</small></span>
+    </a>
+    <nav class="portal-nav">
+      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Word banks">题库工作台</a>
+      <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <div class="tabs" role="tablist" id="tenTabs" aria-label="老师与分配">
+    <button type="button" class="tab active" role="tab" id="tabTeachers" data-tab="teachers" aria-controls="panelTeachers" aria-selected="true"><span data-module-zh="老师" data-module-en="Teachers">老师</span></button>
+    <button type="button" class="tab" role="tab" id="tabAssign" data-tab="assign" aria-controls="panelAssign" aria-selected="false" tabindex="-1"><span data-module-zh="共享与分配" data-module-en="Share and assign">共享与分配</span></button>
+    <button type="button" class="tab" role="tab" id="tabDeleted" data-tab="deleted" aria-controls="panelDeleted" aria-selected="false" tabindex="-1"><span data-module-zh="已删除" data-module-en="Deleted">已删除</span></button>
+    <button type="button" class="tab" role="tab" id="tabAudit" data-tab="audit" aria-controls="panelAudit" aria-selected="false" tabindex="-1"><span data-module-zh="操作记录" data-module-en="Audit log">操作记录</span></button>
+  </div>
+
+  <section id="panelTeachers" role="tabpanel" aria-labelledby="tabTeachers">
+    <div class="card">
+      <h2 data-module-zh="老师" data-module-en="Teachers">老师</h2>
+      <p class="sub" data-module-zh="每位老师只看得到自己名下的学生、班级、题库和成绩，互相看不到。你（超级管理员）看得到所有人的全部内容。新老师第一次登录要先改密码。" data-module-en="Each teacher sees only their own students, classes, word banks and scores, never another teacher’s. You (the super administrator) see everything. A new teacher must change the password at the first sign-in.">每位老师只看得到自己名下的学生、班级、题库和成绩，互相看不到。你（超级管理员）看得到所有人的全部内容。新老师第一次登录要先改密码。</p>
+      <div class="admin-filters">
+        <div class="field"><label for="newNo" data-module-zh="账号（登录名）" data-module-en="Account (sign-in name)">账号（登录名）</label><input type="text" id="newNo" maxlength="32" autocomplete="off"></div>
+        <div class="field"><label for="newName" data-module-zh="姓名" data-module-en="Name">姓名</label><input type="text" id="newName" maxlength="40" autocomplete="off"></div>
+        <div class="field"><label for="newPw" data-module-zh="初始密码（留空自动生成）" data-module-en="Initial password (leave empty to generate)">初始密码（留空自动生成）</label><input type="text" id="newPw" maxlength="64" autocomplete="off"></div>
+        <button type="button" class="btn gold" id="btnAddTeacher" data-module-zh="添加老师" data-module-en="Add teacher">添加老师</button>
+      </div>
+      <div class="msg" id="teacherMsg" role="status"></div>
+      <div class="secret-box" id="teacherSecret" hidden></div>
+      <div class="scroll"><table class="tbl" id="teacherTable">
+        <thead><tr><th data-module-zh="姓名" data-module-en="Name">姓名</th><th data-module-zh="账号" data-module-en="Account">账号</th><th data-module-zh="角色" data-module-en="Role">角色</th><th data-module-zh="学生" data-module-en="Students">学生</th><th data-module-zh="自己的题库" data-module-en="Own word banks">自己的题库</th><th data-module-zh="共享来的题库" data-module-en="Shared word banks">共享来的题库</th><th data-module-zh="词表" data-module-en="Word lists">词表</th><th data-module-zh="最近登录" data-module-en="Last sign-in">最近登录</th><th data-module-zh="操作" data-module-en="Actions">操作</th></tr></thead>
+        <tbody><tr><td colspan="9" class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="panelAssign" role="tabpanel" aria-labelledby="tabAssign" hidden>
+    <div class="card">
+      <h2 data-module-zh="共享与分配" data-module-en="Share and assign">共享与分配</h2>
+      <p class="sub" data-module-zh="共享：对方也能看到和使用，原来的老师照样有。转给：只归对方，原来的老师就没有了。取消共享：对方不再看到（对方给它打的标签一起去掉）。" data-module-en="Share: the teacher can also see and use it, the original teacher keeps it. Move: it belongs only to that teacher, the original teacher loses it. Unshare: the teacher no longer sees it (their tags on it are removed too).">共享：对方也能看到和使用，原来的老师照样有。转给：只归对方，原来的老师就没有了。取消共享：对方不再看到（对方给它打的标签一起去掉）。</p>
+      <div class="source-choice" role="radiogroup">
+        <label class="choice"><input type="radio" name="assignKind" value="bank" checked> <b data-module-zh="题库" data-module-en="Word banks">题库</b></label>
+        <label class="choice"><input type="radio" name="assignKind" value="student"> <b data-module-zh="学生" data-module-en="Students">学生</b></label>
+      </div>
+      <div class="admin-filters">
+        <div class="field"><label for="assignQ" data-module-zh="搜索" data-module-en="Search">搜索</label><input type="text" id="assignQ" maxlength="40"></div>
+        <button type="button" class="btn ghost" id="btnSelAll" data-module-zh="全选当前列表" data-module-en="Select the whole list">全选当前列表</button>
+        <button type="button" class="btn ghost" id="btnSelNone" data-module-zh="全不选" data-module-en="Select none">全不选</button>
+      </div>
+      <div class="pick-list" id="assignList"></div>
+      <div class="admin-filters">
+        <div class="field"><label for="assignTeacher" data-module-zh="老师" data-module-en="Teacher">老师</label><select id="assignTeacher"></select></div>
+        <div class="field"><label for="assignMode" data-module-zh="怎么做" data-module-en="Action">怎么做</label>
+          <select id="assignMode"><option value="share" data-module-zh="共享给这位老师" data-module-en="Share with this teacher">共享给这位老师</option><option value="move" data-module-zh="转给这位老师" data-module-en="Move to this teacher">转给这位老师</option><option value="unshare" data-module-zh="取消共享" data-module-en="Unshare">取消共享</option></select></div>
+        <button type="button" class="btn gold" id="btnAssign" data-module-zh="执行" data-module-en="Apply">执行</button>
+      </div>
+      <p class="hint" id="assignHint" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <section id="panelDeleted" role="tabpanel" aria-labelledby="tabDeleted" hidden>
+    <div class="card">
+      <h2 data-module-zh="已删除" data-module-en="Deleted">已删除</h2>
+      <p class="sub" data-module-zh="老师和你删除的学生、题库、词表都在这里，数据没有丢；恢复后回到原来的老师名下。" data-module-en="Students, word banks and word lists deleted by you or the teachers are here; nothing is lost, and restoring puts them back with their teachers.">老师和你删除的学生、题库、词表都在这里，数据没有丢；恢复后回到原来的老师名下。</p>
+      <h3 data-module-zh="学生和老师账号" data-module-en="Students and teacher accounts">学生和老师账号</h3><div class="list" id="delUsers"></div>
+      <h3 data-module-zh="题库" data-module-en="Word banks">题库</h3><div class="list" id="delBanks"></div>
+      <h3 data-module-zh="词表" data-module-en="Word lists">词表</h3><div class="list" id="delMaterials"></div>
+    </div>
+  </section>
+
+  <section id="panelAudit" role="tabpanel" aria-labelledby="tabAudit" hidden>
+    <div class="card">
+      <h2 data-module-zh="操作记录" data-module-en="Audit log">操作记录</h2>
+      <p class="sub" data-module-zh="谁在什么时候加了老师、共享 / 转了什么、删除 / 恢复了什么，以及导入名单时自动共享的学生。只增不删。" data-module-en="Who added a teacher, shared or moved something, deleted or restored something, and which students were shared automatically by a roster import, and when. Entries are never removed.">谁在什么时候加了老师、共享 / 转了什么、删除 / 恢复了什么，以及导入名单时自动共享的学生。只增不删。</p>
+      <div class="scroll"><table class="tbl" id="auditTable">
+        <thead><tr><th data-module-zh="时间" data-module-en="Time">时间</th><th data-module-zh="谁" data-module-en="Who">谁</th><th data-module-zh="做了什么" data-module-en="Action">做了什么</th><th data-module-zh="对象" data-module-en="Target">对象</th><th data-module-zh="详情" data-module-en="Details">详情</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261117-tenants"></script>
+<script src="/word-puzzle/js/api.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261117-tenants"></script>
+<script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
+<script src="/word-puzzle/js/page-tenants.js?v=20261117-tenants"></script>
+<script src="/shared/module-header.js"></script>
+</body>
+</html>

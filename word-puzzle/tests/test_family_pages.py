@@ -309,8 +309,8 @@ class TestStudentViewIsWired(unittest.TestCase):
         html = read("admin.html")
         for needle in ('id="bulkTags"', 'id="btnBulkAdd"', 'id="btnBulkRemove"', 'data-module-en="Tags"'):
             self.assertIn(needle, html)
-        self.assertEqual(html.count("<th "), 11, "表头列数要和 page-admin.js 里的 colspan 一致")
-        self.assertIn('colspan="11"', (WEB / "js" / "page-admin.js").read_text(encoding="utf-8"))
+        self.assertEqual(html.count("<th "), 12, "表头列数（含超管才有的「所属老师」）要和 page-admin.js 里的 colspan 一致")
+        self.assertIn("(superView ? 12 : 11)", (WEB / "js" / "page-admin.js").read_text(encoding="utf-8"))
 
 
 class TestLevelSizeDefault(unittest.TestCase):

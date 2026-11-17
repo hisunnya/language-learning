@@ -82,14 +82,21 @@
     if (tagsEnabled()) {
       tagPart = ' ' + (BankPanels.tagPills(b) || '<span class="pill warn">' + esc(t('home_noTags')) + '</span>');
     }
+    /* 老师看到的题库有三种来历：自己建的、别人共享给他的、所有老师共用的内置题库（超管什么都管，不标） */
+    var rel = b.relation || 'owner';
+    if (rel === 'shared') src += ' <span class="pill good">' + esc(t('bank_relShared')) + '</span>';
+    var canEdit = rel === 'owner', canDelete = rel !== 'system';
     var ops = '<a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +
       '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('bank_play')) + '</a>';
     if (tagsEnabled()) {
-      ops += '<button class="btn sm ghost" data-cat="' + b.id + '">' + esc(t('home_catBtn')) + '</button>' +
+      ops += (canEdit ? '<button class="btn sm ghost" data-cat="' + b.id + '">' + esc(t('home_catBtn')) + '</button>' : '') +
              '<button class="btn sm ghost" data-tags="' + b.id + '">' + esc(t('home_tagsBtn')) + '</button>';
     }
-    ops += '<button class="btn sm ghost" data-offline="' + b.id + '">' + esc(t('bank_toOffline')) + '</button>' +
-           '<button class="btn sm danger" data-del="' + b.id + '">' + esc(t('bank_delete')) + '</button>';
+    ops += '<button class="btn sm ghost" data-offline="' + b.id + '">' + esc(t('bank_toOffline')) + '</button>';
+    if (canDelete) {
+      ops += '<button class="btn sm danger" data-del="' + b.id + '" data-rel="' + rel + '">' +
+             esc(t(rel === 'shared' ? 'bank_removeShared' : 'bank_delete')) + '</button>';
+    }
     return '<div class="item' + (highlight[b.id] ? ' flash' : '') + '" data-bank-row="' + b.id + '">' +
       '  <div class="main"><b>' + esc(b.title) + '</b> ' + src + tagPart +
       '    <small>' + esc(counts(b)) + '</small></div>' +
@@ -146,8 +153,11 @@
       if (el.dataset.release) { BankPanels.editRelease(el.dataset.release); return; }
       if (el.dataset.offline) { goOffline(parseInt(el.dataset.offline, 10)); return; }
       if (el.dataset.del) {
-        if (!confirm(t('bank_confirmDelBank'))) return;
-        API.del('/api/banks/' + el.dataset.del).then(loadBanks).catch(function (e) { API.toast(e.message); });
+        if (!confirm(t(el.dataset.rel === 'shared' ? 'bank_confirmRemoveShared' : 'bank_confirmDelBank'))) return;
+        API.del('/api/banks/' + el.dataset.del).then(function (res) {
+          API.toast(t(res.done === 'unshared' ? 'bank_removedShared' : 'bank_deletedSoft'));
+          return loadBanks();
+        }).catch(function (e) { API.toast(e.message); });
       }
     });
     $('bankNotice').addEventListener('click', function (ev) {

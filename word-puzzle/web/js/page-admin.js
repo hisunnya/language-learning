@@ -9,6 +9,7 @@
   var lastCredentials = [];
 
   function el(id) { return document.getElementById(id); }
+  var superView = false;        /* 超管：多一列「所属老师」，还看得到老师账号 */
 
   /* ---------- 名单导入 ---------- */
 
@@ -40,6 +41,7 @@
   function showReport(res) {
     lastCredentials = res.credentials || [];
     var html = '<div><b>' + esc(t('importDone', { created: res.created, updated: res.updated, skipped: res.skipped })) + '</b></div>';
+    if (res.shared) html += '<div>' + esc(t('importShared', { n: res.shared })) + '</div>';
     if ((res.ignored_columns || []).length) {
       html += '<div>' + esc(t('importIgnored', { cols: res.ignored_columns.join('、') })) + '</div>';
     }
@@ -104,14 +106,22 @@
     });
   }
 
+  function isStaff(u) { return u.role === 'admin' || u.role === 'teacher'; }
+
+  /* 超管才有这一列：这个学生挂在哪几位老师名下 */
+  function teachersCell(u) {
+    return (u.teachers || []).map(function (x) { return '<span class="pill">' + esc(x.name) + '</span>'; }).join(' ');
+  }
+
   function tagCell(u) {
-    if (u.role === 'admin') return '';
+    if (isStaff(u)) return '';
     if (!(u.tags || []).length) return '<span class="hint">' + esc(t('noTags')) + '</span>';
     return u.tags.map(function (tag) { return '<span class="pill gray">' + esc(tag) + '</span>'; }).join(' ');
   }
 
   function status(u) {
     if (u.role === 'admin') return '<span class="pill good">' + esc(t('statusAdmin')) + '</span>';
+    if (u.role === 'teacher') return '<span class="pill good">' + esc(t('statusTeacher')) + '</span>';
     if (u.disabled) return '<span class="pill bad">' + esc(t('statusDisabled')) + '</span>';
     if (u.locked) return '<span class="pill bad">' + esc(t('statusLocked')) + '</span>';
     if (u.must_change) return '<span class="pill warn">' + esc(t('statusMustChange')) + '</span>';
@@ -123,18 +133,20 @@
     el('usersCount').textContent = t('usersCount', { n: rows.length });
     var body = document.querySelector('#userTable tbody');
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="11" class="empty">' + esc(t('noUsers')) + '</td></tr>';
+      body.innerHTML = '<tr><td colspan="' + (superView ? 12 : 11) + '" class="empty">' + esc(t('noUsers')) + '</td></tr>';
     } else {
       body.innerHTML = rows.map(function (u) {
         var actions = '<button class="btn sm ghost" data-act="reset" data-id="' + u.id + '">' + esc(t('reset')) + '</button>';
         if (u.locked) actions += '<button class="btn sm ghost" data-act="unlock" data-id="' + u.id + '">' + esc(t('unlock')) + '</button>';
-        if (u.role !== 'admin') {
+        if (!isStaff(u)) {
           actions += '<button class="btn sm ghost" data-act="tags" data-id="' + u.id + '">' + esc(t('editTags')) + '</button>';
           actions += '<button class="btn sm ' + (u.disabled ? 'green' : 'danger') + '" data-act="' +
             (u.disabled ? 'enable' : 'disable') + '" data-id="' + u.id + '">' + esc(t(u.disabled ? 'enable' : 'disable')) + '</button>';
+          actions += '<button class="btn sm danger" data-act="delete" data-id="' + u.id + '">' + esc(t('deleteUser')) + '</button>';
         }
         return '<tr><td>' + esc(u.student_no) + '</td><td>' + esc(u.name) + '</td><td>' + esc(u.class_name) +
-          '</td><td>' + esc(u.college) + '</td><td>' + esc(u.department) + '</td><td>' + tagCell(u) + '</td><td>' + status(u) +
+          '</td><td>' + esc(u.college) + '</td><td>' + esc(u.department) + '</td><td>' + tagCell(u) + '</td>' +
+          (superView ? '<td>' + teachersCell(u) + '</td>' : '') + '<td>' + status(u) +
           '</td><td class="num">' + u.games + '</td><td class="num">' + u.best + '</td><td>' +
           esc(u.last_login_at || t('never')) + '</td><td><div class="cell-actions">' + actions + '</div></td></tr>';
       }).join('');
@@ -153,6 +165,8 @@
 
   function loadUsers() {
     return API.get('/api/admin/users').then(function (res) {
+      superView = !!res.super;
+      el('thTeachers').hidden = !superView;
       users = res.users;
       fillSelect('fClass', 'class_name');
       fillSelect('fCollege', 'college');
@@ -185,6 +199,11 @@
       var typed = window.prompt(t('tagsPrompt', { name: u.name }), (u.tags || []).join(', '));
       if (typed === null) return;
       done = API.post(url + 'tags', { tags: typed }).then(function () { API.toast(t('tagsSaved')); });
+    } else if (action === 'delete') {
+      if (!window.confirm(t('confirmDeleteOne', { name: u.name }))) return;
+      done = API.post('/api/admin/users/delete', { user_ids: [u.id] }).then(function (res) {
+        API.toast(t('deleteDone', { deleted: res.deleted, unlinked: res.unlinked }), 5000);
+      });
     } else if (action === 'unlock') {
       done = API.post(url + 'unlock', {});
     } else if (action === 'disable') {
@@ -200,11 +219,22 @@
     });
   }
 
+  /* 删除下面列表里的学生：选了班级，就是删整个班。只属于自己的软删除（管理员能恢复），共享的只从自己名下移走 */
+  function bulkDelete() {
+    var ids = filtered().filter(function (u) { return !isStaff(u); }).map(function (u) { return u.id; });
+    if (!ids.length) { API.toast(t('bulkNoUsers')); return; }
+    if (!window.confirm(t('confirmBulkDelete', { n: ids.length }))) return;
+    API.post('/api/admin/users/delete', { user_ids: ids }).then(function (res) {
+      API.toast(t('deleteDone', { deleted: res.deleted, unlinked: res.unlinked }), 5000);
+      return loadUsers();
+    }).catch(function (err) { API.toast(AuthUI.errorText(err)); });
+  }
+
   /* 批量：只作用于当前筛选出来的学生（管理员账号不受影响） */
   function bulkTags(mode) {
     var typed = el('bulkTags').value.trim();
     if (!typed) { API.toast(t('bulkNeedTags')); return; }
-    var ids = filtered().filter(function (u) { return u.role !== 'admin'; }).map(function (u) { return u.id; });
+    var ids = filtered().filter(function (u) { return !isStaff(u); }).map(function (u) { return u.id; });
     if (!ids.length) { API.toast(t('bulkNoUsers')); return; }
     var key = mode === 'add' ? 'bulkConfirmAdd' : 'bulkConfirmRemove';
     if (!window.confirm(t(key, { n: ids.length, tags: typed }))) return;
@@ -220,6 +250,7 @@
     el('btnImport').onclick = doImport;
     el('btnBulkAdd').onclick = function () { bulkTags('add'); };
     el('btnBulkRemove').onclick = function () { bulkTags('remove'); };
+    el('btnBulkDelete').onclick = bulkDelete;
     ['fClass', 'fCollege', 'fDept'].forEach(function (id) { el(id).onchange = render; });
     el('fSearch').oninput = render;
     document.querySelector('#userTable tbody').addEventListener('click', function (event) {
@@ -227,7 +258,7 @@
       if (button) act(button);
     });
     AuthUI.ready.then(function (info) {
-      if (info.user && info.user.role === 'admin') loadUsers();
+      if (info.user && (info.user.role === 'admin' || info.user.role === 'teacher')) loadUsers();
     });
   });
 })();

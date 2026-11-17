@@ -154,3 +154,10 @@ html.role-student .student-only { display: block; }
 .recent-card { border-left: 4px solid var(--green); }
 .recent-card .item { padding: 10px 4px; }
 .recent-card .list { border-top: 0; }
+
+/* 老师与分配（超管）：可勾选的列表 */
+.pick-list { max-height: 360px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; margin: 8px 0; background: var(--card); }
+.pick-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--soft-line); cursor: pointer; }
+.pick-row:first-child { border-top: 0; }
+.pick-row small { color: var(--ink3); margin-left: auto; text-align: right; }
+.pick-row:hover { background: var(--chip-bg); }
