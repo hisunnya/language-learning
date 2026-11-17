@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
 <link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-summary">
-<link rel="stylesheet" href="/word-puzzle/css/leaderboard.css?v=20261118-board">
+<link rel="stylesheet" href="/word-puzzle/css/leaderboard.css?v=20261118-gala">
 <link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
 </head>
 <body>
@@ -33,17 +33,10 @@
 
   <section class="lb" aria-labelledby="lbTitle">
     <div class="lb-banner">
-      <svg class="lb-trophy" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
-        <defs><linearGradient id="lbTrophyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset="1" stop-color="#E8A100"/></linearGradient></defs>
-        <path d="M18 8h28v14c0 9-6 16-14 16S18 31 18 22V8z" fill="url(#lbTrophyG)"/>
-        <path d="M18 12H8c0 9 4 15 11 16M46 12h10c0 9-4 15-11 16" fill="none" stroke="#E8A100" stroke-width="4" stroke-linecap="round"/>
-        <rect x="28" y="38" width="8" height="9" fill="#E8A100"/>
-        <rect x="20" y="47" width="24" height="7" rx="3" fill="url(#lbTrophyG)"/>
-      </svg>
-      <div class="lb-banner-text">
-        <h1 id="lbTitle" class="lb-title">积分榜</h1>
-        <p class="lb-sub" data-module-zh="积分 = 所有游戏得分之和，只显示前十名" data-module-en="Points = the sum of all game scores. Top ten only.">积分 = 所有游戏得分之和，只显示前十名</p>
-      </div>
+      <svg class="lb-crest" viewBox="0 0 80 84" width="68" height="72" aria-hidden="true" focusable="false"><defs><linearGradient id="lbCrestG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF1C2"/><stop offset="0.55" stop-color="#E3B44E"/><stop offset="1" stop-color="#A97A1E"/></linearGradient></defs><g fill="url(#lbCrestG)"><ellipse cx="29.4" cy="64.0" rx="3.2" ry="7" transform="rotate(65.0 29.4 64.0)"/><ellipse cx="22.6" cy="56.8" rx="3.2" ry="7" transform="rotate(43.3 22.6 56.8)"/><ellipse cx="17.7" cy="49.6" rx="3.2" ry="7" transform="rotate(21.7 17.7 49.6)"/><ellipse cx="15.2" cy="42.4" rx="3.2" ry="7" transform="rotate(0.0 15.2 42.4)"/><ellipse cx="15.5" cy="35.3" rx="3.2" ry="7" transform="rotate(-21.7 15.5 35.3)"/><ellipse cx="18.5" cy="28.1" rx="3.2" ry="7" transform="rotate(-43.3 18.5 28.1)"/><ellipse cx="23.9" cy="20.9" rx="3.2" ry="7" transform="rotate(-65.0 23.9 20.9)"/><ellipse cx="50.6" cy="64.0" rx="3.2" ry="7" transform="rotate(-65.0 50.6 64.0)"/><ellipse cx="57.4" cy="56.8" rx="3.2" ry="7" transform="rotate(-43.3 57.4 56.8)"/><ellipse cx="62.3" cy="49.6" rx="3.2" ry="7" transform="rotate(-21.7 62.3 49.6)"/><ellipse cx="64.8" cy="42.4" rx="3.2" ry="7" transform="rotate(-0.0 64.8 42.4)"/><ellipse cx="64.5" cy="35.3" rx="3.2" ry="7" transform="rotate(21.7 64.5 35.3)"/><ellipse cx="61.5" cy="28.1" rx="3.2" ry="7" transform="rotate(43.3 61.5 28.1)"/><ellipse cx="56.1" cy="20.9" rx="3.2" ry="7" transform="rotate(65.0 56.1 20.9)"/></g><circle cx="40" cy="40" r="14.5" fill="none" stroke="url(#lbCrestG)" stroke-width="1.6"/><polygon points="40.0,29.0 42.7,36.3 50.5,36.6 44.4,41.4 46.5,48.9 40.0,44.6 33.5,48.9 35.6,41.4 29.5,36.6 37.3,36.3" fill="url(#lbCrestG)"/></svg>
+      <h1 id="lbTitle" class="lb-title">积分榜</h1>
+      <div class="lb-rule" aria-hidden="true"><i></i><b></b><i></i></div>
+      <p class="lb-sub" id="lbSub"></p>
     </div>
 
     <div class="lb-controls">
@@ -52,9 +45,10 @@
         <button type="button" class="lb-seg-btn" id="lbWeek" data-period="week" aria-pressed="false" data-module-zh="本周" data-module-en="This week">本周</button>
       </div>
       <label class="lb-class" id="lbClassBox" hidden>
-        <span data-module-zh="班级" data-module-en="Class">班级</span>
+        <span data-module-zh="范围" data-module-en="Show">范围</span>
         <select id="lbClass"></select>
       </label>
+      <a class="lb-settings" id="lbSettings" href="/word-puzzle/tenants.html#leaderboard" hidden data-module-zh="设置榜单" data-module-en="Board settings">设置榜单</a>
     </div>
 
     <div class="lb-me" id="lbMe" hidden></div>
@@ -66,11 +60,11 @@
 </div>
 
 <script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=20261118-board"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261118-gala"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261117-requests"></script>
 <script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
-<script src="/word-puzzle/js/page-leaderboard.js?v=20261118-board"></script>
+<script src="/word-puzzle/js/page-leaderboard.js?v=20261118-gala"></script>
 <script src="/shared/module-header.js"></script>
 </body>
 </html>

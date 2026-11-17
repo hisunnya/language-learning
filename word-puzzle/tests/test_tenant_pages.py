@@ -101,12 +101,12 @@ class TestTenantsPage(unittest.TestCase):
 
     def test_every_audit_action_has_a_translation(self):
         backend = "\n".join((ROOT / "server" / n).read_text(encoding="utf-8") for n in ("app.py", "tenancy.py", "auth.py"))
-        actions = set(re.findall(r'"((?:teacher|bank|student|material|user|share)\.[a-z_]+)"', backend))
+        actions = set(re.findall(r'"((?:teacher|bank|student|material|user|share|leaderboard)\.[a-z_]+)"', backend))
         actions |= {"%s.%s" % (k, m) for k in ("bank", "student") for m in ("share", "move", "unshare")}
         actions |= {"%s.restore" % k for k in ("user", "bank", "material")}
         actions |= {"bank.delete", "bank.unshare_self", "student.delete", "student.unlink_self"}
         actions |= {"share.request", "share.approve", "share.reject"}
-        keys = dict(re.findall(r"'((?:teacher|bank|student|material|user|share)\.[a-z_]+)': '(ten_act_[a-z_]+)'", self.CODE))
+        keys = dict(re.findall(r"'((?:teacher|bank|student|material|user|share|leaderboard)\.[a-z_]+)': '(ten_act_[a-z_]+)'", self.CODE))
         self.assertEqual(actions - set(keys), set(), "审计里会出现、页面上却没有译文的动作")
 
     def test_initial_passwords_are_only_shown_once_and_escaped(self):

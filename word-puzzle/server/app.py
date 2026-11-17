@@ -728,10 +728,27 @@ class Handler(BaseHTTPRequestHandler):
         """超级管理员专属：老师、共享 / 分配、已删除和恢复、审计记录。处理了返回 True。"""
         db, auth = self.db, self.auth
         if not (path.startswith("/api/admin/teachers") or path in ("/api/admin/assign", "/api/admin/deleted",
-                                                                    "/api/admin/restore", "/api/admin/audit")):
+                                                                    "/api/admin/restore", "/api/admin/audit",
+                                                                    "/api/admin/leaderboard-config")):
             return False
         self._need_admin()
         me = self._uid()
+
+        if path == "/api/admin/leaderboard-config":
+            if method == "GET":
+                self.send_json({"ok": True, "config": leaderboard.get_config(db), "classes": leaderboard.class_counts(db),
+                                "max_classes": leaderboard.MAX_CLASSES})
+                return True
+            if method == "POST":
+                body = self.read_json()
+                try:
+                    cfg = leaderboard.set_config(db, body.get("title", ""), body.get("classes"), me)
+                except ValueError as exc:
+                    raise HttpError(400, str(exc), "bad_classes") from exc
+                tenancy.audit(db, me, "leaderboard.config", "settings", None, title=cfg["title"],
+                              classes=cfg["classes"], count=len(cfg["classes"]))
+                self.send_json({"ok": True, "config": cfg})
+                return True
 
         if path == "/api/admin/teachers" and method == "GET":
             rows = db.query(

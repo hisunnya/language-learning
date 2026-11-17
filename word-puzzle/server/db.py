@@ -169,6 +169,14 @@ CREATE TABLE IF NOT EXISTS teacher_banks (     -- 共享给这位老师的题库
 );
 CREATE INDEX IF NOT EXISTS ix_tb_bank ON teacher_banks(bank_id);
 
+-- 站点设置（键值）：目前只有积分榜的设置（哪几个班参与总榜、标题）。值是 JSON 文本。
+CREATE TABLE IF NOT EXISTS app_settings (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL DEFAULT '',
+    updated_at INTEGER NOT NULL DEFAULT 0,
+    updated_by INTEGER
+);
+
 -- 审计记录：谁在什么时候建了老师、共享 / 分配了什么、删了 / 恢复了什么。只增不删。
 CREATE TABLE IF NOT EXISTS audit_log (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,

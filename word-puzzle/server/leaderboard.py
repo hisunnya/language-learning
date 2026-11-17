@@ -10,12 +10,15 @@
 """
 from __future__ import annotations
 
+import json
 import time
 
 from . import tenancy
 from .db import Database
 
 TOP = 10
+MAX_CLASSES = 30
+SETTING = "leaderboard"
 
 
 def week_start(now: float | None = None) -> str:
@@ -41,6 +44,46 @@ def _pool(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str
     return " AND ".join(where), args
 
 
+def get_config(db: Database) -> dict:
+    """{"title": str, "classes": [班级名…]}；没设置过就是空。"""
+    row = db.one("SELECT value FROM app_settings WHERE key=?", (SETTING,))
+    try:
+        data = json.loads(row["value"]) if row else {}
+    except ValueError:
+        data = {}
+    classes = [c for c in (data.get("classes") or []) if isinstance(c, str) and c]
+    return {"title": str(data.get("title") or "")[:40], "classes": classes}
+
+
+def set_config(db: Database, title: str, classes: list, actor: int | None) -> dict:
+    """保存设置。班级必须是现有学生的班级名；最多 MAX_CLASSES 个；返回保存后的设置。不合格抛 ValueError。"""
+    known = {r["class_name"] for r in db.query(
+        "SELECT DISTINCT class_name FROM users WHERE role='student' AND deleted_at=0 AND class_name<>''")}
+    picked, seen = [], set()
+    for c in classes if isinstance(classes, list) else []:
+        if not isinstance(c, str):
+            raise ValueError("班级名不对")
+        if c not in known:
+            raise ValueError("没有这个班级：%s" % c[:30])
+        if c not in seen:
+            seen.add(c)
+            picked.append(c)
+    if len(picked) > MAX_CLASSES:
+        raise ValueError("最多选 %d 个班" % MAX_CLASSES)
+    cfg = {"title": " ".join(str(title or "").split())[:40], "classes": picked}
+    db.execute("INSERT INTO app_settings(key, value, updated_at, updated_by) VALUES (?,?,?,?) "
+               "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at, updated_by=excluded.updated_by",
+               (SETTING, json.dumps(cfg, ensure_ascii=False), int(time.time()), actor))
+    return cfg
+
+
+def class_counts(db: Database) -> list[dict]:
+    """超管设置页用：所有班级和人数。"""
+    return [dict(r) for r in db.query(
+        "SELECT class_name, COUNT(*) AS students FROM users WHERE role='student' AND deleted_at=0 AND class_name<>'' "
+        "GROUP BY class_name ORDER BY class_name")]
+
+
 def classes_of(db: Database, scope: tenancy.Scope) -> list[str]:
     cond, args = tenancy.student_where(scope)
     rows = db.query("SELECT DISTINCT u.class_name FROM users u WHERE %s AND u.role='student' AND u.class_name<>'' "
@@ -51,7 +94,13 @@ def classes_of(db: Database, scope: tenancy.Scope) -> list[str]:
 def board(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str = "", period: str = "all",
           now: float | None = None) -> dict:
     period = "week" if period == "week" else "all"
-    where, args = _pool(db, scope, user, class_name)
+    cfg = get_config(db)
+    overall = bool(cfg["classes"]) and not (scope.staff and class_name)       # 老师选了某个班，就看那个班
+    if overall:
+        marks = ",".join("?" * len(cfg["classes"]))
+        where, args = "u.role='student' AND u.deleted_at=0 AND u.class_name IN (%s)" % marks, list(cfg["classes"])
+    else:
+        where, args = _pool(db, scope, user, class_name)
     join = "JOIN scores s ON s.user_id=u.id"
     if period == "week":
         join += " AND s.created_at>=?"
@@ -66,15 +115,23 @@ def board(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str
         ranked.append({"rank": rank, "name": r["name"], "points": r["points"], "class_name": r["class_name"],
                        "me": bool(user and r["id"] == user["id"])})
     staff = scope.staff
+    keep_class = staff or overall          # 总榜里每个人旁边标班级（学生也看得到别班同学是哪个班的）
     out = {
         "period": period,
-        "scope": "staff" if staff else "class",
-        "class_name": class_name if staff else ((user or {}).get("class_name") or ""),
-        "entries": [dict(e, **({} if staff else {"class_name": ""})) for e in ranked[:TOP]],
+        "scope": "overall" if overall else ("staff" if staff else "class"),
+        "class_name": "" if overall else (class_name if staff else ((user or {}).get("class_name") or "")),
+        "title": cfg["title"] if overall else "",
+        "class_count": len(cfg["classes"]),
+        "configured": bool(cfg["classes"]),
+        "entries": [dict(e, **({} if keep_class else {"class_name": ""})) for e in ranked[:TOP]],
         "total": len(ranked),
         "me": next((e for e in ranked if e["me"]), None),
+        "can_configure": scope.kind == tenancy.SUPER,
+        "is_student": scope.kind == tenancy.STUDENT,
+        "my_class_in_board": bool(overall and user and user.get("class_name") in cfg["classes"]),
     }
-    if not staff:
-        out["me"] = dict(out["me"], class_name="") if out["me"] else None
+    if out["me"] and not keep_class:
+        out["me"] = dict(out["me"], class_name="")
     out["classes"] = classes_of(db, scope) if staff else []
     return out
+

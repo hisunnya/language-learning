@@ -13,27 +13,25 @@
 
   var state = { period: 'all', cls: '', data: null, picked: false };
 
-  /* 奖牌：金 / 银 / 铜，写死颜色（不跟配色走）。第一名带皇冠。 */
+  /* 奖牌：金 / 银 / 铜，拉丝金属质感（写死颜色，不跟配色走）：双圈圆盘 + 深色丝带 + 衬线数字。 */
   var MEDAL = {
-    1: { a: '#FFE680', b: '#F2B200', c: '#B87A00', ribbon: '#D9362B' },
-    2: { a: '#F7F9FC', b: '#C4CBD6', c: '#8892A3', ribbon: '#2F6FD0' },
-    3: { a: '#F8C79B', b: '#D08850', c: '#8E5428', ribbon: '#2E9A63' }
+    1: { a: '#FFF3C6', b: '#E9B94B', c: '#9A6D14', ink: '#5a3d00', ring: '#FFE9A0' },
+    2: { a: '#FFFFFF', b: '#C9D2E0', c: '#7C889C', ink: '#3b4658', ring: '#F2F5FA' },
+    3: { a: '#FFDFC4', b: '#D58F5B', c: '#8A4F26', ink: '#5a2c10', ring: '#F5C09C' }
   };
 
   function medal(rank) {
     var m = MEDAL[rank];
     var g = 'lbMedalG' + rank;
-    var crown = rank === 1
-      ? '<path d="M16 12l6 7 6-10 6 10 6-7-2 13H18z" fill="#F2B200" stroke="#B87A00" stroke-width="1.2" stroke-linejoin="round"/>'
-      : '';
-    return '<svg class="lb-medal" viewBox="0 0 56 66" aria-hidden="true" focusable="false">' +
-      '<defs><linearGradient id="' + g + '" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="' + m.a + '"/><stop offset="0.55" stop-color="' + m.b + '"/><stop offset="1" stop-color="' + m.c + '"/></linearGradient></defs>' +
-      '<path d="M14 0h12l6 22H20z" fill="' + m.ribbon + '"/><path d="M42 0H30l-6 22h12z" fill="' + m.ribbon + '" opacity="0.82"/>' +
-      '<circle cx="28" cy="42" r="20" fill="url(#' + g + ')" stroke="' + m.c + '" stroke-width="2"/>' +
-      '<circle cx="28" cy="42" r="14.5" fill="none" stroke="' + m.c + '" stroke-opacity="0.55" stroke-width="1.5"/>' +
-      '<text x="28" y="49" text-anchor="middle" font-size="20" font-weight="800" font-family="Arial,Helvetica,sans-serif" fill="#fff" stroke="' + m.c + '" stroke-width="0.8">' + rank + '</text>' +
-      crown + '</svg>';
+    return '<svg class="lb-medal" viewBox="0 0 56 68" aria-hidden="true" focusable="false">' +
+      '<defs><linearGradient id="' + g + '" x1="0.15" y1="0" x2="0.85" y2="1">' +
+      '<stop offset="0" stop-color="' + m.a + '"/><stop offset="0.5" stop-color="' + m.b + '"/><stop offset="1" stop-color="' + m.c + '"/></linearGradient></defs>' +
+      '<path d="M15 0h10l5 24H20z" fill="#1b2354" stroke="' + m.b + '" stroke-width="1"/><path d="M41 0H31l-5 24h10z" fill="#232c66" stroke="' + m.b + '" stroke-width="1"/>' +
+      '<circle cx="28" cy="43" r="20" fill="url(#' + g + ')" stroke="' + m.ring + '" stroke-width="1.6"/>' +
+      '<circle cx="28" cy="43" r="15.5" fill="none" stroke="' + m.c + '" stroke-opacity="0.55" stroke-width="1.2"/>' +
+      '<circle cx="28" cy="43" r="12.5" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="0.8"/>' +
+      '<text x="28" y="50.5" text-anchor="middle" font-size="21" font-weight="800" font-family="Songti SC,Noto Serif SC,STSong,Georgia,serif" fill="' + m.ink + '">' + rank + '</text>' +
+      '</svg>';
   }
 
   function points(n) { return '<b>' + esc(n) + '</b><small>' + esc(t('lb_unit')) + '</small>'; }
@@ -42,17 +40,20 @@
   var showClass = false;        /* 老师看「全部学生」时才在名字旁边标班级；单个班的榜不用重复 */
 
   function slot(rank, e) {
-    var cls = 'lb-slot lb-slot-' + rank + (e ? '' : ' lb-slot-empty') + (e && e.me ? ' is-me' : '');
+    /* 位置（左 / 中 / 右）决定大小，名次决定颜色：并列第一的人两个都是金色，不会出现银色底配金牌 */
+    var tier = e ? Math.min(e.rank, 3) : rank;
+    var cls = 'lb-slot lb-pos-' + rank + ' lb-tier-' + tier + (e ? '' : ' lb-slot-empty') + (e && e.me ? ' is-me' : '');
     if (!e) {
-      return '<div class="' + cls + '">' + medal(rank) + '<div class="lb-name">' + esc(t('lb_vacant')) + '</div></div>';
+      return '<div class="' + cls + '" data-rank="' + rank + '">' + medal(rank) + '<div class="lb-name">' + esc(t('lb_vacant')) + '</div></div>';
     }
-    return '<div class="' + cls + '" aria-label="' + esc(t('lb_rankN', { n: e.rank })) + '">' + medal(e.rank) +
+    return '<div class="' + cls + '" data-rank="' + esc(e.rank) + '" aria-label="' + esc(t('lb_rankN', { n: e.rank })) + '">' + medal(e.rank) +
       '<div class="lb-name">' + esc(e.name) + meTag(e) + '</div>' +
       '<div class="lb-pts">' + points(e.points) + '</div>' +
       (showClass && e.class_name ? '<div class="lb-cls">' + esc(e.class_name) + '</div>' : '') + '</div>';
   }
 
   function title(d) {
+    if (d.scope === 'overall') return d.title || t('lb_titleOverall');
     if (d.scope === 'staff') return d.class_name ? t('lb_title', { cls: d.class_name }) : t('lb_titleAll');
     return d.class_name ? t('lb_title', { cls: d.class_name }) : t('lb_titleMine');
   }
@@ -60,8 +61,10 @@
   function render() {
     var d = state.data;
     if (!d) return;
-    showClass = d.scope === 'staff' && !d.class_name;
+    showClass = d.scope !== 'class' && !d.class_name;
     $('lbTitle').textContent = title(d);
+    $('lbSub').textContent = d.scope === 'overall' ? t('lb_subOverall', { n: d.class_count }) : t('lb_sub');
+    $('lbSettings').hidden = !d.can_configure;
     document.title = title(d) + ' · ' + t('lb_site');
     var entries = d.entries || [];
     var empty = $('lbEmpty');
@@ -84,7 +87,9 @@
     /* 我不在前十名：单独告诉我排第几 */
     var me = d.me, box = $('lbMe');
     var inTop = entries.some(function (e) { return e.me; });
-    if (d.scope === 'class') {
+    /* 学生：不在前十名时告诉他排第几；还没有积分就鼓励他玩一局；他的班没参加总榜就什么都不说 */
+    var student = d.is_student && (d.scope === 'class' || (d.scope === 'overall' && d.my_class_in_board));
+    if (student) {
       box.hidden = false;
       if (me && !inTop) box.textContent = t('lb_myRank', { rank: me.rank, n: me.points, total: d.total });
       else if (!me) box.textContent = t('lb_myNone');
@@ -102,10 +107,10 @@
 
   function renderClasses(d) {
     var box = $('lbClassBox');
-    if (d.scope !== 'staff') { box.hidden = true; return; }
+    if (d.is_student || d.scope === 'class') { box.hidden = true; return; }
     box.hidden = false;
     var select = $('lbClass');
-    var html = '<option value="">' + esc(t('lb_allClasses')) + '</option>' + (d.classes || []).map(function (c) {
+    var html = '<option value="">' + esc(d.configured ? t('lb_overallOption', { n: d.class_count }) : t('lb_allClasses')) + '</option>' + (d.classes || []).map(function (c) {
       return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
     }).join('');
     if (select.getAttribute('data-html') !== html) { select.innerHTML = html; select.setAttribute('data-html', html); }
@@ -116,7 +121,7 @@
     var url = '/api/leaderboard?period=' + state.period + (state.cls ? '&class_name=' + encodeURIComponent(state.cls) : '');
     return API.get(url).then(function (res) {
       /* 老师第一次进来：默认选第一个班（一个班一个榜），而不是把所有班混在一起 */
-      if (res.scope === 'staff' && !state.picked && !state.cls && res.classes && res.classes.length) {
+      if (res.scope === 'staff' && !res.configured && !state.picked && !state.cls && res.classes && res.classes.length) {
         state.picked = true;
         state.cls = res.classes[0];
         return load();

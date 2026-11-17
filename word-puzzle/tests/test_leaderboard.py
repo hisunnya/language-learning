@@ -170,6 +170,100 @@ class TestRanking(LeaderboardCase):
         self.assertEqual([e["name"] for e in res["entries"]], ["正常"])
 
 
+class TestOverallBoard(LeaderboardCase):
+    """超管设置「这几个班」以后，所有登录的人看到的是这几个班合在一起的总榜。"""
+
+    def tearDown(self):
+        leaderboard.set_config(self.db, "", [], None)
+
+    def configure(self, classes, title=""):
+        status, res = self.root.json("POST", "/api/admin/leaderboard-config", {"title": title, "classes": classes})
+        self.assertEqual(status, 200, res)
+        return res
+
+    def test_only_the_super_admin_can_read_or_change_the_setting(self):
+        for client in (self.ta, self.tb):
+            self.assertEqual(client.json("GET", "/api/admin/leaderboard-config")[0], 403)
+            self.assertEqual(client.json("POST", "/api/admin/leaderboard-config", {"classes": []})[0], 403)
+        cls = self.fresh_class(self.ta, "设")
+        no, uid = self.pupil(self.ta, "学生", cls)
+        pupil = self.login_as(no, "Teach3r!pw")
+        self.assertIn(pupil.json("POST", "/api/admin/leaderboard-config", {"classes": [cls]})[0], (401, 403))
+        self.assertEqual(leaderboard.get_config(self.db)["classes"], [], "学生改不了")
+
+    def test_the_setting_lists_real_classes_validates_and_is_audited(self):
+        cls = self.fresh_class(self.ta, "真")
+        self.pupil(self.ta, "某生", cls)
+        listing = self.root.json("GET", "/api/admin/leaderboard-config")[1]
+        self.assertIn(cls, [c["class_name"] for c in listing["classes"]])
+        self.assertEqual(self.root.json("POST", "/api/admin/leaderboard-config", {"classes": ["没有这个班"]})[0], 400)
+        self.assertEqual(self.root.json("POST", "/api/admin/leaderboard-config", {"classes": "一班"})[1]["config"]["classes"], [],
+                         "不是列表就当没选")
+        saved = self.configure([cls, cls], title="  年级   总榜 ")["config"]
+        self.assertEqual(saved, {"title": "年级 总榜", "classes": [cls]}, "去重、整理空格")
+        audit = self.root.json("GET", "/api/admin/audit")[1]["audit"]
+        self.assertTrue([a for a in audit if a["action"] == "leaderboard.config" and a["detail"]["classes"] == [cls]])
+
+    def test_everyone_sees_the_combined_board_of_the_chosen_classes_only(self):
+        c1, c2, c3 = self.fresh_class(self.ta, "总一"), self.fresh_class(self.tb, "总二"), self.fresh_class(self.ta, "不在")
+        n1, a = self.pupil(self.ta, "甲班的", c1)
+        _, b = self.pupil(self.tb, "乙老师班的", c2)
+        _, out = self.pupil(self.ta, "没入选的班", c3)
+        self.play(a, 40)
+        self.play(b, 90)
+        self.play(out, 9999)
+        self.configure([c1, c2], title="十班总积分榜")
+        student = self.login_as(n1, "Teach3r!pw")
+        res = self.board(student)
+        self.assertEqual(res["scope"], "overall")
+        self.assertEqual(res["title"], "十班总积分榜")
+        self.assertEqual(res["class_count"], 2)
+        self.assertEqual([(e["name"], e["class_name"], e["points"]) for e in res["entries"]],
+                         [("乙老师班的", c2, 90), ("甲班的", c1, 40)], "跨老师、跨班合在一起，旁边标班级；没入选的班不在")
+        self.assertTrue(res["my_class_in_board"] and res["is_student"])
+        self.assertEqual([(e["name"], e["points"]) for e in self.board(self.ta)["entries"]], [(e["name"], e["points"]) for e in res["entries"]], "老师默认也是总榜")
+        self.assertEqual(self.board(self.root)["scope"], "overall")
+        self.assertTrue(self.board(self.root)["can_configure"])
+        self.assertFalse(res["can_configure"])
+
+    def test_a_student_outside_the_chosen_classes_still_sees_the_board_but_has_no_rank(self):
+        c1, other = self.fresh_class(self.ta, "入选"), self.fresh_class(self.ta, "外")
+        _, a = self.pupil(self.ta, "入选生", c1)
+        n, me = self.pupil(self.ta, "外班生", other)
+        self.play(a, 5)
+        self.play(me, 500)
+        self.configure([c1])
+        res = self.board(self.login_as(n, "Teach3r!pw"))
+        self.assertEqual([e["name"] for e in res["entries"]], ["入选生"])
+        self.assertIsNone(res["me"])
+        self.assertFalse(res["my_class_in_board"])
+
+    def test_a_teacher_can_still_pick_one_class_and_only_within_their_own_students(self):
+        c1, c2 = self.fresh_class(self.ta, "师一"), self.fresh_class(self.tb, "师二")
+        _, a = self.pupil(self.ta, "甲的", c1)
+        _, b = self.pupil(self.tb, "乙的", c2)
+        self.play(a, 3)
+        self.play(b, 4)
+        self.configure([c1, c2])
+        one = self.board(self.ta, class_name=c1)
+        self.assertEqual((one["scope"], [e["name"] for e in one["entries"]]), ("staff", ["甲的"]))
+        self.assertEqual(self.board(self.ta, class_name=c2)["entries"], [], "别的老师的班，选了也是空的")
+        student = self.login_as(self.pupil(self.ta, "学生丙", c1)[0], "Teach3r!pw")
+        self.assertEqual(self.board(student, class_name=c2)["scope"], "overall", "学生传班级参数没用，仍是总榜")
+
+    def test_clearing_the_setting_goes_back_to_one_class_per_board(self):
+        cls = self.fresh_class(self.ta, "回")
+        n, uid = self.pupil(self.ta, "回退", cls)
+        self.play(uid, 1)
+        self.configure([cls])
+        self.configure([])
+        self.assertEqual(self.board(self.login_as(n, "Teach3r!pw"))["scope"], "class")
+
+    def test_a_broken_stored_value_is_treated_as_not_configured(self):
+        self.db.execute("INSERT OR REPLACE INTO app_settings(key, value) VALUES ('leaderboard', '{not json')")
+        self.assertEqual(leaderboard.get_config(self.db), {"title": "", "classes": []})
+
+
 WEB = ROOT / "web"
 
 
@@ -188,12 +282,13 @@ class TestLeaderboardPage(unittest.TestCase):
 
     def test_medals_are_gold_silver_and_bronze_and_the_podium_is_silver_gold_bronze(self):
         js = read("js/page-leaderboard.js")
-        for colour in ("#F2B200", "#C4CBD6", "#D08850"):
+        for colour in ("#E9B94B", "#C9D2E0", "#D58F5B"):
             self.assertIn(colour, js)
         self.assertIn("slot(2, entries[1]) + slot(1, entries[0]) + slot(3, entries[2])", js, "左银、中金、右铜")
         css = read("css/leaderboard.css")
-        for cls in ("lb-slot-1", "lb-slot-2", "lb-slot-3"):
+        for cls in ("lb-tier-1", "lb-tier-2", "lb-tier-3", "lb-pos-1", "lb-pos-2", "lb-pos-3"):
             self.assertIn("." + cls, css)
+        self.assertIn("var tier = e ? Math.min(e.rank, 3) : rank;", js, "颜色跟名次走，并列第一两个都是金色")
 
     def test_only_the_top_ten_exist_server_side_and_names_are_escaped(self):
         self.assertEqual(leaderboard.TOP, 10)
@@ -203,8 +298,23 @@ class TestLeaderboardPage(unittest.TestCase):
 
     def test_the_class_picker_is_only_shown_to_staff_and_hidden_really_hides_it(self):
         js, css = read("js/page-leaderboard.js"), read("css/leaderboard.css")
-        self.assertIn("if (d.scope !== 'staff') { box.hidden = true; return; }", js)
+        self.assertIn("if (d.is_student || d.scope === 'class') { box.hidden = true; return; }", js)
         self.assertIn(".lb-class[hidden]", css, "display:flex 会盖掉 hidden 属性，要单独写一条")
+
+    def test_the_super_admin_gets_a_settings_link_and_a_tab_to_choose_the_classes(self):
+        js, html = read("js/page-leaderboard.js"), read("leaderboard.html")
+        self.assertIn("$('lbSettings').hidden = !d.can_configure;", js)
+        self.assertIn('href="/word-puzzle/tenants.html#leaderboard"', html)
+        tenants, code = read("tenants.html"), read("js/page-tenants.js")
+        self.assertIn('id="tabLeaderboard"', tenants)
+        self.assertIn("'/api/admin/leaderboard-config'", code)
+        self.assertIn("leaderboard.config", code, "操作记录里要有这个动作的译文")
+
+    def test_the_stage_is_dark_and_serif_and_the_title_has_a_plain_colour_fallback(self):
+        css = read("css/leaderboard.css")
+        self.assertIn("--serif:", css)
+        self.assertRegex(css, r"\.lb-title \{[^}]*color: #f3d98b")       # 不支持渐变文字的浏览器看到的是纯金色，不是透明
+        self.assertIn("@supports", css)
 
     def test_the_link_is_in_the_navigation_for_everyone_who_is_signed_in(self):
         code = read("js/auth-ui.js")

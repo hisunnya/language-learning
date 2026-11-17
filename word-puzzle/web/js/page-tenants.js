@@ -10,8 +10,8 @@
 (function () {
   'use strict';
 
-  var TABS = ['teachers', 'assign', 'deleted', 'audit'];
-  var SUFFIX = { teachers: 'Teachers', assign: 'Assign', deleted: 'Deleted', audit: 'Audit' };
+  var TABS = ['teachers', 'assign', 'deleted', 'leaderboard', 'audit'];
+  var SUFFIX = { teachers: 'Teachers', assign: 'Assign', deleted: 'Deleted', leaderboard: 'Leaderboard', audit: 'Audit' };
   var teachers = [], banks = [], students = [], picked = {};
   var current = 'teachers';
 
@@ -39,6 +39,7 @@
     try { history.replaceState(null, '', '#' + name); } catch (e) { }
     if (name === 'assign') loadAssign();
     if (name === 'deleted') loadDeleted();
+    if (name === 'leaderboard') loadBoardConfig();
     if (name === 'audit') loadAudit();
   }
 
@@ -222,6 +223,43 @@
     }).catch(function (e) { API.toast(e.message); });
   }
 
+  /* ---------------- 积分榜设置 ---------------- */
+
+  var boardClasses = [], boardPicked = {}, boardMax = 30;
+
+  function renderBoardClasses() {
+    $('lbClassList').innerHTML = boardClasses.length ? boardClasses.map(function (c) {
+      return '<label class="pick-row"><input type="checkbox" data-class="' + esc(c.class_name) + '"' + (boardPicked[c.class_name] ? ' checked' : '') + '> ' +
+        '<span>' + esc(c.class_name) + '</span><small>' + esc(t('ten_lbStudents', { n: c.students })) + '</small></label>';
+    }).join('') : '<div class="empty">' + esc(t('ten_lbNoClasses')) + '</div>';
+    $('lbPicked').textContent = t('ten_lbPicked', { n: Object.keys(boardPicked).filter(function (k) { return boardPicked[k]; }).length });
+  }
+
+  function loadBoardConfig() {
+    return API.get('/api/admin/leaderboard-config').then(function (res) {
+      boardClasses = res.classes || [];
+      boardMax = res.max_classes || 30;
+      boardPicked = {};
+      (res.config.classes || []).forEach(function (c) { boardPicked[c] = true; });
+      $('lbTitleInput').value = res.config.title || '';
+      renderBoardClasses();
+    }).catch(function (e) { API.toast(AuthUI.errorText(e)); });
+  }
+
+  function saveBoardConfig() {
+    var picked = boardClasses.map(function (c) { return c.class_name; }).filter(function (c) { return boardPicked[c]; });
+    if (picked.length > boardMax) { $('lbMsg').className = 'msg on err'; $('lbMsg').textContent = t('ten_lbTooMany', { n: boardMax }); return; }
+    $('lbSave').disabled = true;
+    API.post('/api/admin/leaderboard-config', { title: $('lbTitleInput').value, classes: picked }).then(function () {
+      $('lbMsg').className = 'msg on ok';
+      $('lbMsg').textContent = t('ten_lbSaved', { n: picked.length });
+      return loadBoardConfig();
+    }).catch(function (e) {
+      $('lbMsg').className = 'msg on err';
+      $('lbMsg').textContent = AuthUI.errorText(e);
+    }).finally(function () { $('lbSave').disabled = false; });
+  }
+
   /* ---------------- 操作记录 ---------------- */
 
   var ACTION_KEYS = {
@@ -232,7 +270,7 @@
     'student.delete': 'ten_act_student_delete', 'student.unlink_self': 'ten_act_student_unlink_self',
     'student.auto_share': 'ten_act_student_auto_share', 'user.restore': 'ten_act_user_restore',
     'share.request': 'ten_act_share_request', 'share.approve': 'ten_act_share_approve', 'share.reject': 'ten_act_share_reject',
-    'teacher.group': 'ten_act_teacher_group',
+    'teacher.group': 'ten_act_teacher_group', 'leaderboard.config': 'ten_act_leaderboard_config',
     'material.delete': 'ten_act_material_delete', 'material.restore': 'ten_act_material_restore'
   };
 
@@ -246,7 +284,7 @@
       var body = document.querySelector('#auditTable tbody');
       body.innerHTML = rows.length ? rows.map(function (r) {
         var d = r.detail || {};
-        var detail = [d.title, d.student_no, d.name, d.teacher, d.group].filter(Boolean).join(' · ');
+        var detail = [d.title, d.student_no, d.name, d.teacher, d.group, d.classes ? d.classes.join('、') : ''].filter(Boolean).join(' · ');
         return '<tr><td>' + esc(when(r.ts)) + '</td><td>' + esc(r.actor_name || '-') + '</td><td>' + esc(actionText(r.action)) + '</td>' +
           '<td>' + esc((r.target_type || '') + (r.target_id ? ' #' + r.target_id : '')) + '</td><td>' + esc(detail) + '</td></tr>';
       }).join('') : '<tr><td colspan="5" class="empty">' + esc(t('ten_noAudit')) + '</td></tr>';
@@ -260,6 +298,7 @@
     if (current === 'assign') renderAssign();
     if (current === 'deleted') loadDeleted();
     if (current === 'audit') loadAudit();
+    if (current === 'leaderboard') renderBoardClasses();
   });
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -278,6 +317,13 @@
     $('btnSelAll').onclick = function () { items().forEach(function (x) { picked[kind() + ':' + x.id] = true; }); renderAssign(); };
     $('btnSelNone').onclick = function () { picked = {}; renderAssign(); };
     $('btnAssign').onclick = runAssign;
+    $('lbSave').onclick = saveBoardConfig;
+    $('lbSelAll').onclick = function () { boardClasses.forEach(function (c) { boardPicked[c.class_name] = true; }); renderBoardClasses(); };
+    $('lbSelNone').onclick = function () { boardPicked = {}; renderBoardClasses(); };
+    $('lbClassList').addEventListener('change', function (ev) {
+      var box = ev.target.closest('input[data-class]');
+      if (box) { boardPicked[box.getAttribute('data-class')] = box.checked; $('lbPicked').textContent = t('ten_lbPicked', { n: Object.keys(boardPicked).filter(function (k) { return boardPicked[k]; }).length }); }
+    });
     $('panelDeleted').addEventListener('click', function (ev) {
       var btn = ev.target.closest('button[data-restore]');
       if (!btn) return;

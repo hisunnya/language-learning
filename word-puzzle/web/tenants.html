@@ -33,6 +33,7 @@
     <button type="button" class="tab active" role="tab" id="tabTeachers" data-tab="teachers" aria-controls="panelTeachers" aria-selected="true"><span data-module-zh="老师" data-module-en="Teachers">老师</span></button>
     <button type="button" class="tab" role="tab" id="tabAssign" data-tab="assign" aria-controls="panelAssign" aria-selected="false" tabindex="-1"><span data-module-zh="共享与分配" data-module-en="Share and assign">共享与分配</span></button>
     <button type="button" class="tab" role="tab" id="tabDeleted" data-tab="deleted" aria-controls="panelDeleted" aria-selected="false" tabindex="-1"><span data-module-zh="已删除" data-module-en="Deleted">已删除</span></button>
+    <button type="button" class="tab" role="tab" id="tabLeaderboard" data-tab="leaderboard" aria-controls="panelLeaderboard" aria-selected="false" tabindex="-1"><span data-module-zh="积分榜设置" data-module-en="Leaderboard">积分榜设置</span></button>
     <button type="button" class="tab" role="tab" id="tabAudit" data-tab="audit" aria-controls="panelAudit" aria-selected="false" tabindex="-1"><span data-module-zh="操作记录" data-module-en="Audit log">操作记录</span></button>
   </div>
 
@@ -89,6 +90,26 @@
     </div>
   </section>
 
+  <section id="panelLeaderboard" role="tabpanel" aria-labelledby="tabLeaderboard" hidden>
+    <div class="card">
+      <h2 data-module-zh="积分榜设置" data-module-en="Leaderboard settings">积分榜设置</h2>
+      <p class="sub" data-module-zh="勾选参加总榜的班级（可以跨老师）：所有登录的学生和老师看到的，就是这些班的学生合在一起的前十名，姓名旁边标班级。一个班都不选，就恢复成每个班只看自己班的榜。" data-module-en="Tick the classes that take part (they may belong to different teachers). Every signed-in student and teacher then sees the top ten students of these classes together, with the class next to each name. Tick none to go back to one board per class.">勾选参加总榜的班级（可以跨老师）：所有登录的学生和老师看到的，就是这些班的学生合在一起的前十名，姓名旁边标班级。一个班都不选，就恢复成每个班只看自己班的榜。</p>
+      <div class="field"><label for="lbTitleInput" data-module-zh="榜单标题（可不填，默认「总积分榜」）" data-module-en="Board title (optional, default “Overall Leaderboard”)">榜单标题（可不填，默认「总积分榜」）</label>
+        <input type="text" id="lbTitleInput" maxlength="40" placeholder="例如：十班总积分榜"></div>
+      <div class="actions">
+        <button class="btn sm ghost" id="lbSelAll" type="button" data-module-zh="全选" data-module-en="Select all">全选</button>
+        <button class="btn sm ghost" id="lbSelNone" type="button" data-module-zh="清空" data-module-en="Clear">清空</button>
+        <span class="hint" id="lbPicked" aria-live="polite"></span>
+      </div>
+      <div class="pick-list" id="lbClassList"></div>
+      <div class="actions">
+        <button class="btn lg gold" id="lbSave" type="button" data-module-zh="保存" data-module-en="Save">保存</button>
+        <a class="btn ghost" href="/word-puzzle/leaderboard.html" data-module-zh="看看积分榜" data-module-en="Open the leaderboard">看看积分榜</a>
+      </div>
+      <div class="msg" id="lbMsg" role="status"></div>
+    </div>
+  </section>
+
   <section id="panelAudit" role="tabpanel" aria-labelledby="tabAudit" hidden>
     <div class="card">
       <h2 data-module-zh="操作记录" data-module-en="Audit log">操作记录</h2>
@@ -103,7 +124,7 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=20261117-requests"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261118-gala"></script>
 <script src="/word-puzzle/js/api.js?v=20261104-base"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=20261117-requests"></script>
 <script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>

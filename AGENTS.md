@@ -366,6 +366,13 @@ never with its own ad-hoc filter.
 - Sharing, moving, deleting, restoring and adding teachers go to `audit_log`.
 - The LAN guest (home edition, not logged in) sees the built-in banks and the super
   administrator's banks.
+- The leaderboard (`server/leaderboard.py`, `leaderboard.html`) shows names and points only.
+  Without settings a student sees their own class (classmates = same class name AND a shared
+  teacher), a teacher the classes of their own students, the super administrator everyone.
+  The super administrator can set an overall board (`app_settings` key `leaderboard`: the
+  classes and an optional title, edited on `tenants.html`, audit `leaderboard.config`); then
+  every signed-in student and teacher sees those classes' students together, deliberately
+  across teachers, with the class next to each name.
 
 
 | Path | Holds |
