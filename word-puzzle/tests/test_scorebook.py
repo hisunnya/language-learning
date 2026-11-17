@@ -157,7 +157,10 @@ class TestOverHttp(HttpCase):
         _, uid, a = self.student("己", "删除2601")
         self.play(a, bank, 500, levels=1, matched=12)                       # 有题库时：只通了第 1 关（共 2 关）→ 不算完成
         self.assertEqual([r for r in self.summary(admin)["rows"] if r["user_id"] == uid][0]["completed"], 0)
-        admin.json("DELETE", "/api/banks/%d" % bank)
+        admin.json("DELETE", "/api/banks/%d" % bank)                          # 软删除：题库还在，总关数照样查得到
+        row = [r for r in self.summary(admin)["rows"] if r["user_id"] == uid][0]
+        self.assertEqual((row["plays"], row["completed"]), (1, 0), "软删除的题库仍按真实的总关数算")
+        self.app.Handler.db.delete_bank(bank)                                 # 真正没了（比如内置题库重建）
         row = [r for r in self.summary(admin)["rows"] if r["user_id"] == uid][0]
         self.assertEqual((row["plays"], row["completed"]), (1, 1), "题库没了查不到总关数，只看最后一关有没有通关")
         self.assertEqual(row["bank_title"], "t", "题库名退回到成绩里记下的名字")

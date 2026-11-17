@@ -21,7 +21,10 @@ import unicodedata
 from collections import deque
 from typing import Callable
 
+from . import tenancy
 from .db import Database, TagError, normalize_tags, now_iso
+
+ROLES = ("student", "teacher", "admin")       # admin = 超级管理员
 
 SESSION_COOKIE = "wp_session"
 SCRYPT_N, SCRYPT_R, SCRYPT_P = 2 ** 14, 8, 1
@@ -164,8 +167,13 @@ class AuthService:
 
     def create_user(self, student_no: str, name: str, *, password: str | None = None,
                     class_name: str = "", college: str = "", department: str = "",
-                    role: str = "student", must_change: bool = True) -> tuple[dict, str]:
-        """返回 (用户, 明文初始密码)。明文只在这里出现一次，库里只有哈希。"""
+                    role: str = "student", must_change: bool = True,
+                    teacher_id: int | None = None) -> tuple[dict, str]:
+        """返回 (用户, 明文初始密码)。明文只在这里出现一次，库里只有哈希。
+
+        学生会挂到一位老师名下：teacher_id 给了就是他；不给就是第一位超级管理员（命令行、老接口）。"""
+        if role not in ROLES:
+            raise AuthError(400, "bad_role", "角色只能是 student / teacher / admin")
         student_no = self.normalize_student_no(student_no)
         if not STUDENT_NO_RE.fullmatch(student_no):
             raise AuthError(400, "bad_student_no", "学号只能是字母、数字和 _ . -，最长 32 位")
@@ -185,13 +193,24 @@ class AuthService:
                 (student_no, name, str(class_name).strip(), str(college).strip(),
                  str(department).strip(), role, hash_password(plain), 1 if must_change else 0,
                  now_iso()))
-        return self.get_by_id(cur.lastrowid), plain
+        uid = cur.lastrowid
+        if role == "student":
+            owner = teacher_id if teacher_id is not None else self.db.default_teacher_id()
+            if owner:
+                tenancy.link_student(self.db, owner, uid, owner)
+        return self.get_by_id(uid), plain
 
     def list_users(self, *, class_name: str = "", college: str = "", department: str = "",
-                   q: str = "") -> list[dict]:
+                   q: str = "", scope: "tenancy.Scope | None" = None, role: str = "") -> list[dict]:
+        """账号列表。scope 决定能看到谁（老师只看到自己名下的学生）；标签是这个人自己打的那组。
+        超管还能看到每个学生挂在哪几位老师名下（teachers）。"""
+        scope = scope or tenancy.Scope(tenancy.ALL)
         where, args = [], []
+        cond, cargs = tenancy.student_where(scope)
+        where.append(cond)
+        args += list(cargs)
         for column, value in (("u.class_name", class_name), ("u.college", college),
-                              ("u.department", department)):
+                              ("u.department", department), ("u.role", role)):
             if value:
                 where.append(column + "=?")
                 args.append(value)
@@ -203,16 +222,22 @@ class AuthService:
                "COUNT(s.id) AS games, COALESCE(MAX(s.score),0) AS best, "
                "COALESCE(SUM(s.score),0) AS total "
                "FROM users u LEFT JOIN scores s ON s.user_id=u.id")
-        if where:
-            sql += " WHERE " + " AND ".join(where)
+        sql += " WHERE " + " AND ".join(where)
         sql += " GROUP BY u.id ORDER BY u.class_name, u.student_no"
         now = self.clock()
         out = []
-        tags = self.db.user_tags_map()
+        tags = self.db.user_tags_map(teacher_id=scope.tag_teacher)
+        names = {}
+        if scope.everything:
+            for row in self.db.query("SELECT ts.student_id, t.id, t.name FROM teacher_students ts "
+                                     "JOIN users t ON t.id=ts.teacher_id WHERE t.deleted_at=0 ORDER BY t.id"):
+                names.setdefault(row["student_id"], []).append({"id": row["id"], "name": row["name"]})
         for row in self.db.query(sql, args):
             d = dict(row)
             d["locked"] = d.pop("locked_until") > now
             d["tags"] = tags.get(d["id"], [])
+            if scope.everything:
+                d["teachers"] = names.get(d["id"], [])
             out.append(d)
         return out
 
@@ -240,7 +265,7 @@ class AuthService:
         if not row:
             return None
         user = dict(row)
-        if user["expires_at"] < self.clock() or user["disabled"]:
+        if user["expires_at"] < self.clock() or user["disabled"] or user.get("deleted_at"):
             return None
         return user
 
@@ -266,7 +291,7 @@ class AuthService:
         if not user:
             verify_password(password, _DUMMY_HASH)
             raise AuthError(401, "invalid_credentials", MESSAGE_BAD_LOGIN)
-        if user["disabled"] or user["locked_until"] > now:
+        if user["disabled"] or user.get("deleted_at") or user["locked_until"] > now:
             verify_password(password, _DUMMY_HASH)
             raise AuthError(401, "invalid_credentials", MESSAGE_BAD_LOGIN)
         if not verify_password(password, user["pw_hash"]):
@@ -315,11 +340,15 @@ class AuthService:
     def unlock(self, uid: int) -> None:
         self.db.execute("UPDATE users SET failed_count=0, locked_until=0 WHERE id=?", (uid,))
 
-    def import_roster(self, rows: list[dict], *, reset_existing: bool = False) -> dict:
-        """按名单建号。已存在的学号只更新姓名 / 班级 / 学院 / 院系（不动密码，除非 reset_existing）。
-        返回 {created, updated, skipped, errors, credentials}。credentials 里有明文初始密码，
+    def import_roster(self, rows: list[dict], *, reset_existing: bool = False,
+                      teacher_id: int | None = None, actor: int | None = None) -> dict:
+        """按名单建号，学生挂到导入的这位老师名下（teacher_id；不给就是第一位超级管理员）。
+        已存在的学号：挂到这位老师名下（如果原来属于别的老师，就成了两位老师共享，记进审计）；
+        只有当这个学生只属于这位老师时才更新姓名 / 班级 / 学院 / 院系，共享的不改别人那边的资料。
+        返回 {created, updated, shared, skipped, errors, credentials}。credentials 里有明文初始密码，
         只在这一次返回，之后谁也查不到。"""
-        report = {"created": 0, "updated": 0, "skipped": 0, "errors": [], "credentials": []}
+        owner = teacher_id if teacher_id is not None else self.db.default_teacher_id()
+        report = {"created": 0, "updated": 0, "shared": 0, "skipped": 0, "errors": [], "credentials": []}
         seen: set[str] = set()
         for rec in rows:
             line = rec.get("_row", "?")
@@ -345,24 +374,35 @@ class AuthService:
                     custom = rec.get("password") or None
                     if custom and len(custom) < 6:
                         raise AuthError(400, "bad_password", "初始密码至少 6 位（或留空自动生成）")
-                    user, plain = self.create_user(sn, fields["name"], password=custom, **{
+                    user, plain = self.create_user(sn, fields["name"], password=custom, teacher_id=owner, **{
                         k: fields[k] for k in ("class_name", "college", "department")})
                     report["created"] += 1
                     if new_tags is not None:
-                        self.db.set_user_tags(user["id"], new_tags)
+                        self.db.set_user_tags(user["id"], new_tags, teacher_id=owner)
                     report["credentials"].append({"student_no": user["student_no"], "name": user["name"],
                                                   "class_name": user["class_name"], "password": plain})
                 else:
-                    if existing["role"] == "admin":
-                        raise AuthError(400, "is_admin", "这是管理员账号，名单导入不会修改它")
+                    if existing["role"] != "student":
+                        raise AuthError(400, "is_admin", "这是老师 / 管理员账号，名单导入不会修改它")
+                    if existing.get("deleted_at"):
+                        raise AuthError(400, "deleted", "这个学号的账号已被删除，请联系管理员恢复")
                     if not str(fields["name"]).strip():
                         raise AuthError(400, "bad_name", "姓名不能为空")
-                    self.db.execute("UPDATE users SET name=?, class_name=?, college=?, department=? WHERE id=?",
-                                    (fields["name"].strip(), fields["class_name"].strip(),
-                                     fields["college"].strip(), fields["department"].strip(), existing["id"]))
-                    report["updated"] += 1
+                    before = tenancy.student_teachers(self.db, existing["id"])
+                    if owner and owner not in before:
+                        tenancy.link_student(self.db, owner, existing["id"], actor or owner)
+                        if before:            # 原来属于别的老师：自动共享（按管理员的决定），留痕
+                            tenancy.audit(self.db, actor or owner, "student.auto_share", "user", existing["id"],
+                                          student_no=sn, teacher_id=owner, other_teachers=before)
+                    if [t for t in before if t != owner]:
+                        report["shared"] += 1                     # 共享的学生：不改别的老师那边的资料
+                    else:
+                        self.db.execute("UPDATE users SET name=?, class_name=?, college=?, department=? WHERE id=?",
+                                        (fields["name"].strip(), fields["class_name"].strip(),
+                                         fields["college"].strip(), fields["department"].strip(), existing["id"]))
+                        report["updated"] += 1
                     if new_tags is not None:
-                        self.db.set_user_tags(existing["id"], new_tags)
+                        self.db.set_user_tags(existing["id"], new_tags, teacher_id=owner)
                     if reset_existing:
                         plain = self.reset_password(existing["id"])
                         report["credentials"].append({"student_no": sn, "name": fields["name"],

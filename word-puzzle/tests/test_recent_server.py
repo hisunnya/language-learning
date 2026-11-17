@@ -135,7 +135,7 @@ class TestApi(RecentCase):
         c.json("POST", "/api/recent", {"bank_id": bid})
         self.admin.json("DELETE", "/api/banks/%d" % bid)
         self.assertEqual(c.json("GET", "/api/recent")[1]["recent"], [])
-        self.assertIsNone(self.db.one("SELECT 1 FROM recent_banks WHERE bank_id=?", (bid,)))
+        self.assertIsNotNone(self.db.get_bank(bid)["deleted_at"], "老师的删除是软删除：题库还在，只是谁都看不到")
 
     def test_anonymous_visitors_of_the_lan_entrance_are_told_to_use_this_device(self):
         with mock.patch.dict(os.environ, {"WP_LAN_GUEST": "1"}):

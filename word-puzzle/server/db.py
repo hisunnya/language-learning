@@ -124,16 +124,51 @@ CREATE INDEX IF NOT EXISTS ix_users_class ON users(class_name);
 
 -- 标签：学生和题库各自带一组标签，两边至少有一个相同，学生才能看到、打开这个题库。
 -- 没打标签的题库学生看不到（老师始终看得到全部）。
+-- 标签按老师分开（teacher_id）：A 老师的「一班」和 B 老师的「一班」互不相干。
+-- 学生能看到题库 = 同一位老师给这个学生和这个题库打了同一个标签。teacher_id = 0 只出现在没有账号体系的家庭版里。
 CREATE TABLE IF NOT EXISTS user_tags (
-    user_id INTEGER NOT NULL,
-    tag     TEXT NOT NULL,
-    PRIMARY KEY (user_id, tag)
+    user_id    INTEGER NOT NULL,
+    tag        TEXT NOT NULL,
+    teacher_id INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, tag, teacher_id)
 );
 CREATE TABLE IF NOT EXISTS bank_tags (
-    bank_id INTEGER NOT NULL,
-    tag     TEXT NOT NULL,
-    PRIMARY KEY (bank_id, tag)
+    bank_id    INTEGER NOT NULL,
+    tag        TEXT NOT NULL,
+    teacher_id INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (bank_id, tag, teacher_id)
 );
+
+-- 多位老师：底层的学生、题库、成绩都在一起，上层靠这两张表决定「哪位老师能看到 / 管理什么」。
+-- 一个学生 / 题库可以挂在多位老师名下（共享）；超级管理员（role=admin）不受这两张表限制，什么都看得到。
+CREATE TABLE IF NOT EXISTS teacher_students (
+    teacher_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    added_at   INTEGER NOT NULL DEFAULT 0,       -- UTC 秒
+    added_by   INTEGER,
+    PRIMARY KEY (teacher_id, student_id)
+);
+CREATE INDEX IF NOT EXISTS ix_ts_student ON teacher_students(student_id);
+CREATE TABLE IF NOT EXISTS teacher_banks (     -- 共享给这位老师的题库（自己建的题库看 banks.owner_id）
+    teacher_id INTEGER NOT NULL,
+    bank_id    INTEGER NOT NULL,
+    added_at   INTEGER NOT NULL DEFAULT 0,
+    added_by   INTEGER,
+    PRIMARY KEY (teacher_id, bank_id)
+);
+CREATE INDEX IF NOT EXISTS ix_tb_bank ON teacher_banks(bank_id);
+
+-- 审计记录：谁在什么时候建了老师、共享 / 分配了什么、删了 / 恢复了什么。只增不删。
+CREATE TABLE IF NOT EXISTS audit_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts          INTEGER NOT NULL,                -- UTC 秒
+    actor_id    INTEGER,
+    action      TEXT NOT NULL,                   -- teacher.create / bank.share / student.move / bank.delete / … / student.auto_share
+    target_type TEXT NOT NULL DEFAULT '',        -- user / bank / material
+    target_id   INTEGER,
+    detail      TEXT NOT NULL DEFAULT '{}'       -- JSON
+);
+CREATE INDEX IF NOT EXISTS ix_audit_ts ON audit_log(ts);
 CREATE INDEX IF NOT EXISTS ix_bank_tags_tag ON bank_tags(tag);
 
 -- 每个账号最近打开过的题库（首页「最近玩过」，跨设备）：同一个题库一行，只留最近 8 个。
@@ -311,6 +346,28 @@ class Database:
         if "category" not in columns:
             # 分类：只用来整理和浏览，不参与权限（权限只看标签）
             self.execute("ALTER TABLE banks ADD COLUMN category TEXT NOT NULL DEFAULT ''")
+        # 软删除：只打标记（UTC 秒），老师和学生看不到，超级管理员能看到并恢复
+        for table in ("banks", "users", "materials"):
+            cols = {row["name"] for row in self.query("PRAGMA table_info(%s)" % table)}
+            if "deleted_at" not in cols:
+                self.execute("ALTER TABLE %s ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0" % table)
+            if "deleted_by" not in cols:
+                self.execute("ALTER TABLE %s ADD COLUMN deleted_by INTEGER" % table)
+        if "owner_id" not in {row["name"] for row in self.query("PRAGMA table_info(materials)")}:
+            self.execute("ALTER TABLE materials ADD COLUMN owner_id INTEGER")     # 谁上传的；老师只看得到自己的
+        # 老库的标签表没有 teacher_id：重建成带 teacher_id 的，原有标签归第一位超级管理员
+        for table, key in (("user_tags", "user_id"), ("bank_tags", "bank_id")):
+            if "teacher_id" not in {row["name"] for row in self.query("PRAGMA table_info(%s)" % table)}:
+                owner = self.default_teacher_id()
+                with self._tx() as conn:
+                    conn.execute("ALTER TABLE %s RENAME TO %s_old" % (table, table))
+                    conn.execute("CREATE TABLE %s (%s INTEGER NOT NULL, tag TEXT NOT NULL, "
+                                 "teacher_id INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (%s, tag, teacher_id))" % (table, key, key))
+                    conn.execute("INSERT INTO %s(%s, tag, teacher_id) SELECT %s, tag, ? FROM %s_old" % (table, key, key, table), (owner,))
+                    conn.execute("DROP TABLE %s_old" % table)
+        self.execute("CREATE INDEX IF NOT EXISTS ix_bank_tags_tag ON bank_tags(tag)")
+        self.execute("CREATE INDEX IF NOT EXISTS ix_user_tags_teacher ON user_tags(teacher_id, tag)")
+        self.execute("CREATE INDEX IF NOT EXISTS ix_bank_tags_teacher ON bank_tags(teacher_id, tag)")
         score_columns = {row["name"] for row in self.query("PRAGMA table_info(scores)")}
         if "user_id" not in score_columns:
             self.execute("ALTER TABLE scores ADD COLUMN user_id INTEGER")
@@ -320,6 +377,22 @@ class Database:
         if self.one("PRAGMA user_version")[0] < 1:
             self.execute("UPDATE banks SET pairs_per_level=9 WHERE pairs_per_level=12")
             self.execute("PRAGMA user_version = 1")
+        # v2（2026-11）：多位老师。已有的学生都挂到第一位超级管理员名下（她原来就管着所有学生），只做一次。
+        if self.one("PRAGMA user_version")[0] < 2:
+            owner = self.default_teacher_id()
+            if owner:
+                self.execute("INSERT OR IGNORE INTO teacher_students(teacher_id, student_id, added_at) "
+                             "SELECT ?, id, ? FROM users WHERE role='student'", (owner, int(time.time())))
+            self.execute("PRAGMA user_version = 2")
+
+    def default_teacher_id(self) -> int:
+        """第一位（编号最小的）没被删除的超级管理员；没有就是 0（家庭版、或者还没建管理员）。
+        没指明是哪位老师的标签（命令行导入、老接口）都算在她名下。"""
+        try:
+            row = self.one("SELECT MIN(id) AS id FROM users WHERE role='admin' AND deleted_at=0")
+        except sqlite3.OperationalError:          # 迁移到一半：users 还没有 deleted_at
+            row = self.one("SELECT MIN(id) AS id FROM users WHERE role='admin'")
+        return int(row["id"]) if row and row["id"] else 0
 
     # ---------------- 基础操作 ----------------
 
@@ -360,14 +433,14 @@ class Database:
     # ---------------- materials ----------------
 
     def insert_material(self, name: str, filename: str, fmt: str, size: int,
-                        note: str, words: list[dict]) -> int:
+                        note: str, words: list[dict], owner_id: int | None = None) -> int:
         ts = now_iso()
         with self._tx() as conn:
             cur = conn.execute(
                 "INSERT INTO materials(name, filename, fmt, size, note, "
-                "word_count, unit_count, created_at) VALUES (?,?,?,?,?,?,?,?)",
+                "word_count, unit_count, created_at, owner_id) VALUES (?,?,?,?,?,?,?,?,?)",
                 (name, filename, fmt, size, note, len(words),
-                 len({w['unit'] for w in words}), ts),
+                 len({w['unit'] for w in words}), ts, owner_id),
             )
             mid = cur.lastrowid
             conn.executemany(
@@ -378,9 +451,9 @@ class Database:
             )
         return mid
 
-    def list_materials(self) -> list[dict]:
-        rows = self.query("SELECT * FROM materials ORDER BY id DESC")
-        return [dict(r) for r in rows]
+    def list_materials(self, where: str = "", args: Iterable[Any] = ()) -> list[dict]:
+        sql = "SELECT * FROM materials" + (" WHERE " + where if where else "")
+        return [dict(r) for r in self.query(sql + " ORDER BY id DESC", tuple(args))]
 
     def get_material(self, mid: int) -> dict | None:
         row = self.one("SELECT * FROM materials WHERE id=?", (mid,))
@@ -426,77 +499,94 @@ class Database:
             )
         return bid
 
-    def list_banks(self, visible_to: int | None = None) -> list[dict]:
-        """visible_to=None 返回全部（老师）；给了用户 id 就只返回和他至少有一个相同标签的题库。
-        每个题库带上 ``tags``（列表）。"""
-        if visible_to is None:
-            rows = self.query("SELECT * FROM banks ORDER BY id DESC")
-        else:
-            rows = self.query(
-                "SELECT b.* FROM banks b WHERE EXISTS ("
-                "SELECT 1 FROM bank_tags bt JOIN user_tags ut ON ut.tag = bt.tag "
-                "WHERE bt.bank_id = b.id AND ut.user_id = ?) ORDER BY b.id DESC",
-                (visible_to,))
-        banks = [dict(r) for r in rows]
+    def list_banks(self, where: str = "", args: Iterable[Any] = (), tag_teacher: int | None = None) -> list[dict]:
+        """题库列表（含软删除的，谁能看到由调用方传进来的 where 决定，见 server/tenancy.py）。
+
+        每个题库带上 ``tags``：tag_teacher 给了就只是这位老师打的标签（老师只看得到自己的），
+        不给就是所有老师打的标签合在一起（内部用，比如重建内置题库时带走标签）。"""
+        sql = "SELECT b.* FROM banks b"
+        if where:
+            sql += " WHERE " + where
+        banks = [dict(r) for r in self.query(sql + " ORDER BY b.id DESC", tuple(args))]
         by_bank: dict[int, list[str]] = {}
-        for row in self.query("SELECT bank_id, tag FROM bank_tags ORDER BY tag"):
+        if tag_teacher is None:
+            rows = self.query("SELECT DISTINCT bank_id, tag FROM bank_tags ORDER BY tag")
+        else:
+            rows = self.query("SELECT bank_id, tag FROM bank_tags WHERE teacher_id=? ORDER BY tag", (tag_teacher,))
+        for row in rows:
             by_bank.setdefault(row["bank_id"], []).append(row["tag"])
         for bank in banks:
             bank["tags"] = by_bank.get(bank["id"], [])
         return banks
 
-    def list_banks_by_id(self, bid: int) -> dict | None:
+    def list_banks_by_id(self, bid: int, tag_teacher: int | None = None) -> dict | None:
         """单个题库（带标签），给改完分类 / 标签后回传用。"""
-        return next((b for b in self.list_banks() if b["id"] == bid), None)
-
-    def bank_visible_to(self, bid: int, user_id: int | None) -> bool:
-        """这个用户（学生）能不能看到这个题库：两边至少有一个相同标签。"""
-        if user_id is None:
-            return False
-        return self.one(
-            "SELECT 1 FROM bank_tags bt JOIN user_tags ut ON ut.tag = bt.tag "
-            "WHERE bt.bank_id = ? AND ut.user_id = ?", (bid, user_id)) is not None
+        found = self.list_banks("b.id=?", (bid,), tag_teacher=tag_teacher)
+        return found[0] if found else None
 
     # ---------------- 标签 ----------------
 
-    def bank_tags(self, bid: int) -> list[str]:
+    def bank_tags(self, bid: int, teacher_id: int | None = None) -> list[str]:
+        if teacher_id is None:
+            return [r["tag"] for r in self.query("SELECT DISTINCT tag FROM bank_tags WHERE bank_id=? ORDER BY tag", (bid,))]
         return [r["tag"] for r in self.query(
-            "SELECT tag FROM bank_tags WHERE bank_id=? ORDER BY tag", (bid,))]
+            "SELECT tag FROM bank_tags WHERE bank_id=? AND teacher_id=? ORDER BY tag", (bid, teacher_id))]
 
-    def set_bank_meta(self, bid: int, category: str | None, tags: list[str] | None) -> bool:
-        """改题库的分类和标签；传 None 的那一项保持不变。"""
+    def bank_tag_rows(self, bid: int) -> list[tuple[str, int]]:
+        """所有老师在这个题库上的标签（重建内置题库时原样带过去）。"""
+        return [(r["tag"], r["teacher_id"]) for r in self.query(
+            "SELECT tag, teacher_id FROM bank_tags WHERE bank_id=?", (bid,))]
+
+    def put_bank_tag_rows(self, bid: int, rows: list[tuple[str, int]]) -> None:
+        self.executemany("INSERT OR IGNORE INTO bank_tags(bank_id, tag, teacher_id) VALUES (?,?,?)",
+                         [(bid, tag, teacher) for tag, teacher in rows])
+
+    def _teacher(self, teacher_id: int | None) -> int:
+        return self.default_teacher_id() if teacher_id is None else int(teacher_id)
+
+    def set_bank_meta(self, bid: int, category: str | None, tags: list[str] | None,
+                      teacher_id: int | None = None) -> bool:
+        """改题库的分类和标签；传 None 的那一项保持不变。标签只改这位老师自己的（别的老师打的不动）。"""
         if not self.get_bank(bid):
             return False
+        teacher = self._teacher(teacher_id)
         with self._tx() as conn:
             if category is not None:
                 conn.execute("UPDATE banks SET category=? WHERE id=?", (category, bid))
             if tags is not None:
-                conn.execute("DELETE FROM bank_tags WHERE bank_id=?", (bid,))
-                conn.executemany("INSERT INTO bank_tags(bank_id, tag) VALUES (?, ?)",
-                                 [(bid, t) for t in tags])
+                conn.execute("DELETE FROM bank_tags WHERE bank_id=? AND teacher_id=?", (bid, teacher))
+                conn.executemany("INSERT INTO bank_tags(bank_id, tag, teacher_id) VALUES (?, ?, ?)",
+                                 [(bid, t, teacher) for t in tags])
         return True
 
-    def change_bank_tags(self, bank_ids: Iterable[int], add: list[str], remove: list[str]) -> int:
-        """批量给一批题库加 / 去标签（老师「批量开放」用）。返回实际存在的题库数。"""
+    def change_bank_tags(self, bank_ids: Iterable[int], add: list[str], remove: list[str],
+                         teacher_id: int | None = None) -> int:
+        """批量给一批题库加 / 去这位老师的标签（「批量开放」用）。返回实际存在的题库数。"""
+        teacher = self._teacher(teacher_id)
         ids = [i for i in bank_ids if self.get_bank(i)]
         with self._tx() as conn:
-            conn.executemany("INSERT OR IGNORE INTO bank_tags(bank_id, tag) VALUES (?, ?)",
-                             [(b, t) for b in ids for t in add])
-            conn.executemany("DELETE FROM bank_tags WHERE bank_id=? AND tag=?",
-                             [(b, t) for b in ids for t in remove])
+            conn.executemany("INSERT OR IGNORE INTO bank_tags(bank_id, tag, teacher_id) VALUES (?, ?, ?)",
+                             [(b, t, teacher) for b in ids for t in add])
+            conn.executemany("DELETE FROM bank_tags WHERE bank_id=? AND tag=? AND teacher_id=?",
+                             [(b, t, teacher) for b in ids for t in remove])
         return len(ids)
 
-    def all_tags(self) -> list[dict]:
-        """所有出现过的标签，以及有多少学生 / 多少题库带着它（老师挑「开放给谁」时用）。"""
+    def all_tags(self, teacher_id: int | None = None) -> list[dict]:
+        """这位老师用过的标签，以及有多少学生 / 多少题库带着它（老师挑「开放给谁」时用）。
+        只数还在的学生和题库（软删除的不算）。"""
+        teacher = self._teacher(teacher_id)
         out: dict[str, dict] = {}
-        for row in self.query("SELECT tag, COUNT(*) AS n FROM user_tags GROUP BY tag"):
+        for row in self.query("SELECT ut.tag, COUNT(*) AS n FROM user_tags ut JOIN users u ON u.id=ut.user_id "
+                              "WHERE ut.teacher_id=? AND u.deleted_at=0 GROUP BY ut.tag", (teacher,)):
             out.setdefault(row["tag"], {"tag": row["tag"], "students": 0, "banks": 0})["students"] = row["n"]
-        for row in self.query("SELECT tag, COUNT(*) AS n FROM bank_tags GROUP BY tag"):
+        for row in self.query("SELECT bt.tag, COUNT(*) AS n FROM bank_tags bt JOIN banks b ON b.id=bt.bank_id "
+                              "WHERE bt.teacher_id=? AND b.deleted_at=0 GROUP BY bt.tag", (teacher,)):
             out.setdefault(row["tag"], {"tag": row["tag"], "students": 0, "banks": 0})["banks"] = row["n"]
         return sorted(out.values(), key=lambda t: (-t["students"], t["tag"]))
 
-    def user_tags_map(self, user_ids: Iterable[int] | None = None) -> dict[int, list[str]]:
-        rows = self.query("SELECT user_id, tag FROM user_tags ORDER BY tag")
+    def user_tags_map(self, user_ids: Iterable[int] | None = None, teacher_id: int | None = None) -> dict[int, list[str]]:
+        teacher = self._teacher(teacher_id)
+        rows = self.query("SELECT user_id, tag FROM user_tags WHERE teacher_id=? ORDER BY tag", (teacher,))
         wanted = None if user_ids is None else set(user_ids)
         out: dict[int, list[str]] = {}
         for row in rows:
@@ -504,20 +594,24 @@ class Database:
                 out.setdefault(row["user_id"], []).append(row["tag"])
         return out
 
-    def set_user_tags(self, user_id: int, tags: list[str]) -> None:
+    def set_user_tags(self, user_id: int, tags: list[str], teacher_id: int | None = None) -> None:
+        """整组替换这位老师给这个学生打的标签（别的老师打的不动）。teacher_id 不给 = 第一位超级管理员。"""
+        teacher = self._teacher(teacher_id)
         with self._tx() as conn:
-            conn.execute("DELETE FROM user_tags WHERE user_id=?", (user_id,))
-            conn.executemany("INSERT INTO user_tags(user_id, tag) VALUES (?, ?)",
-                             [(user_id, t) for t in tags])
+            conn.execute("DELETE FROM user_tags WHERE user_id=? AND teacher_id=?", (user_id, teacher))
+            conn.executemany("INSERT INTO user_tags(user_id, tag, teacher_id) VALUES (?, ?, ?)",
+                             [(user_id, t, teacher) for t in tags])
 
-    def change_user_tags(self, user_ids: Iterable[int], add: list[str], remove: list[str]) -> None:
-        """批量给一批用户加 / 去标签。"""
+    def change_user_tags(self, user_ids: Iterable[int], add: list[str], remove: list[str],
+                         teacher_id: int | None = None) -> None:
+        """批量给一批用户加 / 去这位老师的标签。"""
+        teacher = self._teacher(teacher_id)
         ids = list(user_ids)
         with self._tx() as conn:
-            conn.executemany("INSERT OR IGNORE INTO user_tags(user_id, tag) VALUES (?, ?)",
-                             [(u, t) for u in ids for t in add])
-            conn.executemany("DELETE FROM user_tags WHERE user_id=? AND tag=?",
-                             [(u, t) for u in ids for t in remove])
+            conn.executemany("INSERT OR IGNORE INTO user_tags(user_id, tag, teacher_id) VALUES (?, ?, ?)",
+                             [(u, t, teacher) for u in ids for t in add])
+            conn.executemany("DELETE FROM user_tags WHERE user_id=? AND tag=? AND teacher_id=?",
+                             [(u, t, teacher) for u in ids for t in remove])
 
     def get_bank(self, bid: int) -> dict | None:
         row = self.one("SELECT * FROM banks WHERE id=?", (bid,))
@@ -530,11 +624,13 @@ class Database:
         return [dict(r) for r in rows]
 
     def delete_bank(self, bid: int) -> bool:
+        """真正删掉（只在内部重建内置题库时用）。老师和管理员的「删除」是软删除，见 server/tenancy.py。"""
         if not self.get_bank(bid):
             return False
         with self._tx() as conn:
             conn.execute("DELETE FROM bank_words WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM bank_tags WHERE bank_id=?", (bid,))
+            conn.execute("DELETE FROM teacher_banks WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM recent_banks WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM banks WHERE id=?", (bid,))
         return True
@@ -585,8 +681,11 @@ class Database:
         return int(cur.lastrowid)
 
     def list_scores(self, limit: int = 200, bank_id: int | None = None,
-                    user_id: int | None = None) -> list[dict]:
+                    user_id: int | None = None, people: tuple[str, tuple] | None = None) -> list[dict]:
+        """people：按人过滤的 SQL 片段（server/tenancy.py 的 people_where，列名 user_id）。"""
         where, args = [], []
+        if people is not None:
+            where.append(people[0]); args += list(people[1])
         if bank_id is not None:
             where.append("bank_id=?")
             args.append(bank_id)
@@ -607,8 +706,13 @@ class Database:
             out.append(d)
         return out
 
-    def score_stats(self, user_id: int | None = None) -> dict:
-        cond, args = ("WHERE user_id=?", (user_id,)) if user_id is not None else ("", ())
+    def score_stats(self, user_id: int | None = None, people: tuple[str, tuple] | None = None) -> dict:
+        parts, args = [], []
+        if user_id is not None:
+            parts.append("user_id=?"); args.append(user_id)
+        if people is not None:
+            parts.append(people[0]); args += list(people[1])
+        cond, args = ("WHERE " + " AND ".join(parts) if parts else ""), tuple(args)
         row = self.one(
             "SELECT COUNT(*) AS n, COALESCE(SUM(score),0) AS total, "
             "COALESCE(MAX(score),0) AS best, COALESCE(AVG(score),0) AS avg "

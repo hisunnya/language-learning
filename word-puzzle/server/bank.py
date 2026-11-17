@@ -354,7 +354,7 @@ def create_bank_per_unit(db: Database, payload: dict, owner_id: int | None = Non
     return created
 
 
-def bank_payload(db: Database, bid: int) -> dict:
+def bank_payload(db: Database, bid: int, tag_teacher: int | None = None) -> dict:
     """给前端游戏用的完整题库数据（词条 + 分组）。"""
     bank = db.get_bank(bid)
     if not bank:
@@ -374,7 +374,7 @@ def bank_payload(db: Database, bid: int) -> dict:
                       ("id", "title", "level1", "level2", "level3", "level4",
                        "source", "unit_mode", "unit_from", "unit_to",
                        "pairs_per_level", "word_count", "unit_count", "created_at",
-                       "category")}, tags=db.bank_tags(bid)),
+                       "category")}, tags=db.bank_tags(bid, tag_teacher)),
         "groups": chunk_groups([{"unit": u, "words": groups[u]} for u in order],
                                max_pairs=int(bank.get("pairs_per_level")
                                              or MAX_PAIRS_PER_LEVEL)),
@@ -439,7 +439,7 @@ def seed_default_bank(db: Database) -> int:
                                (MAX_PAIRS_PER_LEVEL, b["id"]))
                 default_banks.append(b)
                 continue
-            carried = (b.get("category") or "", list(b.get("tags") or []))
+            carried = (b.get("category") or "", db.bank_tag_rows(b["id"]))
             db.delete_bank(b["id"])          # 词库变了 → 重建
 
     if default_banks:
@@ -454,7 +454,8 @@ def seed_default_bank(db: Database) -> int:
 
     bank = create_bank(db, payload)
     if carried:
-        db.set_bank_meta(bank["id"], carried[0], carried[1])
+        db.set_bank_meta(bank["id"], carried[0], None)
+        db.put_bank_tag_rows(bank["id"], carried[1])          # 每位老师打的标签原样带过去
     return bank["id"]
 
 
@@ -497,7 +498,7 @@ def seed_curriculum_banks(db: Database) -> list[int]:
                                (MAX_PAIRS_PER_LEVEL, existing["id"]))
                 seeded.append(existing["id"])
                 continue
-            carried = (existing.get("category") or "", list(existing.get("tags") or []))
+            carried = (existing.get("category") or "", db.bank_tag_rows(existing["id"]), existing.get("deleted_at") or 0)
             db.delete_bank(existing["id"])
         else:
             carried = None
@@ -515,6 +516,9 @@ def seed_curriculum_banks(db: Database) -> list[int]:
             "pairs_per_level": MAX_PAIRS_PER_LEVEL,
         }, words)
         if carried:
-            db.set_bank_meta(new_id, carried[0], carried[1])
+            db.set_bank_meta(new_id, carried[0], None)
+            db.put_bank_tag_rows(new_id, carried[1])
+            if carried[2]:                                     # 管理员删掉过的内置题库，重建后仍然是删掉的
+                db.execute("UPDATE banks SET deleted_at=? WHERE id=?", (carried[2], new_id))
         seeded.append(new_id)
     return seeded

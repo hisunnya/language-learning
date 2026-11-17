@@ -208,7 +208,7 @@ def request_info(headers, peer: str) -> dict:
 def _who(user: dict | None) -> dict:
     if not user:
         return {"user_id": None, "role": "", "student_no": "", "name": "", "class_name": ""}
-    return {"user_id": user["id"], "role": "admin" if user["role"] == "admin" else "student",
+    return {"user_id": user["id"], "role": user["role"] if user["role"] in ("admin", "teacher") else "student",
             "student_no": user["student_no"], "name": user["name"], "class_name": user["class_name"] or ""}
 
 
@@ -270,14 +270,18 @@ def track(db: Database, user: dict | None, info: dict, payload: dict, now: float
 
 # ---------------------------------------------------------------- 查询（老师页面 / 导出用）
 
-def _filters(role: str, class_name: str, q: str, since, until, table: str):
+def _filters(role: str, class_name: str, q: str, since, until, table: str, people: tuple[str, tuple] | None = None):
+    """people：按人过滤（server/tenancy.py 的 people_where，列名 user_id）——老师只看自己名下学生的记录。"""
     where, args = [], []
+    if people is not None:
+        where.append(people[0]); args += list(people[1])
     ts = "ts" if table == "login_events" else "started_at"
     if role == "student":
         where.append("role='student'" if table == "page_views"
-                     else "user_id IN (SELECT id FROM users WHERE role<>'admin')")
-    elif role == "admin":
-        where.append("role='admin'" if table == "page_views" else "user_id IN (SELECT id FROM users WHERE role='admin')")
+                     else "user_id IN (SELECT id FROM users WHERE role='student')")
+    elif role == "admin":                      # 「老师」：超级管理员和老师
+        where.append("role IN ('admin','teacher')" if table == "page_views"
+                     else "user_id IN (SELECT id FROM users WHERE role IN ('admin','teacher'))")
     elif role == "anonymous":
         where.append("user_id IS NULL")
     if class_name:
@@ -294,9 +298,9 @@ def _filters(role: str, class_name: str, q: str, since, until, table: str):
 
 
 def sessions(db: Database, *, role: str = "", class_name: str = "", q: str = "", since=None, until=None,
-             limit: int = 100, offset: int = 0) -> dict:
+             limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None) -> dict:
     """一次访问 = 同一个浏览器标签页（sid）里同一个账号先后打开的页面。最近的在最前面。"""
-    cond, args = _filters(role, class_name, q, since, until, "page_views")
+    cond, args = _filters(role, class_name, q, since, until, "page_views", people)
     group = "FROM page_views" + cond + " GROUP BY sid, COALESCE(user_id, 0)"
     total = db.one("SELECT COUNT(*) AS n FROM (SELECT 1 " + group + ")", args)["n"]
     keys = db.query("SELECT sid, COALESCE(user_id, 0) AS uid, MAX(started_at) AS last " + group +
@@ -319,8 +323,10 @@ def sessions(db: Database, *, role: str = "", class_name: str = "", q: str = "",
     return {"sessions": out, "total": total}
 
 
-def session_pages(db: Database, sid: str, user_id: int | None) -> list[dict]:
-    rows = db.query("SELECT * FROM page_views WHERE sid=? AND COALESCE(user_id, 0)=? ORDER BY started_at, id", (sid, user_id or 0))
+def session_pages(db: Database, sid: str, user_id: int | None, people: tuple[str, tuple] | None = None) -> list[dict]:
+    cond, args = (" AND " + people[0], tuple(people[1])) if people is not None else ("", ())
+    rows = db.query("SELECT * FROM page_views WHERE sid=? AND COALESCE(user_id, 0)=?" + cond + " ORDER BY started_at, id",
+                    (sid, user_id or 0, *args))
     out = []
     for r in rows:
         d = dict(r)
@@ -334,8 +340,8 @@ def session_pages(db: Database, sid: str, user_id: int | None) -> list[dict]:
 
 
 def logins(db: Database, *, role: str = "", class_name: str = "", q: str = "", only_failed: bool = False, since=None,
-           until=None, limit: int = 100, offset: int = 0) -> dict:
-    cond, args = _filters(role, class_name, q, since, until, "login_events")
+           until=None, limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None) -> dict:
+    cond, args = _filters(role, class_name, q, since, until, "login_events", people)
     if only_failed:
         cond += (" AND " if cond else " WHERE ") + "success=0"
     total = db.one("SELECT COUNT(*) AS n FROM login_events" + cond, args)["n"]
@@ -344,9 +350,10 @@ def logins(db: Database, *, role: str = "", class_name: str = "", q: str = "", o
     return {"logins": [dict(r) for r in rows], "total": total}
 
 
-def all_rows(db: Database, table: str, *, class_name: str = "", q: str = "", since=None, until=None) -> tuple[list[str], list[tuple]]:
+def all_rows(db: Database, table: str, *, class_name: str = "", q: str = "", since=None, until=None,
+             people: tuple[str, tuple] | None = None) -> tuple[list[str], list[tuple]]:
     """导出用：整张表的所有列（含转发头、客户端信息原文），按时间先后。"""
-    cond, args = _filters("", class_name, q, since, until, table)
+    cond, args = _filters("", class_name, q, since, until, table, people)
     order = "ts, id" if table == "login_events" else "started_at, id"
     cur = db.query("SELECT * FROM " + table + cond + " ORDER BY " + order, args)
     cols = list(cur[0].keys()) if cur else [r["name"] for r in db.query("PRAGMA table_info(%s)" % table)]

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261116_170000.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261117_100000.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -36,6 +36,7 @@ for path in \
   word-puzzle/web/js/i18n.js \
   word-puzzle/web/js/i18n-lexica.js \
   word-puzzle/server/accesslog.py \
+  word-puzzle/server/tenancy.py \
   word-puzzle/web/js/tracker.js \
   word-puzzle/web/visits.html \
   word-puzzle/web/js/page-visits.js \

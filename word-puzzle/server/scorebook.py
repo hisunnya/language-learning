@@ -43,8 +43,12 @@ def _key(row: dict):
     return _who(row) + (("b", row["bank_id"]) if row["bank_id"] is not None else ("t", row["bank_title"] or ""))
 
 
-def _fetch(db: Database, *, user_id=None, device=None, bank_id=None, bank_title=None, class_name="") -> list[dict]:
+def _fetch(db: Database, *, user_id=None, device=None, bank_id=None, bank_title=None, class_name="",
+           people: tuple[str, tuple] | None = None) -> list[dict]:
+    """people：按人过滤的 SQL 片段（server/tenancy.py 的 people_where，列名 s.user_id）——老师只看自己名下学生的成绩。"""
     where, args = [], []
+    if people is not None:
+        where.append(people[0]); args += list(people[1])
     if user_id is not None:
         where.append("s.user_id=?"); args.append(user_id)
     elif device is not None:
@@ -62,9 +66,9 @@ def _fetch(db: Database, *, user_id=None, device=None, bank_id=None, bank_title=
 
 
 def summarize(db: Database, *, only_user_id: int | None = None, class_name: str = "", bank_id: int | None = None,
-              q: str = "") -> dict:
+              q: str = "", people: tuple[str, tuple] | None = None) -> dict:
     """返回 {"rows": [...], "classes": [...], "banks": [{"id", "title"}]}，行按 班级 / 学号 / 题库 排好。"""
-    rows = _fetch(db, user_id=only_user_id, bank_id=bank_id, class_name=class_name)
+    rows = _fetch(db, user_id=only_user_id, bank_id=bank_id, class_name=class_name, people=people)
     cache: dict = {}
     titles = {b["id"]: b["title"] for b in db.list_banks()}
     groups: dict = {}
@@ -96,12 +100,13 @@ def summarize(db: Database, *, only_user_id: int | None = None, class_name: str 
             "banks": [{"id": i, "title": t} for i, t in banks]}
 
 
-def plays_of(db: Database, *, user_id=None, device=None, bank_id=None, bank_title=None) -> list[dict]:
+def plays_of(db: Database, *, user_id=None, device=None, bank_id=None, bank_title=None,
+             people: tuple[str, tuple] | None = None) -> list[dict]:
     """某个学生在某套题上的每一次：最新的在最前面。至少要指明是谁（user_id 或 device）。"""
     if user_id is None and device is None:
         return []                       # 没指明是谁就什么都不给，不能退化成「全部人的全部成绩」
     rows = _fetch(db, user_id=user_id, device=device if user_id is None else None, bank_id=bank_id,
-                  bank_title=bank_title if bank_id is None else None)
+                  bank_title=bank_title if bank_id is None else None, people=people)
     cache: dict = {}
     out = []
     for r in reversed(rows):

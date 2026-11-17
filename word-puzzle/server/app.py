@@ -33,7 +33,7 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
 
 from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
-from server import accesslog, hierarchy, modules, policy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
+from server import accesslog, hierarchy, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -272,8 +272,12 @@ class Handler(BaseHTTPRequestHandler):
         return self.auth.user_for_token(self._session_token())
 
     def _is_admin(self) -> bool:
-        """家庭版没有账号体系，等同管理员（行为和以前一样）。"""
+        """超级管理员。家庭版没有账号体系，等同超级管理员（行为和以前一样）。"""
         return self.auth is None or bool(self.user and self.user["role"] == "admin")
+
+    def _is_staff(self) -> bool:
+        """能用管理功能的人：超级管理员和老师（老师只管得了自己名下的，范围见 server/tenancy.py）。"""
+        return self.auth is None or bool(self.user and self.user["role"] in policy.STAFF_ROLES)
 
     def _guest_entrance(self) -> bool:
         """内网入口（家庭版）：不登录也能用所有页面，管理功能才要登录。
@@ -282,9 +286,9 @@ class Handler(BaseHTTPRequestHandler):
         return (self.auth is not None and os.environ.get("WP_LAN_GUEST") == "1"
                 and self._peer() in accesslog.LOOPBACK and self.headers.get("X-Wp-Entry") == "lan")
 
-    def _sees_all(self) -> bool:
-        """能看到全部题库 / 成绩的人：老师，以及内网入口里没登录的人（家庭版不登录也能用所有页面）。"""
-        return self._is_admin() or bool(self._guest_entrance() and not self.user)
+    def _scope(self) -> "tenancy.Scope":
+        """这个请求能看到、能管理哪些数据（超管 / 老师 / 学生 / 家庭版访客）。"""
+        return tenancy.scope_for(self.auth is not None, self.user, self._guest_entrance())
 
     def _need(self, action: str, resource: dict | None = None) -> None:
         """按 server/policy.py 判断当前用户能不能做这件事；局域网版（没有账号体系）等同允许。"""
@@ -294,19 +298,20 @@ class Handler(BaseHTTPRequestHandler):
             raise HttpError(401, "请先用教师账号登录", "login_required")
         raise HttpError(403, "需要管理员权限", "forbidden")
 
-    def _need_admin(self) -> None:
+    def _need_staff(self) -> None:
+        """老师或超级管理员。"""
         self._need("admin")
+
+    def _need_admin(self) -> None:
+        """只有超级管理员（加老师、共享 / 分配、恢复删除、审计记录）。"""
+        self._need("tenants.manage")
 
     def _uid(self) -> int | None:
         return self.user["id"] if (self.auth is not None and self.user) else None
 
     def _bank_visible(self, bank: dict | None) -> bool:
-        """老师看得到全部；学生只看得到和自己至少有一个相同标签的题库（没打标签的就看不到）。"""
-        if not bank:
-            return False
-        if self._sees_all():
-            return True
-        return self.db.bank_visible_to(bank["id"], self._uid())
+        """超管看得到全部；老师看得到自己的、共享给他的、内置的；学生看得到某位老师给他开放的；家庭版访客看得到内置的和超管的。"""
+        return tenancy.bank_visible(self.db, self._scope(), bank)
 
     @staticmethod
     def _tags_meta(payload: dict) -> tuple[str | None, list[str] | None]:
@@ -375,9 +380,9 @@ class Handler(BaseHTTPRequestHandler):
 
         self._gate(path)
 
-        # ---- 管理员接口 ----
+        # ---- 管理员接口（老师和超级管理员；超管专属的在里面另外检查） ----
         if path.startswith("/api/admin/"):
-            self._need_admin()
+            self._need_staff()
             if self.auth is None:
                 raise HttpError(404, "家庭版没有账号管理")
             self.handle_admin(method, path, query)
@@ -410,10 +415,11 @@ class Handler(BaseHTTPRequestHandler):
 
         # ---- 资料 ----
         if path.startswith("/api/materials"):
-            self._need_admin()
+            self._need_staff()
         if path == "/api/materials":
             if method == "GET":
-                self.send_json({"ok": True, "materials": db.list_materials()})
+                where, args = tenancy.material_where(self._scope())
+                self.send_json({"ok": True, "materials": db.list_materials(where, args)})
                 return
             if method == "POST":
                 with self._heavy():
@@ -422,9 +428,11 @@ class Handler(BaseHTTPRequestHandler):
 
         m = re.fullmatch(r"/api/materials/(\d+)", path)
         if m and method == "DELETE":
-            ok = db.delete_material(int(m.group(1)))
-            if not ok:
+            mid = int(m.group(1))
+            if not tenancy.material_visible(db, self._scope(), mid):
                 raise HttpError(404, "资料不存在")
+            tenancy.soft_delete(db, "materials", mid, self._uid())       # 软删除：超管能恢复
+            tenancy.audit(db, self._uid(), "material.delete", "material", mid)
             self.send_json({"ok": True})
             return
 
@@ -442,16 +450,19 @@ class Handler(BaseHTTPRequestHandler):
         # ---- 题库 ----
         if path == "/api/banks":
             if method == "GET":
-                visible = None if self._sees_all() else self._uid()
-                if visible is None and not self._sees_all():
-                    self.send_json({"ok": True, "banks": []})
-                    return
-                self.send_json({"ok": True, "banks": db.list_banks(visible)})
+                self.send_json({"ok": True, "banks": tenancy.list_banks(db, self._scope())})
                 return
             if method == "POST":
-                # 建题库属于题库管理，只有老师（家庭版没有账号，等同老师）
-                self._need_admin()
+                # 建题库属于题库管理：老师和超管（家庭版没有账号，等同超管）。题库归建的人所有。
+                self._need_staff()
                 payload = self.read_json()
+                if payload.get("source") == "material":
+                    try:
+                        mid = int(payload.get("material_id") or 0)
+                    except (TypeError, ValueError):
+                        mid = 0
+                    if mid and not tenancy.material_visible(db, self._scope(), mid):
+                        raise HttpError(400, "资料不存在，可能已被删除")
                 category, tags = self._tags_meta(payload)
                 split = bool(payload.get("split_units"))
                 if split and category is None:
@@ -465,26 +476,28 @@ class Handler(BaseHTTPRequestHandler):
                     raise HttpError(400, str(exc)) from exc
                 if category is not None or tags is not None:
                     for item in made:
-                        db.set_bank_meta(item["id"], category, tags)
-                banks = [db.list_banks_by_id(item["id"]) for item in made]
+                        db.set_bank_meta(item["id"], category, tags, teacher_id=self._scope().tag_teacher)
+                banks = [db.list_banks_by_id(item["id"], tag_teacher=self._scope().tag_teacher) for item in made]
                 self.send_json({"ok": True, "bank": banks[0], "banks": banks}, status=201)
                 return
 
 
         if path == "/api/banks/tags" and method == "POST":
-            # 批量开放 / 收回：给一批题库加或去掉标签（学生有相同标签就能看到）
-            self._need_admin()
+            # 批量开放 / 收回：给一批题库加或去掉自己的标签（自己名下的学生有相同标签就能看到）
+            self._need_staff()
             payload = self.read_json()
             ids = payload.get("bank_ids")
             if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
                 raise HttpError(400, "请选择要修改的题库")
+            scope = self._scope()
+            ids = [i for i in ids if tenancy.can_tag_bank(db, scope, db.get_bank(i))]
             try:
                 add, remove = normalize_tags(payload.get("add")), normalize_tags(payload.get("remove"))
             except TagError as exc:
                 raise HttpError(400, exc.args[0], "bad_tags") from exc
             if not add and not remove:
                 raise HttpError(400, "请填写要加或要去掉的标签")
-            self.send_json({"ok": True, "changed": db.change_bank_tags(ids, add, remove)})
+            self.send_json({"ok": True, "changed": db.change_bank_tags(ids, add, remove, teacher_id=scope.tag_teacher)})
             return
 
         m = re.fullmatch(r"/api/banks/(\d+)", path)
@@ -492,37 +505,46 @@ class Handler(BaseHTTPRequestHandler):
             bid = int(m.group(1))
             if not self._bank_visible(db.get_bank(bid)):
                 raise HttpError(404, "题库不存在")
+            scope = self._scope()
             try:
-                self.send_json({"ok": True, **bank_mod.bank_payload(db, bid)})
+                self.send_json({"ok": True, **bank_mod.bank_payload(db, bid, scope.tag_teacher if scope.staff else -1)})
             except bank_mod.BankError as exc:
                 raise HttpError(404, str(exc)) from exc
             return
 
         m = re.fullmatch(r"/api/banks/(\d+)", path)
         if m and method == "DELETE":
+            self._need_staff()
             bank = db.get_bank(int(m.group(1)))
-            self._need_admin()
-            if not bank:
+            scope = self._scope()
+            if not bank or bank.get("deleted_at") or not tenancy.bank_visible(db, scope, bank):
                 raise HttpError(404, "题库不存在")
-            ok = db.delete_bank(int(m.group(1)))
-            if not ok:
-                raise HttpError(404, "题库不存在")
-            self.send_json({"ok": True})
+            try:
+                done = tenancy.delete_bank_for(db, scope, bank)       # 自己的：软删除；共享过来的：从自己名下移走
+            except PermissionError as exc:
+                raise HttpError(403, str(exc), "forbidden") from exc
+            tenancy.audit(db, self._uid(), "bank." + ("delete" if done == "deleted" else "unshare_self"), "bank", bank["id"],
+                          title=bank["title"])
+            self.send_json({"ok": True, "done": done})
             return
 
         # ---- 改题库的分类和标签（只有老师） ----
         m = re.fullmatch(r"/api/banks/(\d+)/meta", path)
         if m and method == "POST":
-            self._need_admin()
+            self._need_staff()
             category, tags = self._tags_meta(self.read_json())
-            if not db.set_bank_meta(int(m.group(1)), category, tags):
+            bank, scope = db.get_bank(int(m.group(1))), self._scope()
+            if not tenancy.can_tag_bank(db, scope, bank):
                 raise HttpError(404, "题库不存在")
-            self.send_json({"ok": True, "bank": db.list_banks_by_id(int(m.group(1)))})
+            if category is not None and not tenancy.can_edit_bank(db, scope, bank):
+                raise HttpError(403, "只有题库的主人能改分类（内置题库和别人共享的题库不能改）", "forbidden")
+            db.set_bank_meta(bank["id"], category, tags, teacher_id=scope.tag_teacher)
+            self.send_json({"ok": True, "bank": db.list_banks_by_id(bank["id"], tag_teacher=scope.tag_teacher)})
             return
 
         # ---- 生成离线测试页（很吃资源，学生版只给管理员） ----
         if path.startswith("/api/offline") or path.endswith("/offline"):
-            self._need_admin()
+            self._need_staff()
         m = re.fullmatch(r"/api/banks/(\d+)/offline", path)
         if m and method == "POST":
             kind = self.read_json().get("kind") or "game"          # game = 配对游戏，practice = 读音练习
@@ -558,11 +580,11 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET":
                 limit = int_param(query.get("limit"), "limit", 100, 1, 500)
                 bank_id = int_param(query.get("bank_id"), "bank_id")
-                # 学生版：学生只能看自己的成绩，管理员看全部
-                only = None if self._sees_all() else self._uid()
-                scores = db.list_scores(limit=limit, bank_id=bank_id, user_id=only)
+                # 超管看全部；老师看自己名下学生的；学生只看自己的；家庭版访客只看没登录时按设备记的
+                people = tenancy.people_where(self._scope(), "user_id")
+                scores = db.list_scores(limit=limit, bank_id=bank_id, people=people)
                 self.send_json({"ok": True, "scores": scores,
-                                "stats": db.score_stats(only)})
+                                "stats": db.score_stats(people=people)})
                 return
             if method == "POST":
                 rec = self.read_json()
@@ -573,7 +595,7 @@ class Handler(BaseHTTPRequestHandler):
                         bank_id = int(rec["bank_id"])
                     except (TypeError, ValueError):
                         raise HttpError(400, "bank_id 不合法") from None
-                    if not db.bank_visible_to(bank_id, uid):
+                    if not self._bank_visible(db.get_bank(bank_id)):
                         raise HttpError(404, "题库不存在")
                 if uid is not None:
                     # 身份以登录态为准，不信客户端自己报的设备号和昵称
@@ -588,14 +610,15 @@ class Handler(BaseHTTPRequestHandler):
 
         # ---- 成绩汇总：每个学生 × 每套题一行；点开一行看每一次的明细 ----
         if path == "/api/scores/summary" and method == "GET":
-            admin = self._sees_all()
+            scope = self._scope()
             self.send_json({"ok": True, **scorebook.summarize(
-                db, only_user_id=None if admin else self._uid(),
-                class_name=query.get("class_name", "") if admin else "",
+                db, people=tenancy.people_where(scope, "s.user_id"),
+                class_name=query.get("class_name", "") if scope.staff else "",
                 bank_id=int_param(query.get("bank_id"), "bank_id"), q=query.get("q", ""))})
             return
         if path == "/api/scores/plays" and method == "GET":
-            if self._sees_all():
+            scope = self._scope()
+            if scope.staff or scope.kind == tenancy.GUEST:
                 uid = int_param(query.get("user_id"), "user_id")
                 device = None if uid is not None else (query.get("device") if "device" in query else None)
             else:
@@ -604,13 +627,12 @@ class Handler(BaseHTTPRequestHandler):
                 raise HttpError(400, "请指明是谁的成绩")
             bank_id = int_param(query.get("bank_id"), "bank_id")
             self.send_json({"ok": True, "plays": scorebook.plays_of(
-                db, user_id=uid, device=device, bank_id=bank_id,
+                db, user_id=uid, device=device, bank_id=bank_id, people=tenancy.people_where(scope, "s.user_id"),
                 bank_title=query.get("bank_title") if bank_id is None and "bank_title" in query else None)})
             return
 
         if path == "/api/stats" and method == "GET":
-            only = None if self._sees_all() else self._uid()
-            self.send_json({"ok": True, **db.score_stats(only)})
+            self.send_json({"ok": True, **db.score_stats(people=tenancy.people_where(self._scope(), "user_id"))})
             return
 
         raise HttpError(404, f"未知接口 {path}")
@@ -693,15 +715,135 @@ class Handler(BaseHTTPRequestHandler):
     def send_json_with_cookie(self, obj, cookie: str, status: int = 200) -> None:
         self._send(status, json_bytes(obj), "application/json; charset=utf-8", {"Set-Cookie": cookie})
 
+    def handle_super(self, method: str, path: str, query: dict) -> bool:
+        """超级管理员专属：老师、共享 / 分配、已删除和恢复、审计记录。处理了返回 True。"""
+        db, auth = self.db, self.auth
+        if not (path.startswith("/api/admin/teachers") or path in ("/api/admin/assign", "/api/admin/deleted",
+                                                                    "/api/admin/restore", "/api/admin/audit")):
+            return False
+        self._need_admin()
+        me = self._uid()
+
+        if path == "/api/admin/teachers" and method == "GET":
+            rows = db.query(
+                "SELECT u.id, u.student_no, u.name, u.role, u.disabled, u.must_change, u.last_login_at, u.created_at, "
+                "(SELECT COUNT(*) FROM teacher_students ts JOIN users s ON s.id=ts.student_id "
+                " WHERE ts.teacher_id=u.id AND s.deleted_at=0) AS students, "
+                "(SELECT COUNT(*) FROM banks b WHERE b.owner_id=u.id AND b.deleted_at=0) AS own_banks, "
+                "(SELECT COUNT(*) FROM teacher_banks tb JOIN banks b ON b.id=tb.bank_id "
+                " WHERE tb.teacher_id=u.id AND b.deleted_at=0) AS shared_banks, "
+                "(SELECT COUNT(*) FROM materials m WHERE m.owner_id=u.id AND m.deleted_at=0) AS materials "
+                "FROM users u WHERE u.role IN ('admin','teacher') AND u.deleted_at=0 ORDER BY u.role, u.id")
+            self.send_json({"ok": True, "teachers": [dict(r) for r in rows]})
+            return True
+
+        if path == "/api/admin/teachers" and method == "POST":
+            body = self.read_json()
+            password = str(body.get("password") or "") or None
+            if password and len(password) < 8:
+                raise HttpError(400, "初始密码至少 8 位（或留空自动生成）", "bad_password")
+            try:
+                user, plain = auth.create_user(body.get("student_no", ""), body.get("name", ""), password=password,
+                                               role="teacher", must_change=True)
+            except auth_mod.AuthError as exc:
+                raise HttpError(exc.status, exc.message, exc.code) from exc
+            tenancy.audit(db, me, "teacher.create", "user", user["id"], student_no=user["student_no"], name=user["name"])
+            self.send_json({"ok": True, "teacher": auth.public(user), "password": plain}, status=201)
+            return True
+
+        m = re.fullmatch(r"/api/admin/teachers/(\d+)/delete", path)
+        if m and method == "POST":
+            target = auth.get_by_id(int(m.group(1)))
+            if not target or target["role"] != "teacher" or target.get("deleted_at"):
+                raise HttpError(404, "没有这位老师")
+            tenancy.soft_delete(db, "users", target["id"], me)
+            tenancy.audit(db, me, "teacher.delete", "user", target["id"], student_no=target["student_no"])
+            self.send_json({"ok": True})
+            return True
+
+        if path == "/api/admin/assign" and method == "POST":
+            body = self.read_json()
+            kind, mode = body.get("kind"), body.get("mode")
+            ids, teacher_id = body.get("ids"), body.get("teacher_id")
+            if kind not in ("bank", "student") or mode not in ("share", "move", "unshare"):
+                raise HttpError(400, "kind 是 bank / student，mode 是 share / move / unshare", "bad_assign")
+            if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+                raise HttpError(400, "请选择要分配的题库或学生", "bad_assign")
+            teacher = auth.get_by_id(int(teacher_id)) if isinstance(teacher_id, int) else None
+            if not teacher or teacher["role"] not in policy.STAFF_ROLES or teacher.get("deleted_at"):
+                raise HttpError(400, "请选择一位老师", "bad_teacher")
+            changed = 0
+            for row_id in ids:
+                if kind == "bank":
+                    bank = db.get_bank(row_id)
+                    if not bank or bank.get("deleted_at"):
+                        continue
+                    if mode == "share":
+                        changed += tenancy.link_bank(db, teacher["id"], row_id, me)
+                    elif mode == "move":
+                        tenancy.move_bank(db, row_id, teacher["id"])
+                        changed += 1
+                    else:
+                        tenancy.unlink_bank(db, teacher["id"], row_id)
+                        changed += 1
+                else:
+                    student = auth.get_by_id(row_id)
+                    if not student or student["role"] != "student" or student.get("deleted_at"):
+                        continue
+                    if mode == "share":
+                        changed += tenancy.link_student(db, teacher["id"], row_id, me)
+                    elif mode == "move":
+                        tenancy.move_student(db, row_id, teacher["id"], me)
+                        changed += 1
+                    else:
+                        tenancy.unlink_student(db, teacher["id"], row_id)
+                        changed += 1
+                tenancy.audit(db, me, kind + "." + mode, kind if kind == "bank" else "user", row_id,
+                              teacher_id=teacher["id"], teacher=teacher["name"])
+            self.send_json({"ok": True, "changed": changed})
+            return True
+
+        if path == "/api/admin/deleted" and method == "GET":
+            self.send_json({"ok": True, **tenancy.deleted_rows(db)})
+            return True
+
+        if path == "/api/admin/restore" and method == "POST":
+            body = self.read_json()
+            table = {"user": "users", "bank": "banks", "material": "materials"}.get(body.get("kind"))
+            if not table or not isinstance(body.get("id"), int):
+                raise HttpError(400, "kind 是 user / bank / material，id 是编号", "bad_restore")
+            if not tenancy.restore(db, table, body["id"]):
+                raise HttpError(404, "没有这条已删除的记录")
+            tenancy.audit(db, me, body["kind"] + ".restore", body["kind"], body["id"])
+            self.send_json({"ok": True})
+            return True
+
+        if path == "/api/admin/audit" and method == "GET":
+            self.send_json({"ok": True, "audit": tenancy.audit_rows(db, int_param(query.get("limit"), "limit", 200, 1, 1000))})
+            return True
+
+        raise HttpError(404, f"未知接口 {path}")
+
+    def _managed_user(self, uid: int) -> dict:
+        """这个人管得了的账号；管不了的一律当成不存在（别让老师探测别人有哪些学生）。老师不能动老师 / 管理员。"""
+        target = self.auth.get_by_id(uid)
+        if not tenancy.can_manage_user(self.db, self._scope(), target):
+            raise HttpError(404, "没有这个用户")
+        return target
+
     def handle_admin(self, method: str, path: str, query: dict) -> None:
         auth = self.auth
+        scope = self._scope()
+        if self.handle_super(method, path, query):
+            return
         try:
             if path == "/api/admin/users" and method == "GET":
                 users = auth.list_users(class_name=query.get("class_name", ""),
                                         college=query.get("college", ""),
                                         department=query.get("department", ""),
-                                        q=query.get("q", "").strip())
-                self.send_json({"ok": True, "users": users})
+                                        q=query.get("q", "").strip(), scope=scope,
+                                        role=query.get("role", "") if scope.everything else "")
+                self.send_json({"ok": True, "users": users, "super": scope.everything})
                 return
 
             if path == "/api/admin/import" and method == "POST":
@@ -718,17 +860,18 @@ class Handler(BaseHTTPRequestHandler):
                 except roster.RosterError as exc:
                     raise HttpError(400, str(exc)) from exc
                 reset = fields.get("reset_existing", {}).get("data", b"").decode("utf-8", "ignore").strip() in ("1", "true", "on")
-                report = auth.import_roster(table["rows"], reset_existing=reset)
+                report = auth.import_roster(table["rows"], reset_existing=reset,
+                                            teacher_id=scope.tag_teacher or None, actor=self._uid())
                 report["ignored_columns"] = table["ignored_columns"]
                 self.send_json({"ok": True, **report})
                 return
 
             if path == "/api/admin/tags" and method == "GET":
-                self.send_json({"ok": True, "tags": self.db.all_tags()})
+                self.send_json({"ok": True, "tags": self.db.all_tags(teacher_id=scope.tag_teacher)})
                 return
 
             if path == "/api/admin/users/tags" and method == "POST":
-                # 批量：给一批学生加 / 去标签
+                # 批量：给一批（自己名下的）学生加 / 去自己的标签
                 payload = self.read_json()
                 ids = payload.get("user_ids")
                 if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
@@ -739,22 +882,38 @@ class Handler(BaseHTTPRequestHandler):
                     raise HttpError(400, exc.args[0], "bad_tags") from exc
                 if not add and not remove:
                     raise HttpError(400, "请填写要加或要去掉的标签")
-                known = {u["id"] for u in auth.list_users() if u["role"] != "admin"}
+                known = {u["id"] for u in auth.list_users(scope=scope) if u["role"] == "student"}
                 ids = [i for i in ids if i in known]
-                self.db.change_user_tags(ids, add, remove)
+                self.db.change_user_tags(ids, add, remove, teacher_id=scope.tag_teacher)
                 self.send_json({"ok": True, "changed": len(ids)})
+                return
+
+            if path == "/api/admin/users/delete" and method == "POST":
+                # 删学生 / 删一个班：软删除；也挂在别的老师名下的，只从自己名下移走
+                ids = self.read_json().get("user_ids")
+                if not isinstance(ids, list) or not ids or not all(isinstance(i, int) for i in ids):
+                    raise HttpError(400, "请选择要删除的学生")
+                done = {"deleted": 0, "unlinked": 0}
+                for uid in ids:
+                    target = auth.get_by_id(uid)
+                    if not target or target.get("deleted_at") or target["role"] != "student" \
+                            or not tenancy.can_manage_user(self.db, scope, target):
+                        continue
+                    result = tenancy.delete_student_for(self.db, scope, target)
+                    done[result] += 1
+                    tenancy.audit(self.db, self._uid(), "student." + ("delete" if result == "deleted" else "unlink_self"),
+                                  "user", uid, student_no=target["student_no"])
+                self.send_json({"ok": True, **done})
                 return
 
             m = re.fullmatch(r"/api/admin/users/(\d+)/tags", path)
             if m and method == "POST":
-                target = auth.get_by_id(int(m.group(1)))
-                if not target:
-                    raise HttpError(404, "没有这个用户")
+                target = self._managed_user(int(m.group(1)))
                 try:
                     tags = normalize_tags(self.read_json().get("tags"))
                 except TagError as exc:
                     raise HttpError(400, exc.args[0], "bad_tags") from exc
-                self.db.set_user_tags(target["id"], tags)
+                self.db.set_user_tags(target["id"], tags, teacher_id=scope.tag_teacher)
                 self.send_json({"ok": True, "tags": tags})
                 return
 
@@ -762,9 +921,7 @@ class Handler(BaseHTTPRequestHandler):
             if m and method == "POST":
                 uid, action = int(m.group(1)), m.group(2)
                 payload = self.read_json()
-                target = auth.get_by_id(uid)
-                if not target:
-                    raise HttpError(404, "没有这个用户")
+                target = self._managed_user(uid)
                 if action == "reset-password":
                     plain = auth.reset_password(uid)
                     self.send_json({"ok": True, "student_no": target["student_no"], "password": plain})
@@ -787,6 +944,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/admin/visits" and method == "GET":
                 self.send_json(dict(ok=True, **accesslog.sessions(
                     self.db, role=query.get("role", ""), class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
+                    people=tenancy.people_where(scope, "user_id"),
                     since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"),
                     limit=int_param(query.get("limit"), "limit", 100, 1, 500),
                     offset=int_param(query.get("offset"), "offset", 0, 0))))
@@ -794,12 +952,14 @@ class Handler(BaseHTTPRequestHandler):
 
             if path == "/api/admin/visits/pages" and method == "GET":
                 uid = int_param(query.get("user_id"), "user_id")
-                self.send_json({"ok": True, "pages": accesslog.session_pages(self.db, query.get("sid", ""), uid)})
+                self.send_json({"ok": True, "pages": accesslog.session_pages(self.db, query.get("sid", ""), uid,
+                                                                             people=tenancy.people_where(scope, "user_id"))})
                 return
 
             if path == "/api/admin/logins" and method == "GET":
                 self.send_json(dict(ok=True, **accesslog.logins(
                     self.db, role=query.get("role", ""), class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
+                    people=tenancy.people_where(scope, "user_id"),
                     only_failed=query.get("failed") == "1",
                     since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"),
                     limit=int_param(query.get("limit"), "limit", 100, 1, 500),
@@ -824,6 +984,7 @@ class Handler(BaseHTTPRequestHandler):
     def _score_summary_csv(self, query: dict) -> bytes:
         """一人一套题一行的汇总，老师拿去排名 / 存档。"""
         data = scorebook.summarize(self.db, class_name=query.get("class_name", ""),
+                                   people=tenancy.people_where(self._scope(), "s.user_id"),
                                    bank_id=int_param(query.get("bank_id"), "bank_id"), q=query.get("q", ""))
         out = io.StringIO()
         writer = csv.writer(out)
@@ -903,6 +1064,9 @@ class Handler(BaseHTTPRequestHandler):
                 where.append("kind=?")
                 args.append(query["kind"])
             if policy.allow(self.user, "records.read_all", {"subject": subject}) or self.auth is None:
+                people, pargs = tenancy.people_where(self._scope(), "user_id")       # 老师只看自己名下学生的
+                where.append(people)
+                args += list(pargs)
                 if query.get("user_id"):
                     where.append("user_id=?")
                     args.append(int_param(query["user_id"], "user_id"))
@@ -933,6 +1097,7 @@ class Handler(BaseHTTPRequestHandler):
     def _access_csv(self, table: str, query: dict) -> bytes:
         """访问记录 / 登录记录的完整导出：所有列，时间换成 UTC+8 的可读时间。"""
         cols, rows = accesslog.all_rows(self.db, table, class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
+                                        people=tenancy.people_where(self._scope(), "user_id"),
                                         since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"))
         stamps = {"ts", "started_at", "last_seen_at"}
         out = io.StringIO()
@@ -950,7 +1115,8 @@ class Handler(BaseHTTPRequestHandler):
         return ("\ufeff" + out.getvalue()).encode("utf-8")
 
     def _scores_csv(self, query: dict) -> bytes:
-        where, args = [], []
+        people, pargs = tenancy.people_where(self._scope(), "s.user_id")      # 老师只导出自己名下学生的
+        where, args = [people], list(pargs)
         for column, key in (("u.class_name", "class_name"), ("u.college", "college"),
                             ("u.department", "department")):
             if query.get(key):
@@ -994,7 +1160,7 @@ class Handler(BaseHTTPRequestHandler):
             note = fields["note"]["data"].decode("utf-8", "replace").strip()
         name = note or Path(filename).stem
         mid = self.db.insert_material(name, filename, fmt, len(f["data"]),
-                                      note, words)
+                                      note, words, owner_id=self._uid())
         info = materials.summary(words)
         self.send_json({"ok": True, "material": self.db.get_material(mid),
                         "summary": info}, status=201)
@@ -1002,7 +1168,7 @@ class Handler(BaseHTTPRequestHandler):
     def _make_offline(self, bid: int, kind: str = "game") -> None:
         db = self.db
         bank = db.get_bank(bid)
-        if not bank:
+        if not self._bank_visible(bank):              # 别人的、删掉的：当成不存在
             raise HttpError(404, "题库不存在")
         try:
             # 和在线玩法用同一套分组（含「词多的单元拆成多关」）
