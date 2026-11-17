@@ -30,10 +30,12 @@ class TestPreDeploy(unittest.TestCase):
 
     def test_it_snapshots_backs_up_consistently_and_prints_the_rollback(self):
         self.assertIn('pct snapshot "$CTID" "$SNAP"', self.SCRIPT)
+        self.assertIn("tar czf", self.SCRIPT, "容器有 bind mount 时不能快照，代码要另外打 tar")
         self.assertIn(".backup(", self.SCRIPT, "WAL 模式的库不能直接 cp，要用 SQLite 的 backup 接口")
         self.assertIn("integrity_check", self.SCRIPT)
         self.assertIn("pct rollback", self.SCRIPT)
-        self.assertIn("exit 1", self.SCRIPT, "快照失败就不该让人继续部署")
+        self.assertIn("exit 1", self.SCRIPT, "备份没做成就不该让人继续部署")
+        self.assertIn("if pct snapshot", self.SCRIPT, "快照失败只是警告，不能让整个脚本退出")
 
     def test_it_takes_the_container_id_from_the_private_env_file_not_the_repo(self):
         self.assertIn("LEXICA_CTID", self.SCRIPT)
