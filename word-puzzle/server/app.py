@@ -33,7 +33,7 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
 
 from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
-from server import accesslog, hierarchy, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
+from server import accesslog, hierarchy, leaderboard, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -573,6 +573,15 @@ class Handler(BaseHTTPRequestHandler):
                 raise HttpError(404, "服务器没有可用的语音合成器")
             self._send(200, data, tts.content_type(data),
                        {"Cache-Control": "public, max-age=604800"})
+            return
+
+        # ---- 积分榜：学生只看自己班，老师看自己名下各班，超管看全部 ----
+        if path == "/api/leaderboard" and method == "GET":
+            scope = self._scope()
+            if scope.kind in (tenancy.GUEST, tenancy.NOBODY):
+                raise HttpError(403, "积分榜要登录后才能看", "login_required")
+            self.send_json({"ok": True, **leaderboard.board(db, scope, self.user, query.get("class_name", "").strip()[:60],
+                                                           query.get("period", "all"))})
             return
 
         # ---- 成绩 ----

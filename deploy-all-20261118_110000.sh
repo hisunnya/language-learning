@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261118_100000.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261118_110000.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -37,6 +37,10 @@ for path in \
   word-puzzle/web/js/i18n-lexica.js \
   word-puzzle/server/accesslog.py \
   word-puzzle/server/tenancy.py \
+  word-puzzle/server/leaderboard.py \
+  word-puzzle/web/leaderboard.html \
+  word-puzzle/web/js/page-leaderboard.js \
+  word-puzzle/web/css/leaderboard.css \
   word-puzzle/web/tenants.html \
   word-puzzle/web/js/page-tenants.js \
   word-puzzle/web/js/tracker.js \
@@ -110,6 +114,9 @@ check_path /word-puzzle/img/icon.svg
 check_path /word-puzzle/js/release-presets.js
 check_path /word-puzzle/js/i18n.js
 check_path /word-puzzle/js/i18n-lexica.js
+check_path /word-puzzle/leaderboard.html
+check_path /word-puzzle/css/leaderboard.css
+check_path /word-puzzle/js/page-leaderboard.js
 
 retry "词境 API 健康检查失败或返回异常" health_ok
 printf '    OK /word-puzzle/api/health\n'

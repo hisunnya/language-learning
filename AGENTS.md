@@ -166,7 +166,7 @@ page in the repository that implements all of §3 today, and the hub test
 | `word-puzzle/web/*.html` | `data-module-zh/en` + `WPI18N` | 5 (shared header) | top-right, square swatches (shared header) | ✅ every page, including the game and the offline page |
 | `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
 | `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
-| `word-puzzle/web/{login,change-password,admin,tenants}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
+| `word-puzzle/web/{login,change-password,admin,tenants,leaderboard}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
 | `miniprogram/` (WeChat) | `utils/i18n.js` | 5 (same names) | top-right, square swatches (tap, name shown below) | ✅ adapted, see 3.4.1 |
 
 The two ⚠️ pages predate this convention. When you touch one of them, bring

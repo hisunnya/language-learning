@@ -1,0 +1,81 @@
+/* 积分榜：奖牌榜风格。前三名金 / 银 / 铜（图标 + 底色），4–10 名一行一个。
+   奖牌颜色是固定的，不跟配色走（金银铜在哪个配色下都该是金银铜）；其余用页面的配色变量。
+   为了兼容旧一点的内置浏览器（微信等），不用 flex 的 gap、aspect-ratio、inset。 */
+.lb { max-width: 760px; margin: 0 auto; padding: 4px 0 28px; }
+
+/* 顶部横幅 */
+.lb-banner { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+  background: linear-gradient(135deg, #1d2a5b 0%, #3b2f7e 60%, #5a3a8f 100%); color: #fff;
+  border-radius: 22px; padding: 20px 22px; box-shadow: 0 10px 28px rgba(40, 30, 100, .28); }
+.lb-trophy { -webkit-flex: none; flex: none; margin-right: 16px; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .3)); }
+.lb-banner-text { min-width: 0; }
+.lb-title { margin: 0; font-size: 28px; line-height: 1.2; font-weight: 800; letter-spacing: 1px; color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .25); word-break: break-all; }
+.lb-sub { margin: 6px 0 0; font-size: 13px; color: rgba(255, 255, 255, .78); }
+
+/* 总榜 / 本周、选班 */
+.lb-controls { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; -webkit-align-items: center; align-items: center; margin: 16px 0 6px; }
+.lb-seg { display: -webkit-inline-flex; display: inline-flex; background: var(--chip-bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px; margin: 0 12px 8px 0; }
+.lb-seg-btn { -webkit-appearance: none; appearance: none; border: 0; background: transparent; color: var(--ink2); font: inherit; font-size: 14px; font-weight: 700;
+  min-height: 36px; padding: 0 20px; border-radius: 999px; cursor: pointer; touch-action: manipulation; }
+.lb-seg-btn.active { background: var(--blue); color: var(--on-primary, #fff); box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+.lb-class { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin: 0 0 8px; font-size: 13px; color: var(--ink2); font-weight: 700; }
+.lb-class[hidden], .lb-me[hidden], .lb-empty[hidden], .lb-podium[hidden], .lb-list[hidden] { display: none; }
+.lb-class span { margin-right: 8px; white-space: nowrap; }
+.lb-class select { min-height: 36px; font-size: 16px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--field-bg); color: var(--field-ink); max-width: 56vw; }
+
+/* 我的名次（不在前十名时） */
+.lb-me { margin: 10px 0 4px; padding: 11px 16px; border-radius: 14px; font-weight: 700; font-size: 15px; color: #5b3a00;
+  background: linear-gradient(90deg, #fff1c9, #ffe29a); border: 1px solid #f0c561; }
+
+/* 领奖台：左银、中金、右铜 */
+.lb-podium { display: grid; grid-template-columns: 1fr 1.12fr 1fr; grid-gap: 10px; -webkit-align-items: end; align-items: end; margin: 40px 0 14px; }
+.lb-slot { position: relative; text-align: center; padding: 38px 8px 14px; border-radius: 18px 18px 8px 8px; min-width: 0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .12); }
+.lb-slot-1 { min-height: 214px; background: linear-gradient(180deg, #fff6cf 0%, #ffd95c 58%, #f5b800 100%); color: #4a3200; border: 1px solid #f0c030; }
+.lb-slot-2 { min-height: 178px; background: linear-gradient(180deg, #fbfcfe 0%, #dfe4ec 58%, #b9c1ce 100%); color: #2f3a4b; border: 1px solid #c2cad6; }
+.lb-slot-3 { min-height: 158px; background: linear-gradient(180deg, #ffeadb 0%, #f1b98c 58%, #cf8550 100%); color: #50290f; border: 1px solid #dba074; }
+.lb-slot-empty { opacity: .55; }
+.lb-medal { position: absolute; top: -24px; left: 50%; margin-left: -29px; width: 58px; height: 68px; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .25)); }
+.lb-slot-1 .lb-medal { top: -32px; margin-left: -35px; width: 70px; height: 82px; }
+.lb-name { font-size: 17px; font-weight: 800; line-height: 1.25; margin-top: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.lb-slot-1 .lb-name { font-size: 19px; margin-top: 26px; }
+.lb-pts { margin-top: 6px; font-weight: 800; line-height: 1; }
+.lb-pts b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.lb-slot-1 .lb-pts b { font-size: 32px; }
+.lb-pts small { font-size: 12px; margin-left: 3px; opacity: .8; font-weight: 700; }
+.lb-tag { display: inline-block; margin-left: 5px; padding: 1px 7px; border-radius: 999px; background: rgba(0, 0, 0, .78); color: #fff; font-size: 11px; font-weight: 700; vertical-align: middle; }
+.lb-slot.is-me { box-shadow: 0 0 0 3px var(--blue), 0 8px 20px rgba(0, 0, 0, .18); }
+.lb-cls { font-size: 11px; opacity: .75; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 第 4–10 名 */
+.lb-list { list-style: none; margin: 0; padding: 0; }
+.lb-row { display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center; margin: 0 0 8px; padding: 10px 14px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--line); position: relative; overflow: hidden; }
+.lb-row.is-me { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue); }
+.lb-bar { position: absolute; left: 0; top: 0; bottom: 0; background: var(--blue-l); opacity: .9; z-index: 0; }
+.lb-row > *:not(.lb-bar) { position: relative; z-index: 1; }
+.lb-rank { -webkit-flex: none; flex: none; width: 32px; height: 32px; line-height: 32px; text-align: center; border-radius: 50%; margin-right: 12px;
+  background: var(--chip-bg); color: var(--ink2); font-weight: 800; font-size: 15px; border: 1px solid var(--line); }
+.lb-row .lb-who { -webkit-flex: 1; flex: 1; min-width: 0; font-weight: 700; color: var(--ink); font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-row .lb-who i { font-style: normal; font-weight: 400; font-size: 12px; color: var(--ink3); margin-left: 8px; }
+.lb-row .lb-score { -webkit-flex: none; flex: none; margin-left: 10px; font-weight: 800; color: var(--heading); font-size: 18px; font-variant-numeric: tabular-nums; }
+.lb-row .lb-score small { font-size: 12px; color: var(--ink3); margin-left: 3px; font-weight: 700; }
+
+.lb-empty { text-align: center; padding: 36px 16px; color: var(--ink2); font-size: 15px; background: var(--card); border: 1px dashed var(--line); border-radius: 16px; }
+.lb-empty a { color: var(--blue); font-weight: 700; }
+
+@media (max-width: 480px) {
+  .lb-banner { padding: 16px 16px; border-radius: 18px; }
+  .lb-trophy { width: 44px; height: 44px; margin-right: 12px; }
+  .lb-title { font-size: 22px; }
+  .lb-podium { grid-gap: 6px; margin-top: 40px; }
+  .lb-slot { padding: 34px 4px 12px; }
+  .lb-name { font-size: 14px; }
+  .lb-slot-1 .lb-name { font-size: 16px; }
+  .lb-pts b { font-size: 21px; }
+  .lb-slot-1 .lb-pts b { font-size: 26px; }
+  .lb-slot-1 { min-height: 196px; }
+  .lb-slot-2 { min-height: 162px; }
+  .lb-slot-3 { min-height: 146px; }
+}

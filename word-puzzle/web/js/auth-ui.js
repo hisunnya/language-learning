@@ -20,6 +20,7 @@
       adminLink: '账号管理',
       visitsLink: '访问记录',
       tenantsLink: '老师与分配',
+      leaderboardLink: '积分榜',
       teacherSignIn: '教师登录',
       signingIn: '登录中…',
       signIn: '登录',
@@ -107,6 +108,7 @@
       adminLink: 'Accounts',
       visitsLink: 'Visits',
       tenantsLink: 'Teachers',
+      leaderboardLink: 'Leaderboard',
       teacherSignIn: 'Teacher sign-in',
       signingIn: 'Signing in…',
       signIn: 'Sign in',
@@ -281,7 +283,21 @@
     }
     /* 学生只看得到选题库和玩：题库管理、生成离线页等带 admin-only 的东西都不显示。
        服务端本来就会拒绝，这里是不让他们看到用不了的入口。 */
+    addLeaderboardLink();
     if (isStaffRole(user.role)) { hideHomeLink(); addNavLinks(user.role === 'admin'); }
+  }
+
+  /* 积分榜：登录的人都看得到（学生看本班，老师看自己的班）；排在「成绩记录」后面 */
+  function addLeaderboardLink() {
+    var nav = document.querySelector('.portal-nav');
+    if (!nav || document.getElementById('leaderboardNavLink')) return;
+    var link = document.createElement('a');
+    link.id = 'leaderboardNavLink';
+    link.href = BASE + '/leaderboard.html';
+    link.setAttribute('data-module-zh', TEXT.zh.leaderboardLink);
+    link.setAttribute('data-module-en', TEXT.en.leaderboardLink);
+    link.textContent = t('leaderboardLink');
+    nav.appendChild(link);
   }
 
   /* 老师登录后没有「首页」：题库工作台就是首页（首页和它的内容重复） */

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
+<title data-module-zh="积分榜 · 词境 Lexica" data-module-en="Leaderboard · Lexica">积分榜 · 词境 Lexica</title>
+<link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
+<link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=20261104-theme">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=20261115-summary">
+<link rel="stylesheet" href="/word-puzzle/css/leaderboard.css?v=20261118-board">
+<link rel="stylesheet" href="/shared/module-header.css?v=20261113-logo">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
+      <span class="portal-brand-mark portal-brand-mark--logo" aria-hidden="true"><img src="/word-puzzle/img/icon.svg" alt="" width="40" height="40"></span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="英语词汇练习" data-module-en="Vocabulary practice">英语词汇练习</small></span>
+    </a>
+    <nav class="portal-nav">
+      <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
+      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Word banks">题库工作台</a>
+      <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
+      <a href="/word-puzzle/leaderboard.html" id="leaderboardNavLink" class="active" data-module-zh="积分榜" data-module-en="Leaderboard">积分榜</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <section class="lb" aria-labelledby="lbTitle">
+    <div class="lb-banner">
+      <svg class="lb-trophy" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
+        <defs><linearGradient id="lbTrophyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset="1" stop-color="#E8A100"/></linearGradient></defs>
+        <path d="M18 8h28v14c0 9-6 16-14 16S18 31 18 22V8z" fill="url(#lbTrophyG)"/>
+        <path d="M18 12H8c0 9 4 15 11 16M46 12h10c0 9-4 15-11 16" fill="none" stroke="#E8A100" stroke-width="4" stroke-linecap="round"/>
+        <rect x="28" y="38" width="8" height="9" fill="#E8A100"/>
+        <rect x="20" y="47" width="24" height="7" rx="3" fill="url(#lbTrophyG)"/>
+      </svg>
+      <div class="lb-banner-text">
+        <h1 id="lbTitle" class="lb-title">积分榜</h1>
+        <p class="lb-sub" data-module-zh="积分 = 所有游戏得分之和，只显示前十名" data-module-en="Points = the sum of all game scores. Top ten only.">积分 = 所有游戏得分之和，只显示前十名</p>
+      </div>
+    </div>
+
+    <div class="lb-controls">
+      <div class="lb-seg" role="group" aria-label="period">
+        <button type="button" class="lb-seg-btn active" id="lbAll" data-period="all" aria-pressed="true" data-module-zh="总榜" data-module-en="All time">总榜</button>
+        <button type="button" class="lb-seg-btn" id="lbWeek" data-period="week" aria-pressed="false" data-module-zh="本周" data-module-en="This week">本周</button>
+      </div>
+      <label class="lb-class" id="lbClassBox" hidden>
+        <span data-module-zh="班级" data-module-en="Class">班级</span>
+        <select id="lbClass"></select>
+      </label>
+    </div>
+
+    <div class="lb-me" id="lbMe" hidden></div>
+    <div id="lbPodium" class="lb-podium" aria-live="polite"></div>
+    <ol id="lbList" class="lb-list"></ol>
+    <div id="lbEmpty" class="lb-empty" hidden></div>
+  </section>
+
+</div>
+
+<script src="/word-puzzle/js/i18n.js?v=20261114-i18n"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=20261118-board"></script>
+<script src="/word-puzzle/js/api.js?v=20261104-base"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261117-requests"></script>
+<script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
+<script src="/word-puzzle/js/page-leaderboard.js?v=20261118-board"></script>
+<script src="/shared/module-header.js"></script>
+</body>
+</html>
