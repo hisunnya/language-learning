@@ -34,7 +34,8 @@
     });
   }
 
-  async function request(method, path, body, isForm) {
+  /* 不用 async/await：微信等内置浏览器里旧一点的内核不认，一个语法错误整站所有页面都会白屏。 */
+  function request(method, path, body, isForm) {
     var opt = { method: method, headers: {} };
     if (isForm) {
       opt.body = body;
@@ -42,31 +43,30 @@
       opt.headers['Content-Type'] = 'application/json';
       opt.body = JSON.stringify(body);
     }
-    var res;
-    try {
-      res = await fetch(url(path), opt);
-    } catch (e) {
+    return fetch(url(path), opt).then(null, function () {
       var neterr = new Error(tr('api_network', null, '网络不通'));
       neterr.network = true;
       throw neterr;
-    }
-    var text = await res.text();
-    var data;
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch (e) {
-      throw new Error(tr('api_notJson', { status: res.status }, '服务器返回了非 JSON 内容（HTTP ' + res.status + '）'));
-    }
-    if (!res.ok || data.ok === false) {
-      // 学生版：登录失效 / 还没改初始密码，统一跳转，页面不用各自处理（也不弹错误）
-      if (data.code === 'login_required' && global.AuthUI) { AuthUI.go('login.html', true); return new Promise(function () {}); }
-      if (data.code === 'password_change_required' && global.AuthUI) { AuthUI.go('change-password.html', true); return new Promise(function () {}); }
-      var err = new Error(data.error || tr('api_requestFailed', { status: res.status }, '请求失败（HTTP ' + res.status + '）'));
-      err.code = data.code || '';
-      err.status = res.status;
-      throw err;
-    }
-    return data;
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var data;
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch (e) {
+          throw new Error(tr('api_notJson', { status: res.status }, '服务器返回了非 JSON 内容（HTTP ' + res.status + '）'));
+        }
+        if (!res.ok || data.ok === false) {
+          // 学生版：登录失效 / 还没改初始密码，统一跳转，页面不用各自处理（也不弹错误）
+          if (data.code === 'login_required' && global.AuthUI) { AuthUI.go('login.html', true); return new Promise(function () {}); }
+          if (data.code === 'password_change_required' && global.AuthUI) { AuthUI.go('change-password.html', true); return new Promise(function () {}); }
+          var err = new Error(data.error || tr('api_requestFailed', { status: res.status }, '请求失败（HTTP ' + res.status + '）'));
+          err.code = data.code || '';
+          err.status = res.status;
+          throw err;
+        }
+        return data;
+      });
+    });
   }
 
   var toastTimer = null;

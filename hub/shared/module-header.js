@@ -81,4 +81,11 @@
   applyLanguage(read(LANG_KEY, 'zh'));
   applyTheme(read(THEME_KEY, 'indigo'));
   window.PortalHeader = { applyLanguage: applyLanguage, applyTheme: applyTheme };
+
+  /* 微信内置浏览器：再加载一小段兼容处理（字号别被微信放大、下载提示）；别的浏览器不付这个代价 */
+  if (/MicroMessenger/i.test(navigator.userAgent || '')) {
+    var self = document.currentScript, tag = document.createElement('script');
+    tag.src = (self && self.src ? self.src.replace(/module-header\.js.*$/, '') : '/shared/') + 'wechat.js?v=20261118-wx';
+    document.head.appendChild(tag);
+  }
 })();

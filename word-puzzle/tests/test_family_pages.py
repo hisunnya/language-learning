@@ -66,7 +66,7 @@ class TestNewPages(unittest.TestCase):
     def test_pages_use_the_shared_header_theme_and_declare_their_access_level(self):
         for page, mode in NEW_PAGES.items():
             html = read(page)
-            self.assertIn('<body data-auth="%s">' % mode, html, page)
+            self.assertRegex(html, r'<body data-auth="%s"[ >]' % mode, page)
             self.assertIn('id="portalHeaderControls"', html, page)
             self.assertIn("/shared/module-header.js", html, page)
             self.assertIn("/shared/module-header.css", html, page)
@@ -153,7 +153,7 @@ class TestExistingPages(unittest.TestCase):
         for gone in ("btnUpload", "btnOffline", "btnMake", "defaultCard", "按层级生成题库"):
             self.assertNotIn(gone, index, gone)
         # 题库工作台整页只给老师（data-auth="admin" 会把学生送回首页），三个标签页都在里面
-        self.assertIn('<body data-auth="admin">', bank)
+        self.assertRegex(bank, r'<body data-auth="admin"[ >]')
         for tab in ("panelBanks", "panelNew", "panelOffline"):
             self.assertIn('id="%s"' % tab, bank)
         self.assertIn("html.role-student .admin-only", read("css/auth.css"))
@@ -281,7 +281,7 @@ class TestStudentViewIsWired(unittest.TestCase):
             html = read(page)
             for link in re.findall(r'<a [^>]*href="/word-puzzle/bank\.html"[^>]*>', html):
                 self.assertIn("admin-only", link, page)
-        self.assertIn('<body data-auth="admin">', read("bank.html"))
+        self.assertRegex(read("bank.html"), r'<body data-auth="admin"[ >]')
 
     def test_the_home_page_has_no_generating_or_offline_for_anyone(self):
         html = read("index.html")

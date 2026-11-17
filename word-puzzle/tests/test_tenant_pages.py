@@ -83,7 +83,7 @@ class TestTenantsPage(unittest.TestCase):
     CODE = read("js/page-tenants.js")
 
     def test_the_page_is_super_only_and_follows_the_house_style(self):
-        self.assertIn('<body data-auth="super">', self.HTML)
+        self.assertRegex(self.HTML, r'<body data-auth="super"[ >]')
         self.assertIn("sessionStorage.getItem('wp_role')", self.HTML, "画出来之前就按缓存的角色设好样式")
         self.assertIn('id="portalHeaderControls"', self.HTML, "页眉里有语言和配色")
         self.assertIn("/shared/module-header.js", self.HTML)
