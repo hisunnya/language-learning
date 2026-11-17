@@ -49,6 +49,13 @@
     <div class="import-report" id="importReport" aria-live="polite"></div>
   </div>
 
+  <div class="card" id="reqCard" hidden>
+    <h2 data-module-zh="共享申请" data-module-en="Share requests">共享申请</h2>
+    <p class="sub" data-module-zh="别的老师导入名单时发现学号已经在你名下，不会直接挂过去，而是在这里等你批准。批准后对方能看成绩、打自己的标签，但不能重置密码。" data-module-en="When another teacher imports a student number that is already yours, the student is not linked to them directly; the request waits here for your approval. Once approved they can see the scores and use their own tags, but cannot reset the password.">别的老师导入名单时发现学号已经在你名下，不会直接挂过去，而是在这里等你批准。批准后对方能看成绩、打自己的标签，但不能重置密码。</p>
+    <div id="reqIncoming"></div>
+    <div id="reqOutgoing"></div>
+  </div>
+
   <div class="card">
     <h2 data-module-zh="学生账号" data-module-en="Student accounts">学生账号</h2>
     <p class="sub" id="usersCount"></p>
@@ -96,9 +103,9 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/api.js?v=20261112-auth"></script>
-<script src="/word-puzzle/js/auth-ui.js?v=20261117-tenants"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=20261117-requests"></script>
 <script src="/word-puzzle/js/tracker.js?v=20261115-visits"></script>
-<script src="/word-puzzle/js/page-admin.js?v=20261117-tenants"></script>
+<script src="/word-puzzle/js/page-admin.js?v=20261117-requests"></script>
 <script src="/shared/module-header.js"></script>
 </body>
 </html>

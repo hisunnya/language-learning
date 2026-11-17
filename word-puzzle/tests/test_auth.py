@@ -695,7 +695,7 @@ class TestAdminCli(unittest.TestCase):
             self.assertEqual(code, 1)
 
     def test_create_teacher_and_import_into_that_teacher(self):
-        """命令行加老师、把名单导进这位老师名下；已经属于别人的学号变成两位老师共享。"""
+        """命令行加老师、把名单导进这位老师名下；已经属于别人的学号只提交共享申请。"""
         with tempfile.TemporaryDirectory() as tmp:
             db = str(Path(tmp) / "c.db")
             self.assertEqual(self.run_cli(db, "create-admin", "A001", "--name", "孙", "--password", "Tr0ub4dor!")[0], 0)
@@ -708,7 +708,7 @@ class TestAdminCli(unittest.TestCase):
             self.assertEqual(self.run_cli(db, "import", str(roster_file), "--out", creds)[0], 0)
             code, out, _ = self.run_cli(db, "import", str(roster_file), "--out", creds, "--teacher", "T002")
             self.assertEqual(code, 0, out)
-            self.assertIn("共享", out)
+            self.assertIn("共享申请", out, "别的老师的学生不能直接挂过来，只提交申请")
             code, _, err = self.run_cli(db, "import", str(roster_file), "--teacher", "2026001")
             self.assertEqual(code, 1, "学生的学号不能当老师用")
             self.assertIn("没有工号", err)
@@ -723,7 +723,8 @@ class TestAdminCli(unittest.TestCase):
                 owners = sorted(r["teacher_id"] for r in d.query(
                     "SELECT teacher_id FROM teacher_students WHERE student_id=?", (student["id"],)))
                 admin = d.one("SELECT id FROM users WHERE student_no='A001'")
-                self.assertEqual(owners, sorted([admin["id"], teacher["id"]]))
+                self.assertEqual(owners, [admin["id"]], "申请批准之前不挂到老师名下")
+                self.assertEqual(d.one("SELECT COUNT(*) AS n FROM share_requests WHERE status='pending'")["n"], 1)
             finally:
                 d.close()
 

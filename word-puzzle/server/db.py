@@ -149,6 +149,17 @@ CREATE TABLE IF NOT EXISTS teacher_students (
     PRIMARY KEY (teacher_id, student_id)
 );
 CREATE INDEX IF NOT EXISTS ix_ts_student ON teacher_students(student_id);
+-- 共享申请：导入名单时发现学号已属于别的老师，不再自动挂过去，而是提交申请，由负责这个学生的老师（或超管）批准。
+CREATE TABLE IF NOT EXISTS share_requests (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id   INTEGER NOT NULL,
+    requester_id INTEGER NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'pending',   -- pending / approved / rejected
+    created_at   INTEGER NOT NULL DEFAULT 0,
+    decided_at   INTEGER NOT NULL DEFAULT 0,
+    decided_by   INTEGER
+);
+CREATE INDEX IF NOT EXISTS ix_sr_status ON share_requests(status, student_id);
 CREATE TABLE IF NOT EXISTS teacher_banks (     -- 共享给这位老师的题库（自己建的题库看 banks.owner_id）
     teacher_id INTEGER NOT NULL,
     bank_id    INTEGER NOT NULL,
@@ -353,6 +364,9 @@ class Database:
                 self.execute("ALTER TABLE %s ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0" % table)
             if "deleted_by" not in cols:
                 self.execute("ALTER TABLE %s ADD COLUMN deleted_by INTEGER" % table)
+        if "teacher_group" not in {row["name"] for row in self.query("PRAGMA table_info(users)")}:
+            # 教研组：同一组的老师之间导入同一个学号时自动共享（不用逐个批准）；空 = 不在任何组
+            self.execute("ALTER TABLE users ADD COLUMN teacher_group TEXT NOT NULL DEFAULT ''")
         if "owner_id" not in {row["name"] for row in self.query("PRAGMA table_info(materials)")}:
             self.execute("ALTER TABLE materials ADD COLUMN owner_id INTEGER")     # 谁上传的；老师只看得到自己的
         # 老库的标签表没有 teacher_id：重建成带 teacher_id 的，原有标签归第一位超级管理员

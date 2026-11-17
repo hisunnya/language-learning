@@ -232,10 +232,13 @@ class AuthService:
             for row in self.db.query("SELECT ts.student_id, t.id, t.name FROM teacher_students ts "
                                      "JOIN users t ON t.id=ts.teacher_id WHERE t.deleted_at=0 ORDER BY t.id"):
                 names.setdefault(row["student_id"], []).append({"id": row["id"], "name": row["name"]})
+        primary = tenancy.primary_map(self.db)
         for row in self.db.query(sql, args):
             d = dict(row)
             d["locked"] = d.pop("locked_until") > now
             d["tags"] = tags.get(d["id"], [])
+            d["can_manage"] = scope.everything or (primary.get(d["id"]) or (None,))[0] == scope.user_id
+            d["primary_name"] = (primary.get(d["id"]) or (0, ""))[1]
             if scope.everything:
                 d["teachers"] = names.get(d["id"], [])
             out.append(d)
@@ -343,12 +346,16 @@ class AuthService:
     def import_roster(self, rows: list[dict], *, reset_existing: bool = False,
                       teacher_id: int | None = None, actor: int | None = None) -> dict:
         """按名单建号，学生挂到导入的这位老师名下（teacher_id；不给就是第一位超级管理员）。
-        已存在的学号：挂到这位老师名下（如果原来属于别的老师，就成了两位老师共享，记进审计）；
-        只有当这个学生只属于这位老师时才更新姓名 / 班级 / 学院 / 院系，共享的不改别人那边的资料。
-        返回 {created, updated, shared, skipped, errors, credentials}。credentials 里有明文初始密码，
+        已存在的学号：原来不属于别的老师、或者导入的是超管、或者两位老师在同一个教研组，就直接挂到这位老师名下
+        （共享，记进审计）；否则**不挂、不改资料、不重置密码、不打标签**，只提交一条共享申请（requested），
+        等负责这个学生的老师或超管批准。只有当这个学生只属于这位老师时才更新姓名 / 班级 / 学院 / 院系，
+        共享的不改别人那边的资料；共享来的学生，只有负责他的老师和超管才能用「重置密码」。
+        返回 {created, updated, shared, requested, skipped, errors, credentials}。credentials 里有明文初始密码，
         只在这一次返回，之后谁也查不到。"""
         owner = teacher_id if teacher_id is not None else self.db.default_teacher_id()
-        report = {"created": 0, "updated": 0, "shared": 0, "skipped": 0, "errors": [], "credentials": []}
+        owner_row = self.get_by_id(owner) if owner else None
+        owner_is_super = bool(owner_row and owner_row["role"] == "admin")
+        report = {"created": 0, "updated": 0, "shared": 0, "requested": 0, "skipped": 0, "errors": [], "credentials": []}
         seen: set[str] = set()
         for rec in rows:
             line = rec.get("_row", "?")
@@ -390,10 +397,9 @@ class AuthService:
                         raise AuthError(400, "bad_name", "姓名不能为空")
                     before = tenancy.student_teachers(self.db, existing["id"])
                     if owner and owner not in before:
-                        tenancy.link_student(self.db, owner, existing["id"], actor or owner)
-                        if before:            # 原来属于别的老师：自动共享（按管理员的决定），留痕
-                            tenancy.audit(self.db, actor or owner, "student.auto_share", "user", existing["id"],
-                                          student_no=sn, teacher_id=owner, other_teachers=before)
+                        if tenancy.claim_student(self.db, owner, existing, before, actor or owner) == "requested":
+                            report["requested"] += 1
+                            continue
                     if [t for t in before if t != owner]:
                         report["shared"] += 1                     # 共享的学生：不改别的老师那边的资料
                     else:
@@ -404,9 +410,13 @@ class AuthService:
                     if new_tags is not None:
                         self.db.set_user_tags(existing["id"], new_tags, teacher_id=owner)
                     if reset_existing:
-                        plain = self.reset_password(existing["id"])
-                        report["credentials"].append({"student_no": sn, "name": fields["name"],
-                                                      "class_name": fields["class_name"], "password": plain})
+                        if not owner or owner_is_super or tenancy.primary_teacher(self.db, existing["id"]) == owner:
+                            plain = self.reset_password(existing["id"])
+                            report["credentials"].append({"student_no": sn, "name": fields["name"],
+                                                          "class_name": fields["class_name"], "password": plain})
+                        else:
+                            report["errors"].append({"row": line, "student_no": sn,
+                                                     "reason": "这个学生由别的老师负责，只有他或超级管理员能重置密码"})
             except AuthError as exc:
                 report["skipped"] += 1
                 report["errors"].append({"row": line, "student_no": sn, "reason": exc.message})

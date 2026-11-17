@@ -114,7 +114,9 @@ def main(argv: list[str] | None = None) -> int:
                 print("注意：这些列不会被保存：" + "、".join(table["ignored_columns"]))
             print("新建 %d，更新 %d，跳过 %d" % (report["created"], report["updated"], report["skipped"]))
             if report.get("shared"):
-                print("其中 %d 个学号原来属于别的老师，现在两位老师共享（已记进操作记录）" % report["shared"])
+                print("其中 %d 个学号原来属于别的老师（同一教研组或超管导入），现在共享（已记进操作记录）" % report["shared"])
+            if report.get("requested"):
+                print("其中 %d 个学号已属于别的老师，没有挂到这位老师名下，已提交共享申请，等对方老师或超管批准" % report["requested"])
             for e in report["errors"]:
                 print("  第 %s 行 %s：%s" % (e["row"], e["student_no"] or "-", e["reason"]))
             if report["credentials"]:

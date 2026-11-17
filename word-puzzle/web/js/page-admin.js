@@ -42,6 +42,7 @@
     lastCredentials = res.credentials || [];
     var html = '<div><b>' + esc(t('importDone', { created: res.created, updated: res.updated, skipped: res.skipped })) + '</b></div>';
     if (res.shared) html += '<div>' + esc(t('importShared', { n: res.shared })) + '</div>';
+    if (res.requested) html += '<div>' + esc(t('importRequested', { n: res.requested })) + '</div>';
     if ((res.ignored_columns || []).length) {
       html += '<div>' + esc(t('importIgnored', { cols: res.ignored_columns.join('、') })) + '</div>';
     }
@@ -136,11 +137,14 @@
       body.innerHTML = '<tr><td colspan="' + (superView ? 12 : 11) + '" class="empty">' + esc(t('noUsers')) + '</td></tr>';
     } else {
       body.innerHTML = rows.map(function (u) {
-        var actions = '<button class="btn sm ghost" data-act="reset" data-id="' + u.id + '">' + esc(t('reset')) + '</button>';
-        if (u.locked) actions += '<button class="btn sm ghost" data-act="unlock" data-id="' + u.id + '">' + esc(t('unlock')) + '</button>';
+        /* 共享来的学生：重置密码、停用、解锁只有负责他的老师和超管能用，其他老师只看到「由 X 负责」 */
+        var mine = u.can_manage !== false;
+        var actions = mine ? '<button class="btn sm ghost" data-act="reset" data-id="' + u.id + '">' + esc(t('reset')) + '</button>'
+                           : '<span class="pill">' + esc(t('managedBy', { name: u.primary_name || '-' })) + '</span>';
+        if (mine && u.locked) actions += '<button class="btn sm ghost" data-act="unlock" data-id="' + u.id + '">' + esc(t('unlock')) + '</button>';
         if (!isStaff(u)) {
           actions += '<button class="btn sm ghost" data-act="tags" data-id="' + u.id + '">' + esc(t('editTags')) + '</button>';
-          actions += '<button class="btn sm ' + (u.disabled ? 'green' : 'danger') + '" data-act="' +
+          if (mine) actions += '<button class="btn sm ' + (u.disabled ? 'green' : 'danger') + '" data-act="' +
             (u.disabled ? 'enable' : 'disable') + '" data-id="' + u.id + '">' + esc(t(u.disabled ? 'enable' : 'disable')) + '</button>';
           actions += '<button class="btn sm danger" data-act="delete" data-id="' + u.id + '">' + esc(t('deleteUser')) + '</button>';
         }
@@ -175,6 +179,50 @@
     }).catch(function (err) {
       API.toast(AuthUI.errorText(err));
     });
+  }
+
+  /* ---------- 共享申请 ---------- */
+
+  var requests = { incoming: [], outgoing: [] };
+
+  function renderRequests() {
+    var inc = requests.incoming || [], out = requests.outgoing || [];
+    el('reqCard').hidden = !inc.length && !out.length;
+    el('reqIncoming').innerHTML = inc.map(function (r) {
+      var text = t('reqIn', { requester: r.requester_name, no: r.requester_no,
+                              group: r.requester_group ? t('reqInGroup', { group: r.requester_group }) : '',
+                              sno: r.student_no, name: r.name, cls: r.class_name || '' });
+      return '<div class="item"><div class="main">' + esc(text) + '</div><div class="ops">' +
+        '<button class="btn sm green" data-req="approve" data-id="' + r.id + '">' + esc(t('reqApprove')) + '</button>' +
+        '<button class="btn sm danger" data-req="reject" data-id="' + r.id + '">' + esc(t('reqReject')) + '</button></div></div>';
+    }).join('');
+    var STATUS = { pending: 'reqPending', approved: 'reqApproved', rejected: 'reqRejected' };
+    el('reqOutgoing').innerHTML = out.map(function (r) {
+      return '<div class="item"><div class="main">' + esc(t('reqOut', { sno: r.student_no })) +
+        ' <span class="pill' + (r.status === 'rejected' ? ' bad' : r.status === 'approved' ? ' good' : '') + '">' +
+        esc(t(STATUS[r.status] || 'reqPending')) + '</span></div></div>';
+    }).join('');
+  }
+
+  function loadRequests() {
+    return API.get('/api/admin/share-requests').then(function (res) {
+      requests = res;
+      renderRequests();
+    }).catch(function (err) { API.toast(AuthUI.errorText(err)); });
+  }
+
+  function decide(button) {
+    var r = (requests.incoming || []).filter(function (x) { return String(x.id) === button.dataset.id; })[0];
+    if (!r) return;
+    var approve = button.dataset.req === 'approve';
+    var question = approve ? t('reqConfirmApprove', { name: r.name, sno: r.student_no, requester: r.requester_name })
+                           : t('reqConfirmReject', { requester: r.requester_name });
+    if (!window.confirm(question)) return;
+    button.disabled = true;
+    API.post('/api/admin/share-requests/' + r.id + '/decide', { approve: approve }).then(function () {
+      API.toast(t('reqDone'));
+      return Promise.all([loadRequests(), loadUsers()]);
+    }).catch(function (err) { API.toast(AuthUI.errorText(err)); button.disabled = false; });
   }
 
   function findUser(id) {
@@ -257,8 +305,13 @@
       var button = event.target.closest('button[data-act]');
       if (button) act(button);
     });
+    el('reqCard').addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-req]');
+      if (button) decide(button);
+    });
+    window.addEventListener('portal-lang-change', function () { renderRequests(); render(); });
     AuthUI.ready.then(function (info) {
-      if (info.user && (info.user.role === 'admin' || info.user.role === 'teacher')) loadUsers();
+      if (info.user && (info.user.role === 'admin' || info.user.role === 'teacher')) { loadUsers(); loadRequests(); }
     });
   });
 })();

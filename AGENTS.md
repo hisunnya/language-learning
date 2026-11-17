@@ -346,9 +346,19 @@ never with its own ad-hoc filter.
 - Tags are **per teacher** (`user_tags.teacher_id`, `bank_tags.teacher_id`): a student sees a
   bank only when one teacher gave both the same tag. Removing a student or a bank from a
   teacher also removes that teacher's tags on it.
-- Importing a student number that already belongs to another teacher links the student to
-  both (written to `audit_log` as `student.auto_share`); the other teacher's data is not
-  changed.
+- Importing a student number that already belongs to another teacher does **not** link it:
+  `tenancy.claim_student` files a row in `share_requests` (audit `share.request`) and the
+  importer gets no data, no tags and no password reset for it. The teacher responsible for the
+  student (the first one linked, `tenancy.primary_teacher`) or the super administrator approves
+  or rejects on the accounts page (`share.approve` / `share.reject`). Direct links without a
+  request happen only when the super administrator imports, when the student has no teacher
+  at all, or when both teachers have the same `users.teacher_group` (set by the super
+  administrator; audit `student.auto_share` with the reason). Reason: anyone who knows a
+  student number could otherwise take over the account of a student from another school.
+- Reset password, disable and unlock (also via a roster import with "reset existing") are
+  allowed only for the responsible teacher and the super administrator
+  (`tenancy.can_manage_account`, error code `not_primary`); other teachers a student is shared
+  with can read scores and visits and use their own tags.
 - **Deletes are soft** (`deleted_at` / `deleted_by` on users, banks, materials): hidden from
   teachers and students, restorable by the super administrator on `tenants.html`. A
   teacher "deleting" something that is only shared with them just unlinks it. The hard

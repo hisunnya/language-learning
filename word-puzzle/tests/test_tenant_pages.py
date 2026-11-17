@@ -27,7 +27,7 @@ class TestTeacherIsStaffInThePages(unittest.TestCase):
         for page in WEB.glob("*.html"):
             html = page.read_text(encoding="utf-8")
             if "auth-ui.js" in html:
-                self.assertIn("auth-ui.js?v=20261117-tenants", html, page.name + "：老旧缓存会把老师当成学生")
+                self.assertIn("auth-ui.js?v=20261117-requests", html, page.name + "：老旧缓存会把老师当成学生")
 
     def test_accounts_page_loads_users_for_teachers_too(self):
         self.assertIn("info.user.role === 'admin' || info.user.role === 'teacher'", read("js/page-admin.js"))
@@ -49,6 +49,25 @@ class TestAccountsPage(unittest.TestCase):
 
     def test_the_import_report_mentions_automatically_shared_students(self):
         self.assertIn("importShared", read("js/page-admin.js"))
+
+    def test_share_requests_are_shown_and_decided_on_the_accounts_page(self):
+        html, code = read("admin.html"), read("js/page-admin.js")
+        self.assertIn('id="reqCard"', html)
+        self.assertIn("importRequested", code)
+        self.assertIn("'/api/admin/share-requests/' + r.id + '/decide'", code)
+        self.assertIn("window.confirm(question)", code, "批准前要确认（对方能看成绩和访问记录）")
+
+    def test_students_shared_with_me_have_no_reset_disable_or_unlock_button(self):
+        code = read("js/page-admin.js")
+        self.assertIn("var mine = u.can_manage !== false;", code)
+        self.assertIn("if (mine && u.locked)", code)
+        self.assertIn("if (mine) actions += '<button class=\"btn sm ' + (u.disabled", code)
+        self.assertIn("managedBy", code)
+
+    def test_the_super_admin_can_set_a_teachers_group(self):
+        html, code = read("tenants.html"), read("js/page-tenants.js")
+        self.assertIn('data-module-zh="教研组"', html)
+        self.assertIn("'/api/admin/teachers/' + u.id + '/group'", code)
 
 
 class TestWorkbench(unittest.TestCase):
@@ -82,11 +101,12 @@ class TestTenantsPage(unittest.TestCase):
 
     def test_every_audit_action_has_a_translation(self):
         backend = "\n".join((ROOT / "server" / n).read_text(encoding="utf-8") for n in ("app.py", "tenancy.py", "auth.py"))
-        actions = set(re.findall(r'"((?:teacher|bank|student|material|user)\.[a-z_]+)"', backend))
+        actions = set(re.findall(r'"((?:teacher|bank|student|material|user|share)\.[a-z_]+)"', backend))
         actions |= {"%s.%s" % (k, m) for k in ("bank", "student") for m in ("share", "move", "unshare")}
         actions |= {"%s.restore" % k for k in ("user", "bank", "material")}
         actions |= {"bank.delete", "bank.unshare_self", "student.delete", "student.unlink_self"}
-        keys = dict(re.findall(r"'((?:teacher|bank|student|material|user)\.[a-z_]+)': '(ten_act_[a-z_]+)'", self.CODE))
+        actions |= {"share.request", "share.approve", "share.reject"}
+        keys = dict(re.findall(r"'((?:teacher|bank|student|material|user|share)\.[a-z_]+)': '(ten_act_[a-z_]+)'", self.CODE))
         self.assertEqual(actions - set(keys), set(), "审计里会出现、页面上却没有译文的动作")
 
     def test_initial_passwords_are_only_shown_once_and_escaped(self):

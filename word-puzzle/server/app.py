@@ -726,7 +726,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/admin/teachers" and method == "GET":
             rows = db.query(
-                "SELECT u.id, u.student_no, u.name, u.role, u.disabled, u.must_change, u.last_login_at, u.created_at, "
+                "SELECT u.id, u.student_no, u.name, u.role, u.disabled, u.must_change, u.last_login_at, u.created_at, u.teacher_group, "
                 "(SELECT COUNT(*) FROM teacher_students ts JOIN users s ON s.id=ts.student_id "
                 " WHERE ts.teacher_id=u.id AND s.deleted_at=0) AS students, "
                 "(SELECT COUNT(*) FROM banks b WHERE b.owner_id=u.id AND b.deleted_at=0) AS own_banks, "
@@ -749,6 +749,16 @@ class Handler(BaseHTTPRequestHandler):
                 raise HttpError(exc.status, exc.message, exc.code) from exc
             tenancy.audit(db, me, "teacher.create", "user", user["id"], student_no=user["student_no"], name=user["name"])
             self.send_json({"ok": True, "teacher": auth.public(user), "password": plain}, status=201)
+            return True
+
+        m = re.fullmatch(r"/api/admin/teachers/(\d+)/group", path)
+        if m and method == "POST":
+            target = auth.get_by_id(int(m.group(1)))
+            if not target or target["role"] not in policy.STAFF_ROLES or target.get("deleted_at"):
+                raise HttpError(404, "没有这位老师")
+            group = tenancy.set_teacher_group(db, target["id"], self.read_json().get("group", ""))
+            tenancy.audit(db, me, "teacher.group", "user", target["id"], teacher=target["name"], group=group)
+            self.send_json({"ok": True, "group": group})
             return True
 
         m = re.fullmatch(r"/api/admin/teachers/(\d+)/delete", path)
@@ -917,11 +927,29 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json({"ok": True, "tags": tags})
                 return
 
+            if path == "/api/admin/share-requests" and method == "GET":
+                self.send_json({"ok": True, **tenancy.share_requests(self.db, scope)})
+                return
+
+            m = re.fullmatch(r"/api/admin/share-requests/(\d+)/decide", path)
+            if m and method == "POST":
+                try:
+                    status = tenancy.decide_share_request(self.db, scope, int(m.group(1)),
+                                                          bool(self.read_json().get("approve")), self._uid())
+                except LookupError as exc:
+                    raise HttpError(404, str(exc), "no_request") from exc
+                except PermissionError as exc:
+                    raise HttpError(403, str(exc), "not_primary") from exc
+                self.send_json({"ok": True, "status": status})
+                return
+
             m = re.fullmatch(r"/api/admin/users/(\d+)/(reset-password|disabled|unlock)", path)
             if m and method == "POST":
                 uid, action = int(m.group(1)), m.group(2)
                 payload = self.read_json()
                 target = self._managed_user(uid)
+                if not tenancy.can_manage_account(self.db, scope, target):
+                    raise HttpError(403, "这个学生由别的老师负责，只有他或超级管理员能重置密码、停用、解锁", "not_primary")
                 if action == "reset-password":
                     plain = auth.reset_password(uid)
                     self.send_json({"ok": True, "student_no": target["student_no"], "password": plain})

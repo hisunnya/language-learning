@@ -232,19 +232,146 @@ class TestIsolation(TenantCase):
 
 
 class TestDuplicateStudentNumbers(TenantCase):
-    def test_a_second_teacher_importing_the_number_shares_the_student_and_it_is_audited(self):
+    def requests_of(self, client):
+        return client.json("GET", "/api/admin/share-requests")[1]
+
+    def test_a_second_teacher_importing_the_number_only_files_a_request(self):
+        """外校的人导入同一个学号，既拿不到学生，也看不到资料，也动不了密码和标签。"""
         no, sid = self.student_of(self.ta, "原名")
-        res = self.roster(self.tb, [(no, "改名", "乙的班")])
-        self.assertEqual((res["created"], res["shared"], res["updated"]), (0, 1, 0))
+        res = self.roster(self.tb, [(no, "冒充", "别的班")])
+        self.assertEqual((res["created"], res["shared"], res["updated"], res["requested"]), (0, 0, 0, 1))
+        self.assertEqual(res["credentials"], [])
+        self.assertNotIn(no, self.user_nos(self.tb), "批准之前不在乙老师名下")
+        self.assertEqual(self.svc.get_by_id(sid)["name"], "原名")
+        self.assertEqual(self.svc.get_by_id(sid)["class_name"], "一班")
+        audit = self.root.json("GET", "/api/admin/audit")[1]["audit"]
+        self.assertEqual(len([a for a in audit if a["action"] == "share.request" and a["target_id"] == sid]), 1)
+        self.assertEqual([a for a in audit if a["action"] == "student.auto_share" and a["target_id"] == sid], [])
+
+    def test_the_request_shows_up_for_the_responsible_teacher_and_the_super_admin_only(self):
+        no, sid = self.student_of(self.ta, "原名")
+        self.roster(self.tb, [(no, "x", "y")])
+        mine = [r for r in self.requests_of(self.ta)["incoming"] if r["student_no"] == no]
+        self.assertEqual(len(mine), 1)
+        self.assertEqual((mine[0]["name"], mine[0]["requester_name"]), ("原名", "乙老师"))
+        self.assertTrue([r for r in self.requests_of(self.root)["incoming"] if r["student_no"] == no])
+        self.assertEqual([r for r in self.requests_of(self.tb)["incoming"] if r["student_no"] == no], [])
+        out = [r for r in self.requests_of(self.tb)["outgoing"] if r["student_no"] == no]
+        self.assertEqual([(r["status"]) for r in out], ["pending"])
+        self.assertNotIn("name", out[0], "申请人在批准之前看不到别人学生的姓名")
+        self.assertNotIn("class_name", out[0])
+
+    def test_importing_twice_does_not_pile_up_requests(self):
+        no, _ = self.student_of(self.ta)
+        self.roster(self.tb, [(no, "x", "y")])
+        self.roster(self.tb, [(no, "x", "y")])
+        self.assertEqual(len([r for r in self.requests_of(self.ta)["incoming"] if r["student_no"] == no]), 1)
+
+    def test_approving_shares_the_student_and_it_is_audited(self):
+        no, sid = self.student_of(self.ta, "原名")
+        self.roster(self.tb, [(no, "x", "y")])
+        rid = [r["id"] for r in self.requests_of(self.ta)["incoming"] if r["student_no"] == no][0]
+        self.assertEqual(self.tb.json("POST", "/api/admin/share-requests/%d/decide" % rid, {"approve": True})[0], 403,
+                         "申请人自己不能批准")
+        self.assertEqual(self.ta.json("POST", "/api/admin/share-requests/%d/decide" % rid, {"approve": True})[1]["status"], "approved")
         self.assertIn(no, self.user_nos(self.tb))
         self.assertIn(no, self.user_nos(self.ta))
-        self.assertEqual(self.svc.get_by_id(sid)["name"], "原名", "共享的学生不改甲老师那边的资料")
-        audit = self.root.json("GET", "/api/admin/audit")[1]["audit"]
-        hit = [a for a in audit if a["action"] == "student.auto_share" and a["target_id"] == sid]
-        self.assertEqual(len(hit), 1)
-        self.assertEqual((hit[0]["detail"]["teacher_id"], hit[0]["detail"]["other_teachers"]), (self.ids["TB"], [self.ids["TA"]]))
+        self.assertEqual(self.ta.json("POST", "/api/admin/share-requests/%d/decide" % rid, {"approve": True})[0], 404,
+                         "处理过的申请不能再处理")
+        actions = [a["action"] for a in self.root.json("GET", "/api/admin/audit")[1]["audit"] if a["target_id"] == sid]
+        self.assertIn("share.approve", actions)
         users = {u["student_no"]: u for u in self.root.json("GET", "/api/admin/users")[1]["users"]}
         self.assertEqual({t["name"] for t in users[no]["teachers"]}, {"甲老师", "乙老师"})
+        self.assertEqual([r["status"] for r in self.requests_of(self.tb)["outgoing"] if r["student_no"] == no], ["approved"])
+
+    def test_rejecting_keeps_the_student_out_and_the_super_admin_can_decide_too(self):
+        no, _ = self.student_of(self.ta)
+        self.roster(self.tb, [(no, "x", "y")])
+        rid = [r["id"] for r in self.requests_of(self.root)["incoming"] if r["student_no"] == no][0]
+        self.assertEqual(self.root.json("POST", "/api/admin/share-requests/%d/decide" % rid, {"approve": False})[1]["status"], "rejected")
+        self.assertNotIn(no, self.user_nos(self.tb))
+        self.assertEqual([r for r in self.requests_of(self.ta)["incoming"] if r["student_no"] == no], [])
+        self.assertIn("share.reject", [a["action"] for a in self.root.json("GET", "/api/admin/audit")[1]["audit"]])
+
+    def test_the_request_does_not_let_the_requester_tag_or_reset_the_student(self):
+        no, sid = self.student_of(self.ta)
+        csv = "学号,姓名,班级,标签\n%s,x,y,偷来的\n" % no
+        body, headers = multipart({"reset_existing": "1"}, {"file": ("n.csv", csv.encode())})
+        status, res = self.tb.json("POST", "/api/admin/import", raw=body, headers=headers)
+        self.assertEqual((status, res["requested"], res["credentials"]), (200, 1, []))
+        self.assertEqual(self.db.user_tags_map([sid], self.ids["TB"]).get(sid, []), [])
+        self.assertEqual(Client(self.port).json("POST", "/api/auth/login", {"student_no": no, "password": "Teach3r!pw"})[0], 200,
+                         "密码没被重置，学生还能用原密码登录")
+
+    def test_the_super_admin_importing_an_existing_number_links_directly(self):
+        no, _ = self.student_of(self.ta)
+        res = self.roster(self.root, [(no, "x", "y")])
+        self.assertEqual((res["requested"], res["shared"]), (0, 1))
+        self.assertIn(no, self.user_nos(self.ta))
+        audit = self.root.json("GET", "/api/admin/audit")[1]["audit"]
+        self.assertEqual([a["detail"]["reason"] for a in audit if a["action"] == "student.auto_share"][:1], ["super"])
+
+    def test_teachers_in_the_same_group_share_without_asking(self):
+        for who in ("TA", "TB"):
+            self.assertEqual(self.root.json("POST", "/api/admin/teachers/%d/group" % self.ids[who], {"group": "外语教研组"})[1]["group"], "外语教研组")
+        try:
+            no, sid = self.student_of(self.ta, "原名")
+            res = self.roster(self.tb, [(no, "改名", "别的班")])
+            self.assertEqual((res["requested"], res["shared"]), (0, 1))
+            self.assertIn(no, self.user_nos(self.tb))
+            self.assertEqual(self.svc.get_by_id(sid)["name"], "原名", "共享的学生不改负责老师那边的资料")
+            audit = self.root.json("GET", "/api/admin/audit")[1]["audit"]
+            self.assertIn(("group", "外语教研组"), [(a["detail"].get("reason"), a["detail"].get("group")) for a in audit
+                                                   if a["action"] == "student.auto_share" and a["target_id"] == sid])
+            self.assertIn("teacher.group", [a["action"] for a in audit])
+        finally:
+            for who in ("TA", "TB"):
+                self.root.json("POST", "/api/admin/teachers/%d/group" % self.ids[who], {"group": ""})
+
+    def test_different_groups_still_need_approval_and_only_the_super_admin_sets_groups(self):
+        self.root.json("POST", "/api/admin/teachers/%d/group" % self.ids["TA"], {"group": "甲组"})
+        self.root.json("POST", "/api/admin/teachers/%d/group" % self.ids["TB"], {"group": "乙组"})
+        try:
+            no, _ = self.student_of(self.ta)
+            self.assertEqual(self.roster(self.tb, [(no, "x", "y")])["requested"], 1)
+            self.assertEqual(self.ta.json("POST", "/api/admin/teachers/%d/group" % self.ids["TA"], {"group": "乙组"})[0], 403,
+                             "老师不能自己改教研组")
+        finally:
+            for who in ("TA", "TB"):
+                self.root.json("POST", "/api/admin/teachers/%d/group" % self.ids[who], {"group": ""})
+
+    def test_only_the_responsible_teacher_or_super_can_reset_disable_or_unlock(self):
+        no, sid = self.student_of(self.ta)
+        self.root.json("POST", "/api/admin/assign", {"kind": "student", "mode": "share", "ids": [sid], "teacher_id": self.ids["TB"]})
+        self.assertIn(no, self.user_nos(self.tb))
+        for action, body in (("reset-password", {}), ("disabled", {"disabled": True}), ("unlock", {})):
+            status, res = self.tb.json("POST", "/api/admin/users/%d/%s" % (sid, action), body)
+            self.assertEqual((status, res.get("code")), (403, "not_primary"), action)
+        self.assertEqual(self.svc.get_by_id(sid)["disabled"], 0)
+        self.assertEqual(Client(self.port).json("POST", "/api/auth/login", {"student_no": no, "password": "Teach3r!pw"})[0], 200)
+        rows = {u["student_no"]: u for u in self.tb.json("GET", "/api/admin/users")[1]["users"]}
+        self.assertEqual((rows[no]["can_manage"], rows[no]["primary_name"]), (False, "甲老师"))
+        mine = {u["student_no"]: u for u in self.ta.json("GET", "/api/admin/users")[1]["users"]}
+        self.assertTrue(mine[no]["can_manage"])
+        self.assertEqual(self.ta.json("POST", "/api/admin/users/%d/unlock" % sid, {})[0], 200)
+        self.assertEqual(self.root.json("POST", "/api/admin/users/%d/reset-password" % sid, {})[0], 200)
+        tags = self.tb.json("POST", "/api/admin/users/%d/tags" % sid, {"tags": ["乙的标签"]})
+        self.assertEqual(tags[0], 200, "共享来的学生仍可以打自己的标签")
+
+    def test_a_shared_student_cannot_have_the_password_reset_through_an_import(self):
+        no, sid = self.student_of(self.ta)
+        self.root.json("POST", "/api/admin/assign", {"kind": "student", "mode": "share", "ids": [sid], "teacher_id": self.ids["TB"]})
+        body, headers = multipart({"reset_existing": "1"}, {"file": ("n.csv", ("学号,姓名\n%s,x\n" % no).encode())})
+        res = self.tb.json("POST", "/api/admin/import", raw=body, headers=headers)[1]
+        self.assertEqual(res["credentials"], [])
+        self.assertTrue(res["errors"])
+        self.assertEqual(Client(self.port).json("POST", "/api/auth/login", {"student_no": no, "password": "Teach3r!pw"})[0], 200)
+
+    def test_the_first_teacher_changes_when_the_super_admin_moves_the_student(self):
+        no, sid = self.student_of(self.ta)
+        self.root.json("POST", "/api/admin/assign", {"kind": "student", "mode": "move", "ids": [sid], "teacher_id": self.ids["TB"]})
+        self.assertEqual(self.tb.json("POST", "/api/admin/users/%d/unlock" % sid, {})[0], 200)
+        self.assertEqual(self.ta.json("POST", "/api/admin/users/%d/unlock" % sid, {})[0], 404)
 
     def test_reimporting_my_own_student_still_updates_the_details(self):
         no, sid = self.student_of(self.ta, "旧名")
@@ -283,7 +410,7 @@ class TestSoftDelete(TenantCase):
 
     def test_deleting_students_and_a_whole_class(self):
         shared_no, shared_id = self.student_of(self.ta)
-        self.roster(self.tb, [(shared_no, "x", "y")])                       # 也在乙老师名下
+        self.root.json("POST", "/api/admin/assign", {"kind": "student", "mode": "share", "ids": [shared_id], "teacher_id": self.ids["TB"]})  # 也在乙老师名下
         only_no, only_id = self.student_of(self.ta)
         res = self.ta.json("POST", "/api/admin/users/delete", {"user_ids": [shared_id, only_id]})[1]
         self.assertEqual((res["deleted"], res["unlinked"]), (1, 1))

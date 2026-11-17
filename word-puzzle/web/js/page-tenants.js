@@ -46,19 +46,21 @@
 
   function renderTeachers() {
     var body = document.querySelector('#teacherTable tbody');
-    if (!teachers.length) { body.innerHTML = '<tr><td colspan="9" class="empty">' + esc(t('ten_noTeachers')) + '</td></tr>'; return; }
+    if (!teachers.length) { body.innerHTML = '<tr><td colspan="10" class="empty">' + esc(t('ten_noTeachers')) + '</td></tr>'; return; }
     body.innerHTML = teachers.map(function (u) {
       var role = u.role === 'admin' ? '<span class="pill good">' + esc(t('ten_roleSuper')) + '</span>'
                                     : '<span class="pill">' + esc(t('ten_roleTeacher')) + '</span>';
       if (u.disabled) role += ' <span class="pill bad">' + esc(t('ten_disabled')) + '</span>';
       var ops = '';
       if (u.role === 'teacher') {
-        ops = '<button class="btn sm ghost" data-act="reset" data-id="' + u.id + '">' + esc(t('ten_reset')) + '</button>' +
+        ops = '<button class="btn sm ghost" data-act="group" data-id="' + u.id + '">' + esc(t('ten_setGroup')) + '</button>' +
+              '<button class="btn sm ghost" data-act="reset" data-id="' + u.id + '">' + esc(t('ten_reset')) + '</button>' +
               '<button class="btn sm ' + (u.disabled ? 'green' : 'ghost') + '" data-act="' + (u.disabled ? 'enable' : 'disable') + '" data-id="' + u.id + '">' +
               esc(t(u.disabled ? 'ten_enable' : 'ten_disable')) + '</button>' +
               '<button class="btn sm danger" data-act="delete" data-id="' + u.id + '">' + esc(t('ten_delete')) + '</button>';
       }
       return '<tr><td>' + esc(u.name) + '</td><td>' + esc(u.student_no) + '</td><td>' + role + '</td>' +
+        '<td>' + esc(u.teacher_group || t('ten_noGroup')) + '</td>' +
         '<td class="num">' + u.students + '</td><td class="num">' + u.own_banks + '</td><td class="num">' + u.shared_banks + '</td>' +
         '<td class="num">' + u.materials + '</td><td>' + esc(u.last_login_at || t('ten_never')) + '</td>' +
         '<td><div class="cell-actions">' + ops + '</div></td></tr>';
@@ -94,6 +96,16 @@
     var u = teachers.filter(function (x) { return String(x.id) === btn.dataset.id; })[0];
     if (!u) return;
     var act = btn.dataset.act, done;
+    if (act === 'group') {
+      var typed = window.prompt(t('ten_groupPrompt', { name: u.name }), u.teacher_group || '');
+      if (typed === null) return;
+      btn.disabled = true;
+      API.post('/api/admin/teachers/' + u.id + '/group', { group: typed }).then(function () {
+        API.toast(t('ten_groupSaved'));
+        return loadTeachers();
+      }).catch(function (e) { API.toast(AuthUI.errorText(e)); btn.disabled = false; });
+      return;
+    }
     if (act === 'reset') {
       if (!confirm(t('ten_confirmReset', { name: u.name }))) return;
       done = API.post('/api/admin/users/' + u.id + '/reset-password', {}).then(function (res) {
@@ -219,6 +231,8 @@
     'student.share': 'ten_act_student_share', 'student.move': 'ten_act_student_move', 'student.unshare': 'ten_act_student_unshare',
     'student.delete': 'ten_act_student_delete', 'student.unlink_self': 'ten_act_student_unlink_self',
     'student.auto_share': 'ten_act_student_auto_share', 'user.restore': 'ten_act_user_restore',
+    'share.request': 'ten_act_share_request', 'share.approve': 'ten_act_share_approve', 'share.reject': 'ten_act_share_reject',
+    'teacher.group': 'ten_act_teacher_group',
     'material.delete': 'ten_act_material_delete', 'material.restore': 'ten_act_material_restore'
   };
 
@@ -232,7 +246,7 @@
       var body = document.querySelector('#auditTable tbody');
       body.innerHTML = rows.length ? rows.map(function (r) {
         var d = r.detail || {};
-        var detail = [d.title, d.student_no, d.name, d.teacher].filter(Boolean).join(' · ');
+        var detail = [d.title, d.student_no, d.name, d.teacher, d.group].filter(Boolean).join(' · ');
         return '<tr><td>' + esc(when(r.ts)) + '</td><td>' + esc(r.actor_name || '-') + '</td><td>' + esc(actionText(r.action)) + '</td>' +
           '<td>' + esc((r.target_type || '') + (r.target_id ? ' #' + r.target_id : '')) + '</td><td>' + esc(detail) + '</td></tr>';
       }).join('') : '<tr><td colspan="5" class="empty">' + esc(t('ten_noAudit')) + '</td></tr>';

@@ -208,6 +208,28 @@ def unlink_student(db: Database, teacher_id: int, student_id: int) -> None:
         conn.execute("DELETE FROM user_tags WHERE teacher_id=? AND user_id=?", (teacher_id, student_id))
 
 
+def primary_teacher(db: Database, student_id: int) -> int | None:
+    """负责这个学生的老师 = 最先挂上去的那位（没被删除的）。只有他和超管能重置密码、停用、解锁。"""
+    row = db.one("SELECT ts.teacher_id FROM teacher_students ts JOIN users t ON t.id=ts.teacher_id "
+                 "WHERE ts.student_id=? AND t.deleted_at=0 ORDER BY ts.rowid LIMIT 1", (student_id,))
+    return row["teacher_id"] if row else None
+
+
+def primary_map(db: Database) -> dict[int, tuple[int, str]]:
+    """{学生: (负责老师编号, 姓名)}，给账号列表一次算好。"""
+    out: dict[int, tuple[int, str]] = {}
+    for r in db.query("SELECT ts.student_id, t.id, t.name FROM teacher_students ts JOIN users t ON t.id=ts.teacher_id "
+                      "WHERE t.deleted_at=0 ORDER BY ts.rowid"):
+        out.setdefault(r["student_id"], (r["id"], r["name"]))
+    return out
+
+
+def can_manage_account(db: Database, scope: Scope, user: dict) -> bool:
+    """能不能动这个学生的账号本身（重置密码、停用、解锁）：超管，或者负责他的那位老师。
+    共享来的学生，其他老师只能看成绩、打自己的标签。"""
+    return scope.everything or primary_teacher(db, user["id"]) == scope.user_id
+
+
 def student_teachers(db: Database, student_id: int) -> list[int]:
     return [r["teacher_id"] for r in db.query(
         "SELECT ts.teacher_id FROM teacher_students ts JOIN users t ON t.id=ts.teacher_id "
@@ -246,6 +268,95 @@ def move_student(db: Database, student_id: int, teacher_id: int, actor: int | No
         if old != teacher_id:
             unlink_student(db, old, student_id)
     link_student(db, teacher_id, student_id, actor)
+
+
+# ------------------------------------------------------------------ 共享申请和教研组
+
+def teacher_group(db: Database, teacher_id: int) -> str:
+    row = db.one("SELECT teacher_group FROM users WHERE id=?", (teacher_id,))
+    return (row["teacher_group"] or "") if row else ""
+
+
+def set_teacher_group(db: Database, teacher_id: int, group: str) -> str:
+    group = " ".join(str(group or "").split())[:30]
+    db.execute("UPDATE users SET teacher_group=? WHERE id=?", (group, teacher_id))
+    return group
+
+
+def claim_student(db: Database, importer_id: int, student: dict, current: list[int], actor: int | None) -> str:
+    """导入名单时发现这个学号已经存在、但还不在这位老师名下。返回 linked（已挂上）或 requested（已提交申请）。
+
+    * 超管导入：直接挂上（她什么都看得到）。
+    * 这个学生现在没有任何老师：直接挂上（没人需要保护）。
+    * 同一个教研组的老师：直接挂上，记审计。
+    * 其他情况：不挂、不改资料、不显示，提交共享申请，等负责的老师或超管批准。
+    """
+    who = db.one("SELECT role, name, teacher_group FROM users WHERE id=?", (importer_id,))
+    if who and who["role"] == "admin" or not current:
+        link_student(db, importer_id, student["id"], actor)
+        if current:
+            audit(db, actor, "student.auto_share", "user", student["id"], student_no=student["student_no"],
+                  teacher_id=importer_id, reason="super")
+        return "linked"
+    group = (who["teacher_group"] if who else "") or ""
+    if group and db.one("SELECT 1 FROM users WHERE id IN (%s) AND teacher_group=?" % ",".join("?" * len(current)),
+                        (*current, group)):
+        link_student(db, importer_id, student["id"], actor)
+        audit(db, actor, "student.auto_share", "user", student["id"], student_no=student["student_no"],
+              teacher_id=importer_id, reason="group", group=group)
+        return "linked"
+    if not db.one("SELECT 1 FROM share_requests WHERE student_id=? AND requester_id=? AND status='pending'",
+                  (student["id"], importer_id)):
+        cur = db.execute("INSERT INTO share_requests(student_id, requester_id, created_at) VALUES (?,?,?)",
+                         (student["id"], importer_id, int(time.time())))
+        audit(db, actor, "share.request", "user", student["id"], student_no=student["student_no"],
+              teacher_id=importer_id, teacher=who["name"] if who else "", request_id=cur.lastrowid)
+    return "requested"
+
+
+def share_requests(db: Database, scope: Scope) -> dict:
+    """incoming = 等这个人批准的（负责的老师看自己学生的；超管看全部）；outgoing = 这个人自己提交的（只有学号和状态，
+    不显示姓名，申请没批准之前不该看到别人学生的资料）。"""
+    rows = db.query(
+        "SELECT r.id, r.student_id, r.requester_id, r.created_at, s.student_no, s.name, s.class_name, "
+        "q.name AS requester_name, q.student_no AS requester_no, q.teacher_group AS requester_group "
+        "FROM share_requests r JOIN users s ON s.id=r.student_id JOIN users q ON q.id=r.requester_id "
+        "WHERE r.status='pending' AND s.deleted_at=0 AND q.deleted_at=0 ORDER BY r.id")
+    incoming = []
+    primary = primary_map(db)
+    for r in rows:
+        if scope.everything or (primary.get(r["student_id"]) or (None,))[0] == scope.user_id:
+            d = dict(r)
+            d["primary_name"] = (primary.get(r["student_id"]) or (0, ""))[1]
+            incoming.append(d)
+    outgoing = []
+    if scope.kind == TEACHER:
+        outgoing = [dict(r) for r in db.query(
+            "SELECT r.id, r.status, r.created_at, r.decided_at, s.student_no FROM share_requests r "
+            "JOIN users s ON s.id=r.student_id WHERE r.requester_id=? ORDER BY r.id DESC LIMIT 50", (scope.user_id,))]
+    return {"incoming": incoming, "outgoing": outgoing}
+
+
+def decide_share_request(db: Database, scope: Scope, request_id: int, approve: bool, actor: int | None) -> str:
+    """批准或拒绝。只有负责这个学生的老师和超管能决定。返回 approved / rejected。"""
+    req = db.one("SELECT * FROM share_requests WHERE id=?", (request_id,))
+    if not req or req["status"] != "pending":
+        raise LookupError("没有这条待处理的申请")
+    if not (scope.everything or primary_teacher(db, req["student_id"]) == scope.user_id):
+        raise PermissionError("只有负责这个学生的老师或超级管理员能处理这条申请")
+    student = db.one("SELECT student_no, deleted_at FROM users WHERE id=?", (req["student_id"],))
+    requester = db.one("SELECT name, deleted_at FROM users WHERE id=?", (req["requester_id"],))
+    if approve and (not student or student["deleted_at"] or not requester or requester["deleted_at"]):
+        raise LookupError("学生或申请的老师已被删除")
+    status = "approved" if approve else "rejected"
+    db.execute("UPDATE share_requests SET status=?, decided_at=?, decided_by=? WHERE id=?",
+               (status, int(time.time()), actor, request_id))
+    if approve:
+        link_student(db, req["requester_id"], req["student_id"], actor)
+    audit(db, actor, "share." + ("approve" if approve else "reject"), "user", req["student_id"],
+          student_no=student["student_no"] if student else "", teacher_id=req["requester_id"],
+          teacher=requester["name"] if requester else "", request_id=request_id)
+    return status
 
 
 # ------------------------------------------------------------------ 软删除和恢复
