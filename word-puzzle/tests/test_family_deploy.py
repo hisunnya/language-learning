@@ -100,10 +100,13 @@ class TestNginx(unittest.TestCase):
         for pattern in re.findall(r"location ~\*? (\S+) ", CONF):
             self.assertFalse(pattern.startswith("^/word-puzzle/") or pattern.startswith("^/shared/"), pattern)
 
-    def test_static_files_are_revalidated_not_cached_for_days(self):
+    def test_pages_are_revalidated_and_versioned_files_are_cached_for_an_hour_at_most(self):
         self.assertNotIn("expires", CONF)
-        self.assertNotIn("max-age", CONF)
-        self.assertGreaterEqual(CONF.count('add_header Cache-Control "no-cache";'), 2)
+        ages = [int(n) for n in re.findall(r"max-age=(\d+)", CONF)]
+        self.assertEqual(ages, [3600], "只有带版本号的文件缓存一小时，没有任何东西缓存好几天（改了文件忘了改版本号时，最迟一小时后恢复）")
+        self.assertGreaterEqual(CONF.count("add_header Cache-Control $wp_family_static_cache;"), 2)
+        self.assertIn('default "no-cache";', CONF, "没有版本号的（页面本身）每次都要确认")
+        self.assertIn('"~."    "public, max-age=3600";', CONF, "带 ?v= 的样式和脚本让浏览器留一个小时")
 
     def test_redirects_are_relative_because_funnel_sits_in_front(self):
         """nginx 默认把重定向拼成绝对地址，只知道自己的 http://主机:8081；
@@ -124,6 +127,7 @@ class TestNginx(unittest.TestCase):
             install = tmp / "srv"
             (install / "web").mkdir(parents=True)
             (install / "shared").mkdir()
+            (install / "web" / "app.css").write_text("body{}", encoding="utf-8")
             inc = tmp / "proxy.inc"
             inc.write_text(PROXY, encoding="utf-8")
             conf = (CONF.replace("@INSTALL_DIR@", str(install)).replace("@PORT@", "1")
@@ -158,6 +162,12 @@ class TestNginx(unittest.TestCase):
                             time.sleep(0.1)      # nginx 还没起来
                     else:
                         self.fail("nginx 没有响应")
+                for path, expected in (("/word-puzzle/app.css?v=20261118-x", "public, max-age=3600"),
+                                       ("/word-puzzle/app.css", "no-cache"), ("/word-puzzle/app.css?v=", "no-cache")):
+                    request = urllib.request.Request("http://127.0.0.1:%d%s" % (port, path))
+                    with opener.open(request, timeout=3) as res:
+                        self.assertEqual(res.headers.get("Cache-Control"), expected, path)
+                        self.assertEqual(res.headers.get("X-Frame-Options"), "DENY", "别的安全头不能因此丢掉")
             finally:
                 subprocess.run([NGINX, "-c", str(main), "-p", str(tmp), "-s", "stop"], capture_output=True)
 

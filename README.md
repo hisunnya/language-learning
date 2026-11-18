@@ -129,7 +129,7 @@ language-learning/
 其中宿主机回滚用的就是此刻的提交，所以要在 `git pull` 之前跑；需要 `deploy.local.env` 里有 `LEXICA_CTID`），然后 `git pull`，再从仓库根目录运行：
 
 ```bash
-sudo bash ./deploy-all-20261118_150000.sh
+sudo bash ./deploy-all-20261118_160000.sh
 ```
 
 脚本部署到你指定的服务器（地址写在不进 git 的 `deploy.local.env` 里，见下），会更新词境后端、语林门户、每日话题、无线电执照和 nginx 统一入口（配置写入 `/etc/nginx/conf.d/lingua-grove.conf`），并检查四个页面及词境 API。缺少 `conf.d` 时会自动创建；词境现有数据库会保留。目标服务器的地址不写在仓库里（仓库是公开的）：把 `deploy.local.env.example` 复制成 `deploy.local.env`（已在 `.gitignore` 里，不会提交）并改成自己的值，
@@ -137,8 +137,8 @@ sudo bash ./deploy-all-20261118_150000.sh
 
 ```bash
 cp deploy.local.env.example deploy.local.env     # 然后编辑：LINGUA_SERVER_NAME、LEXICA_UPSTREAM
-sudo bash ./deploy-all-20261118_150000.sh
-# 或临时覆盖：sudo env LINGUA_SERVER_NAME=服务器IP或域名 LEXICA_UPSTREAM=none bash ./deploy-all-20261118_150000.sh
+sudo bash ./deploy-all-20261118_160000.sh
+# 或临时覆盖：sudo env LINGUA_SERVER_NAME=服务器IP或域名 LEXICA_UPSTREAM=none bash ./deploy-all-20261118_160000.sh
 ```
 
 ---
