@@ -266,7 +266,7 @@ class TestBrandLogo(unittest.TestCase):
             self.assertIn("portal-brand-mark--logo", html, page)
             self.assertIn('src="/word-puzzle/img/icon.svg"', html, page)
             self.assertNotIn('aria-hidden="true">词</span>', html, page)
-            self.assertIn("module-header.css?v=20261113-logo", html, page)   # 改了共享样式，要换版本号绕开缓存
+            self.assertRegex(html, r"module-header\.css\?v=[0-9a-f]{8}", page)   # 版本号由内容算出（tools/bump_assets.py）
 
     def test_the_modifier_exists_in_the_shared_stylesheet(self):
         css = (ROOT.parent / "hub" / "shared" / "module-header.css").read_text(encoding="utf-8")

@@ -259,6 +259,12 @@ A regression here must fail the suite rather than ship.
   one copy and the other has to follow, or these fail.
 - The mini program has its own suite (`miniprogram/tests/`) and a fake `wx`
   runtime (`tests/js/harness.js`) with a controllable clock and timers.
+- **Asset versions are computed, not typed.** Pages load JS / CSS with `?v=<first 8 hex of the
+  file's content hash>`; the public entrance lets browsers keep versioned files for an hour and
+  WeChat caches hard, so a file changed without a new `?v=` keeps running old code on students'
+  phones. After editing any file under `word-puzzle/web/js`, `web/css` or `hub/shared`, run
+  `python3 word-puzzle/tools/bump_assets.py` (rewrites every page); `tests/test_asset_versions.py`
+  fails when a page does not match.
 - Run the suite before committing. A change that cannot be verified on this
   machine must say so explicitly instead of claiming success.
 - Verification means the real path, not only unit tests: a unit test with mock

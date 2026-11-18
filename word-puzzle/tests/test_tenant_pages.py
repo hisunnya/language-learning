@@ -27,7 +27,7 @@ class TestTeacherIsStaffInThePages(unittest.TestCase):
         for page in WEB.glob("*.html"):
             html = page.read_text(encoding="utf-8")
             if "auth-ui.js" in html:
-                self.assertIn("auth-ui.js?v=20261117-requests", html, page.name + "：老旧缓存会把老师当成学生")
+                self.assertRegex(html, r"auth-ui\.js\?v=[0-9a-f]{8}", page.name + "：老旧缓存会把老师当成学生")
 
     def test_accounts_page_loads_users_for_teachers_too(self):
         self.assertIn("info.user.role === 'admin' || info.user.role === 'teacher'", read("js/page-admin.js"))

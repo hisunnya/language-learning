@@ -36,8 +36,8 @@ class TestHeadScript(unittest.TestCase):
     def test_pages_load_versioned_styles_and_the_new_script(self):
         for page in PROTECTED:
             html = (WEB / page).read_text(encoding="utf-8")
-            self.assertRegex(html, r"auth\.css\?v=\d{8}-\w+", page)        # 带版本号：改了样式，浏览器才会丢掉旧的
-            self.assertIn("auth-ui.js?v=20261117-requests", html, page)
+            self.assertRegex(html, r"auth\.css\?v=[0-9a-f]{8}", page)        # 带版本号：改了样式，浏览器才会丢掉旧的
+            self.assertRegex(html, r"auth-ui\.js\?v=[0-9a-f]{8}", page)
 
 
 @unittest.skipUnless(NODE, "本机没有 node，跳过换页面不闪教师版的行为测试")

@@ -274,7 +274,7 @@ def read(name):
 class TestLeaderboardPage(unittest.TestCase):
     def test_the_page_is_bilingual_and_has_the_shared_header_with_palettes(self):
         html = read("leaderboard.html")
-        self.assertIn('<script src="/shared/module-header.js"></script>', html, "共享页眉带语言切换和五个配色")
+        self.assertRegex(html, r'<script src="/shared/module-header\.js\?v=[0-9a-f]{8}"></script>', "共享页眉带语言切换和五个配色")
         self.assertIn("data-module-zh=", html)
         self.assertIn('id="portalHeaderControls"', html)
         self.assertIn('id="lbTitle"', html)
