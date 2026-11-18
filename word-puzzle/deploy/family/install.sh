@@ -101,6 +101,15 @@ else
   echo "    已安装，跳过"
 fi
 
+# 数据目录标记：后端的服务单元要先看到它才肯启动（数据盘没挂上时，挂进来的是空目录，没有这个文件，就不会悄悄建一个空数据库）。
+# 只在「已经有数据库」或「第一次安装」时放；数据盘没挂上时重装，不会把标记放到空目录里。
+if [[ -f "$DATA_DIR/app.db" || ! -e "/etc/systemd/system/$SITE_NAME.service" ]]; then
+  touch "$DATA_DIR/.lexica-data"
+  chown "$RUN_USER:$RUN_USER" "$DATA_DIR/.lexica-data"
+elif [[ ! -e "$DATA_DIR/.lexica-data" ]]; then
+  warn "数据目录里没有数据库，也没有 .lexica-data 标记：数据盘是不是没挂上？服务会拒绝启动，直到弄清楚为止"
+fi
+
 say "安装 systemd 服务 $SITE_NAME"
 sed -e "s|@RUN_USER@|$RUN_USER|g" -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@DATA_DIR@|$DATA_DIR|g" \
     -e "s|@PORT@|$PORT|g" -e "s|@PUBLIC_URL@|$PUBLIC_URL|g" -e "s|@TTS_VENV@|$TTS_VENV|g" \
@@ -109,6 +118,21 @@ sed -e "s|@RUN_USER@|$RUN_USER|g" -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@DAT
 systemctl daemon-reload
 systemctl enable "$SITE_NAME" >/dev/null
 systemctl restart "$SITE_NAME"
+
+say "安装看门狗（每分钟检查网站；要求常开时，Funnel 掉了自动重新打开）"
+install -d /etc/lexica
+sed -e "s|@SITE_NAME@|$SITE_NAME|g" -e "s|@NGINX_PORT@|$NGINX_PORT|g" -e "s|@PORT@|$PORT|g" \
+    "$INSTALL_DIR/deploy/family/watchdog.sh" > /usr/local/sbin/lexica-watchdog
+chmod 0755 /usr/local/sbin/lexica-watchdog
+for unit in lexica-watchdog.service lexica-watchdog.timer; do
+  install -m 0644 "$INSTALL_DIR/deploy/family/systemd/$unit" "/etc/systemd/system/$unit"
+done
+if [[ "${WP_FUNNEL_KEEP:-}" == "1" ]]; then
+  touch /etc/lexica/funnel-keep
+  echo "    已设为公网入口常开（/etc/lexica/funnel-keep）；要关掉：先 rm 这个文件，再 tailscale funnel reset"
+fi
+systemctl daemon-reload
+systemctl enable --now lexica-watchdog.timer >/dev/null
 
 if [[ -n "$BACKUP_DIR" ]]; then
   say "安装每日备份定时器（$BACKUP_DIR，保留 30 份）"

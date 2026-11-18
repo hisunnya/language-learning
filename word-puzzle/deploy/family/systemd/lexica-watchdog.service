@@ -1,0 +1,13 @@
+[Unit]
+Description=词境 Lexica 看门狗（网站不正常就拉起来，公网入口掉了就重新打开）
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/lexica-watchdog
+# 它要管 systemd 服务和 tailscale，所以是 root；但只能写日志，别的都只读
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+TimeoutStartSec=240

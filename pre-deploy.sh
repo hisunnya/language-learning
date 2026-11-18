@@ -54,7 +54,7 @@ echo "==> 3/3 记录"
 cat > "$NOTE" <<NOTE_EOF
 部署前状态 $STAMP
   仓库提交      ： $COMMIT
-  容器快照      ： $([[ $SNAP_OK == 1 ]] && echo "$SNAP（容器 $CTID）" || echo "无")
+  容器快照      ： $([[ $SNAP_OK == 1 ]] && echo "${SNAP}（容器 ${CTID}）" || echo "无")
   代码备份      ： 容器里 $CODE_TAR
   数据库备份    ： 容器里 $BACKUP_FILE
 NOTE_EOF
@@ -62,7 +62,7 @@ chmod 600 "$NOTE"
 
 cat <<DONE
 
-保险做好了（记录在 $NOTE）。现在可以部署。
+保险做好了（记录在 ${NOTE}）。现在可以部署。
 
 出问题时的回滚（学生版容器：代码 + 数据库）：
     pct exec $CTID -- systemctl stop word-puzzle-family

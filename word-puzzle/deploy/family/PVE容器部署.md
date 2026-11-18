@@ -51,7 +51,7 @@ pct create $CTID local:vztmpl/$TEMPLATE \
   --cores 1 --memory 1024 --swap 512 \
   --rootfs local-lvm:8 \
   --net0 name=eth0,bridge=vmbr0,ip=<容器IP>/<前缀长度>,gw=<网关> \
-  --onboot 1 --start 0
+  --onboot 1 --startup order=2,up=45 --start 0
 ```
 
 - **一定要非特权容器**（`--unprivileged 1`）：容器里即使被攻破，也只是宿主机上一个没有权限的普通用户。
@@ -299,3 +299,6 @@ apt-get -y remove tailscale
 3. 宿主机不装本程序、不开 Funnel；PVE 管理界面和 SSH 不要映射到任何地方。
 4. 不要在容器（或任何开着 Funnel 的机器）里用 `python3 -m http.server` 做临时测试：它会把当前目录里的所有文件都暴露出去。
 5. 数据库里有学号、姓名、班级、成绩和永久保留的访问记录（IP、设备、浏览器、访问的页面、停留时间），备份文件要妥善保管。
+
+> 停电后的自动恢复（启动顺序、数据盘保护、看门狗）见 `部署说明.md` 的「停电、重启以后怎么自动恢复」；
+> 宿主机上运行一次 `host-autostart.sh` 就能把上面的设置补齐并检查数据盘。
