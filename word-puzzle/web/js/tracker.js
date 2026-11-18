@@ -88,7 +88,7 @@
     tick();
     if (event === 'view') {
       sent = true;
-      send({ event: 'view', sid: sid, path: location.pathname, title: document.title, referrer: document.referrer, client: clientInfo() }, false);
+      send({ event: 'view', sid: sid, path: location.pathname, search: location.search || '', title: document.title, referrer: document.referrer, client: clientInfo() }, false);
       detail();
     } else if (sent) {
       send({ event: event, active: Math.round(active) }, beacon);

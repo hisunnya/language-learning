@@ -224,6 +224,30 @@ def record_login(db: Database, student_no: str, user: dict | None, success: bool
          info["os"], info["os_version"], info["device_type"], info["device_model"], info["in_app"], info["accept_language"]))
 
 
+def _bank_of(db: Database, search: str) -> tuple[int | None, str]:
+    """页面地址里的 ?bank=编号 → (题库编号, 题库当时的标题)。标题在这里查好存下来，题库以后改名 / 删除，记录还是当时的样子。"""
+    m = re.search(r"(?:^|[?&])bank=(\d{1,9})(?:&|$)", search or "")
+    if not m:
+        return None, ""
+    bank = db.get_bank(int(m.group(1)))
+    return int(m.group(1)), _text(bank["title"], 120) if bank else ""
+
+
+# 页面文件名 → 给老师看的名字（筛选下拉框、页面浏览列表用；没列出的页面原样显示文件名）
+PAGE_NAMES = {
+    "index.html": ("首页", "Home"), "play.html": ("游戏", "Game"), "practice.html": ("读音练习", "Pronunciation practice"),
+    "leaderboard.html": ("积分榜", "Leaderboard"), "stats.html": ("成绩记录", "Scores"), "bank.html": ("题库工作台", "Word banks"),
+    "admin.html": ("账号管理", "Accounts"), "visits.html": ("访问记录", "Visits"), "tenants.html": ("老师与分配", "Teachers"),
+    "login.html": ("登录", "Sign in"), "change-password.html": ("修改密码", "Change password"),
+}
+
+
+def page_file(path: str) -> str:
+    """/word-puzzle/practice.html → practice.html；/word-puzzle/ → index.html"""
+    path = path or ""
+    return "index.html" if path.endswith("/") or not path else path.rsplit("/", 1)[-1] or "index.html"
+
+
 def track(db: Database, user: dict | None, info: dict, payload: dict, now: float | None = None) -> bool:
     """处理一条上报。返回是否有效（无效的悄悄丢掉，不给页面报错）。"""
     now = int(now or time.time())
@@ -240,15 +264,17 @@ def track(db: Database, user: dict | None, info: dict, payload: dict, now: float
         if not _ID.fullmatch(sid):
             return False
         path = _text(payload.get("path"), 200)
+        search = _text(payload.get("search"), 300)
+        bank_id, bank_title = _bank_of(db, search)
         db.execute(
             "INSERT OR IGNORE INTO page_views(vid, sid, user_id, role, student_no, name, class_name, ip, forwarded, user_agent, "
             "browser, browser_version, os, os_version, device_type, device_model, in_app, accept_language, path, title, "
-            "referrer, client_info, started_at, last_seen_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "referrer, client_info, started_at, last_seen_at, query, bank_id, bank_title) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (vid, sid, who["user_id"], who["role"], who["student_no"], who["name"], who["class_name"], info["ip"],
              info["forwarded"], info["user_agent"], info["browser"], info["browser_version"], info["os"], info["os_version"],
              info["device_type"], info["device_model"], info["in_app"], info["accept_language"],
              path if path.startswith("/") else "", _text(payload.get("title"), 120), _text(payload.get("referrer"), 300),
-             json.dumps(clean_client_info(payload.get("client")), ensure_ascii=False), now, now))
+             json.dumps(clean_client_info(payload.get("client")), ensure_ascii=False), now, now, search, bank_id, bank_title))
         return True
     row = db.one("SELECT id, user_id, started_at, active_seconds, client_info FROM page_views WHERE vid=?", (vid,))
     if not row:
@@ -270,8 +296,12 @@ def track(db: Database, user: dict | None, info: dict, payload: dict, now: float
 
 # ---------------------------------------------------------------- 查询（老师页面 / 导出用）
 
-def _filters(role: str, class_name: str, q: str, since, until, table: str, people: tuple[str, tuple] | None = None):
-    """people：按人过滤（server/tenancy.py 的 people_where，列名 user_id）——老师只看自己名下学生的记录。"""
+def _filters(role: str, class_name: str, q: str, since, until, table: str, people: tuple[str, tuple] | None = None,
+             extra: dict | None = None):
+    """people：按人过滤（server/tenancy.py 的 people_where，列名 user_id）——老师只看自己名下学生的记录。
+    extra：page（页面文件名）、bank（题库编号，或标题里的字）、device（mobile / tablet / desktop / bot）、
+    app（内置浏览器，例如 微信；写 any 表示「任何内置浏览器」，none 表示「普通浏览器」）、os、min_seconds（停留至少几秒）。"""
+    extra = extra or {}
     where, args = [], []
     if people is not None:
         where.append(people[0]); args += list(people[1])
@@ -288,8 +318,42 @@ def _filters(role: str, class_name: str, q: str, since, until, table: str, peopl
         where.append("class_name=?"); args.append(class_name)
     if q:
         like = "%" + q.strip() + "%"
-        where.append("(student_no LIKE ? OR name LIKE ? OR ip LIKE ? OR user_agent LIKE ? OR device_model LIKE ?)")
-        args += [like] * 5
+        if table == "page_views":
+            where.append("(student_no LIKE ? OR name LIKE ? OR ip LIKE ? OR user_agent LIKE ? OR device_model LIKE ? OR title LIKE ? OR bank_title LIKE ?)")
+            args += [like] * 7
+        else:
+            where.append("(student_no LIKE ? OR name LIKE ? OR ip LIKE ? OR user_agent LIKE ? OR device_model LIKE ?)")
+            args += [like] * 5
+    if extra.get("device") in ("mobile", "tablet", "desktop", "bot"):
+        where.append("device_type=?"); args.append(extra["device"])
+    if extra.get("os"):
+        where.append("os=?"); args.append(str(extra["os"])[:40])
+    app = str(extra.get("app") or "")
+    if app == "any":
+        where.append("in_app<>''")
+    elif app == "none":
+        where.append("in_app=''")
+    elif app:                                     # 库里存的是「WeChat 8.0.44」这样带版本号的：按名字开头匹配
+        where.append("(in_app=? OR in_app LIKE ?)"); args += [app[:40], app[:40] + " %"]
+    if table == "page_views":
+        page = str(extra.get("page") or "")[:60]
+        if page:
+            if page == "index.html":
+                where.append("(path LIKE '%/index.html' OR path LIKE '%/')")
+            else:
+                where.append("path LIKE ?"); args.append("%/" + page)
+        bank = str(extra.get("bank") or "").strip()[:60]
+        if bank:
+            if bank.isdigit():
+                where.append("bank_id=?"); args.append(int(bank))
+            else:
+                where.append("bank_title LIKE ?"); args.append("%" + bank + "%")
+        try:
+            min_seconds = int(extra.get("min_seconds") or 0)
+        except (TypeError, ValueError):
+            min_seconds = 0
+        if min_seconds > 0:
+            where.append("active_seconds>=?"); args.append(min_seconds)
     if since:
         where.append(ts + ">=?"); args.append(int(since))
     if until:
@@ -298,9 +362,9 @@ def _filters(role: str, class_name: str, q: str, since, until, table: str, peopl
 
 
 def sessions(db: Database, *, role: str = "", class_name: str = "", q: str = "", since=None, until=None,
-             limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None) -> dict:
+             limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None, extra: dict | None = None) -> dict:
     """一次访问 = 同一个浏览器标签页（sid）里同一个账号先后打开的页面。最近的在最前面。"""
-    cond, args = _filters(role, class_name, q, since, until, "page_views", people)
+    cond, args = _filters(role, class_name, q, since, until, "page_views", people, extra)
     group = "FROM page_views" + cond + " GROUP BY sid, COALESCE(user_id, 0)"
     total = db.one("SELECT COUNT(*) AS n FROM (SELECT 1 " + group + ")", args)["n"]
     keys = db.query("SELECT sid, COALESCE(user_id, 0) AS uid, MAX(started_at) AS last " + group +
@@ -319,8 +383,43 @@ def sessions(db: Database, *, role: str = "", class_name: str = "", q: str = "",
             "pages": len(rows), "first_at": first["started_at"], "last_at": max(r["last_seen_at"] for r in rows),
             "active_seconds": sum(r["active_seconds"] for r in rows),
             "first_path": first["path"],
+            "pages_seen": list(dict.fromkeys(page_file(r["path"]) for r in rows)),
+            "banks": list(dict.fromkeys(r["bank_title"] or ("#%s" % r["bank_id"]) for r in rows if r["bank_id"])),
         })
     return {"sessions": out, "total": total}
+
+
+def pageviews(db: Database, *, role: str = "", class_name: str = "", q: str = "", since=None, until=None,
+              limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None, extra: dict | None = None) -> dict:
+    """一次页面浏览一行（不按访问合并）：谁、什么时候、哪一页、用的哪个题库、停了多久。最近的在最前面。"""
+    cond, args = _filters(role, class_name, q, since, until, "page_views", people, extra)
+    total = db.one("SELECT COUNT(*) AS n FROM page_views" + cond, args)["n"]
+    rows = db.query("SELECT id, sid, user_id, role, student_no, name, class_name, ip, browser, browser_version, os, os_version, "
+                    "device_type, device_model, in_app, path, title, query, bank_id, bank_title, referrer, started_at, active_seconds "
+                    "FROM page_views" + cond + " ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?",
+                    (*args, max(1, min(limit, 500)), max(0, offset)))
+    return {"pageviews": [dict(r, page=page_file(r["path"])) for r in rows], "total": total}
+
+
+def options(db: Database, people: tuple[str, tuple] | None = None) -> dict:
+    """筛选下拉框的选项：只列这位老师看得到的记录里真有的页面、题库、系统、内置浏览器。"""
+    cond, args = _filters("", "", "", None, None, "page_views", people)
+    pages: dict[str, int] = {}
+    for r in db.query("SELECT path, COUNT(*) AS n FROM page_views" + cond + " GROUP BY path", args):
+        pages[page_file(r["path"])] = pages.get(page_file(r["path"]), 0) + r["n"]
+    gate = (cond + " AND " if cond else " WHERE ")
+    banks = [dict(r) for r in db.query(
+        "SELECT bank_id AS id, MAX(bank_title) AS title, COUNT(*) AS n FROM page_views" + gate + "bank_id IS NOT NULL "
+        "GROUP BY bank_id ORDER BY n DESC LIMIT 100", args)]
+    oses = [r["os"] for r in db.query("SELECT os, COUNT(*) AS n FROM page_views" + gate + "os<>'' GROUP BY os ORDER BY n DESC", args)]
+    apps: list[str] = []
+    for r in db.query("SELECT in_app, COUNT(*) AS n FROM page_views" + gate + "in_app<>'' GROUP BY in_app ORDER BY n DESC", args):
+        name = r["in_app"].split(" ")[0]                  # 去掉版本号，下拉框里只放名字
+        if name not in apps:
+            apps.append(name)
+    return {"pages": [{"page": k, "zh": PAGE_NAMES.get(k, (k, k))[0], "en": PAGE_NAMES.get(k, (k, k))[1], "n": v}
+                      for k, v in sorted(pages.items(), key=lambda kv: -kv[1])],
+            "banks": banks, "os": oses, "apps": apps}
 
 
 def session_pages(db: Database, sid: str, user_id: int | None, people: tuple[str, tuple] | None = None) -> list[dict]:
@@ -340,8 +439,9 @@ def session_pages(db: Database, sid: str, user_id: int | None, people: tuple[str
 
 
 def logins(db: Database, *, role: str = "", class_name: str = "", q: str = "", only_failed: bool = False, since=None,
-           until=None, limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None) -> dict:
-    cond, args = _filters(role, class_name, q, since, until, "login_events", people)
+           until=None, limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None,
+           extra: dict | None = None) -> dict:
+    cond, args = _filters(role, class_name, q, since, until, "login_events", people, extra)
     if only_failed:
         cond += (" AND " if cond else " WHERE ") + "success=0"
     total = db.one("SELECT COUNT(*) AS n FROM login_events" + cond, args)["n"]
@@ -351,9 +451,9 @@ def logins(db: Database, *, role: str = "", class_name: str = "", q: str = "", o
 
 
 def all_rows(db: Database, table: str, *, class_name: str = "", q: str = "", since=None, until=None,
-             people: tuple[str, tuple] | None = None) -> tuple[list[str], list[tuple]]:
-    """导出用：整张表的所有列（含转发头、客户端信息原文），按时间先后。"""
-    cond, args = _filters("", class_name, q, since, until, table, people)
+             people: tuple[str, tuple] | None = None, role: str = "", extra: dict | None = None) -> tuple[list[str], list[tuple]]:
+    """导出用：整张表的所有列（含转发头、客户端信息原文），按时间先后。筛选和页面上选的一致。"""
+    cond, args = _filters(role, class_name, q, since, until, table, people, extra)
     order = "ts, id" if table == "login_events" else "started_at, id"
     cur = db.query("SELECT * FROM " + table + cond + " ORDER BY " + order, args)
     cols = list(cur[0].keys()) if cur else [r["name"] for r in db.query("PRAGMA table_info(%s)" % table)]

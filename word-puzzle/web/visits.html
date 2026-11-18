@@ -31,10 +31,11 @@
 
   <div class="card">
     <h2 data-module-zh="访问记录" data-module-en="Visits">访问记录</h2>
-    <p class="sub" data-module-zh="谁、从哪个 IP、用什么设备和浏览器、什么时候来、看了哪些页面、每页停了多久，永久保留。「一次访问」= 同一个浏览器标签页里先后打开的页面；点一行展开，看每一页。停留时间只算页面在前台的秒数（切到别的标签页、锁屏不算）。IP 是服务器看到的来访地址，手机流量、学校出口、家里宽带下同一出口的人 IP 可能相同。" data-module-en="Who, from which IP, on what device and browser, when, which pages and how long on each, kept permanently. One “visit” = the pages opened one after another in the same browser tab; press a row to see every page. Time on page counts only the seconds the page was in the foreground (another tab or a locked screen does not count). The IP is the address the server saw; people behind the same mobile carrier, campus gateway or home router can share one.">谁、从哪个 IP、用什么设备和浏览器、什么时候来、看了哪些页面、每页停了多久，永久保留。「一次访问」= 同一个浏览器标签页里先后打开的页面；点一行展开，看每一页。停留时间只算页面在前台的秒数（切到别的标签页、锁屏不算）。IP 是服务器看到的来访地址，手机流量、学校出口、家里宽带下同一出口的人 IP 可能相同。</p>
+    <p class="sub" data-module-zh="谁、从哪个 IP、用什么设备和浏览器、什么时候来、看了哪些页面、每页停了多久，永久保留。「一次访问」= 同一个浏览器标签页里先后打开的页面；点一行展开，看每一页。停留时间只算页面在前台的秒数（切到别的标签页、锁屏不算）。IP 是服务器看到的来访地址，手机流量、学校出口、家里宽带下同一出口的人 IP 可能相同。「页面浏览」每打开一页一行，可按页面、题库、设备、从哪里打开（微信等）、系统、停留时间筛选；打开游戏和读音练习时用的题库会记下来（只有这项功能上线之后的记录才有）。" data-module-en="Who, from which IP, on what device and browser, when, which pages and how long on each, kept permanently. One “visit” = the pages opened one after another in the same browser tab; press a row to see every page. Time on page counts only the seconds the page was in the foreground (another tab or a locked screen does not count). The IP is the address the server saw; people behind the same mobile carrier, campus gateway or home router can share one. “Page views” lists every page opened and can be filtered by page, word bank, device, where it was opened (WeChat etc.), system and time on page; the word bank used in the game and pronunciation practice is recorded (only for visits after this feature went live).">谁、从哪个 IP、用什么设备和浏览器、什么时候来、看了哪些页面、每页停了多久，永久保留。「一次访问」= 同一个浏览器标签页里先后打开的页面；点一行展开，看每一页。停留时间只算页面在前台的秒数（切到别的标签页、锁屏不算）。IP 是服务器看到的来访地址，手机流量、学校出口、家里宽带下同一出口的人 IP 可能相同。</p>
 
     <div class="tabs" role="tablist">
       <button type="button" class="tab active" id="tabVisits" role="tab" aria-selected="true" data-module-zh="访问" data-module-en="Visits">访问</button>
+      <button type="button" class="tab" id="tabPages" role="tab" aria-selected="false" data-module-zh="页面浏览" data-module-en="Page views">页面浏览</button>
       <button type="button" class="tab" id="tabLogins" role="tab" aria-selected="false" data-module-zh="登录记录" data-module-en="Sign-ins">登录记录</button>
     </div>
 
@@ -42,11 +43,26 @@
       <div class="field"><label for="fWho" data-module-zh="对象" data-module-en="Who">对象</label>
         <select id="fWho"><option value="" data-module-zh="全部" data-module-en="Everyone">全部</option><option value="student" data-module-zh="学生" data-module-en="Students">学生</option><option value="admin" data-module-zh="老师" data-module-en="Teachers">老师</option><option value="anonymous" data-module-zh="未登录" data-module-en="Not signed in">未登录</option></select></div>
       <div class="field"><label for="fClass" data-module-zh="班级" data-module-en="Class">班级</label><input type="text" id="fClass" maxlength="60"></div>
-      <div class="field"><label for="fSearch" data-module-zh="搜索学号、姓名、IP、设备" data-module-en="Search number, name, IP, device">搜索学号、姓名、IP、设备</label><input type="text" id="fSearch" maxlength="60"></div>
+      <div class="field"><label for="fSearch" data-module-zh="搜索学号、姓名、IP、设备、页面标题、题库" data-module-en="Search number, name, IP, device, page title, word bank">搜索学号、姓名、IP、设备、页面标题、题库</label><input type="text" id="fSearch" maxlength="60"></div>
       <div class="field"><label for="fSince" data-module-zh="起始日期" data-module-en="From date">起始日期</label><input type="date" id="fSince"></div>
       <div class="field"><label for="fUntil" data-module-zh="截止日期" data-module-en="To date">截止日期</label><input type="date" id="fUntil"></div>
       <label class="check" id="failedBox" hidden><input type="checkbox" id="fFailed"> <span data-module-zh="只看失败的" data-module-en="Failed only">只看失败的</span></label>
       <a class="btn ghost" id="btnExport" href="#" data-module-zh="导出完整 CSV" data-module-en="Export full CSV">导出完整 CSV</a>
+    </div>
+    <div class="admin-filters" id="moreFilters">
+      <div class="field" data-for="visits pages"><label for="fPage" data-module-zh="页面" data-module-en="Page">页面</label><select id="fPage"></select></div>
+      <div class="field" data-for="visits pages"><label for="fBank" data-module-zh="题库（编号或名称里的字）" data-module-en="Word bank (number or part of the name)">题库（编号或名称里的字）</label><input type="text" id="fBank" maxlength="60" list="bankList"><datalist id="bankList"></datalist></div>
+      <div class="field"><label for="fDevice" data-module-zh="设备" data-module-en="Device">设备</label><select id="fDevice"></select></div>
+      <div class="field"><label for="fApp" data-module-zh="从哪里打开" data-module-en="Opened in">从哪里打开</label><select id="fApp"></select></div>
+      <div class="field"><label for="fOs" data-module-zh="系统" data-module-en="OS">系统</label><select id="fOs"></select></div>
+      <div class="field" data-for="visits pages"><label for="fStay" data-module-zh="停留至少（秒）" data-module-en="Stayed at least (seconds)">停留至少（秒）</label><input type="number" id="fStay" min="0" max="86400" inputmode="numeric"></div>
+    </div>
+    <div class="admin-filters" id="quickRange">
+      <span class="hint" data-module-zh="快速选日期：" data-module-en="Quick dates:">快速选日期：</span>
+      <button type="button" class="btn sm ghost" data-range="0" data-module-zh="今天" data-module-en="Today">今天</button>
+      <button type="button" class="btn sm ghost" data-range="6" data-module-zh="近 7 天" data-module-en="Last 7 days">近 7 天</button>
+      <button type="button" class="btn sm ghost" data-range="29" data-module-zh="近 30 天" data-module-en="Last 30 days">近 30 天</button>
+      <button type="button" class="btn sm ghost" id="btnClear" data-module-zh="清除全部筛选" data-module-en="Clear all filters">清除全部筛选</button>
     </div>
     <p class="hint" id="countHint" aria-live="polite"></p>
     <p class="hint warn" id="ipWarn" hidden></p>
@@ -55,7 +71,16 @@
       <thead><tr>
         <th class="caret-col"></th>
         <th data-module-zh="时间" data-module-en="Time">时间</th><th data-module-zh="班级" data-module-en="Class">班级</th><th data-module-zh="学号" data-module-en="No.">学号</th><th data-module-zh="姓名" data-module-en="Name">姓名</th>
-        <th>IP</th><th data-module-zh="设备" data-module-en="Device">设备</th><th data-module-zh="系统" data-module-en="OS">系统</th><th data-module-zh="浏览器" data-module-en="Browser">浏览器</th><th data-module-zh="页数" data-module-en="Pages">页数</th><th data-module-zh="停留" data-module-en="Time on pages">停留</th>
+        <th>IP</th><th data-module-zh="设备" data-module-en="Device">设备</th><th data-module-zh="系统" data-module-en="OS">系统</th><th data-module-zh="浏览器" data-module-en="Browser">浏览器</th><th data-module-zh="看过的页面" data-module-en="Pages seen">看过的页面</th><th data-module-zh="用到的题库" data-module-en="Word banks">用到的题库</th><th data-module-zh="页数" data-module-en="Pages">页数</th><th data-module-zh="停留" data-module-en="Time on pages">停留</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table></div>
+
+    <div class="scroll"><table class="tbl" id="pageTable" hidden>
+      <thead><tr>
+        <th data-module-zh="时间" data-module-en="Time">时间</th><th data-module-zh="班级" data-module-en="Class">班级</th><th data-module-zh="学号" data-module-en="No.">学号</th><th data-module-zh="姓名" data-module-en="Name">姓名</th>
+        <th data-module-zh="页面" data-module-en="Page">页面</th><th data-module-zh="题库" data-module-en="Word bank">题库</th><th data-module-zh="停留" data-module-en="Stay">停留</th>
+        <th data-module-zh="设备" data-module-en="Device">设备</th><th data-module-zh="系统" data-module-en="OS">系统</th><th data-module-zh="浏览器" data-module-en="Browser">浏览器</th><th>IP</th>
       </tr></thead>
       <tbody></tbody>
     </table></div>
@@ -73,11 +98,11 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=2fe864c4"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=de9facc8"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=54a2a0ae"></script>
 <script src="/word-puzzle/js/api.js?v=e44053c6"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=ec37383f"></script>
-<script src="/word-puzzle/js/tracker.js?v=ed007aaf"></script>
-<script src="/word-puzzle/js/page-visits.js?v=c3ff5224"></script>
+<script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
+<script src="/word-puzzle/js/page-visits.js?v=d93a142b"></script>
 <script src="/shared/module-header.js?v=0b00f0ec"></script>
 </body>
 </html>

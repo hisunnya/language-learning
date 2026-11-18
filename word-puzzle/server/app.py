@@ -110,6 +110,11 @@ def json_bytes(obj) -> bytes:
 
 # ---------------------------------------------------------------- Handler
 
+def _access_extra(query: dict) -> dict:
+    """访问记录的筛选条件（页面、题库、设备、内置浏览器、系统、最短停留）；具体含义见 accesslog._filters。"""
+    return {k: (query.get(k) or "").strip() for k in ("page", "bank", "device", "app", "os", "min_seconds")}
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "WordPuzzle/2.0"
     protocol_version = "HTTP/1.1"
@@ -995,13 +1000,18 @@ class Handler(BaseHTTPRequestHandler):
                     "Content-Disposition": 'attachment; filename="lexica-score-summary.csv"'})
                 return
 
-            if path == "/api/admin/visits" and method == "GET":
-                self.send_json(dict(ok=True, **accesslog.sessions(
+            if path in ("/api/admin/visits", "/api/admin/pageviews") and method == "GET":
+                fn = accesslog.sessions if path.endswith("/visits") else accesslog.pageviews
+                self.send_json(dict(ok=True, **fn(
                     self.db, role=query.get("role", ""), class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
-                    people=tenancy.people_where(scope, "user_id"),
+                    people=tenancy.people_where(scope, "user_id"), extra=_access_extra(query),
                     since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"),
                     limit=int_param(query.get("limit"), "limit", 100, 1, 500),
                     offset=int_param(query.get("offset"), "offset", 0, 0))))
+                return
+
+            if path == "/api/admin/visits/options" and method == "GET":
+                self.send_json({"ok": True, **accesslog.options(self.db, people=tenancy.people_where(scope, "user_id"))})
                 return
 
             if path == "/api/admin/visits/pages" and method == "GET":
@@ -1013,7 +1023,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/admin/logins" and method == "GET":
                 self.send_json(dict(ok=True, **accesslog.logins(
                     self.db, role=query.get("role", ""), class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
-                    people=tenancy.people_where(scope, "user_id"),
+                    people=tenancy.people_where(scope, "user_id"), extra=_access_extra(query),
                     only_failed=query.get("failed") == "1",
                     since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"),
                     limit=int_param(query.get("limit"), "limit", 100, 1, 500),
@@ -1151,6 +1161,7 @@ class Handler(BaseHTTPRequestHandler):
     def _access_csv(self, table: str, query: dict) -> bytes:
         """访问记录 / 登录记录的完整导出：所有列，时间换成 UTC+8 的可读时间。"""
         cols, rows = accesslog.all_rows(self.db, table, class_name=query.get("class_name", ""), q=query.get("q", "").strip(),
+                                        role=query.get("role", ""), extra=_access_extra(query),
                                         people=tenancy.people_where(self._scope(), "user_id"),
                                         since=int_param(query.get("since"), "since"), until=int_param(query.get("until"), "until"))
         stamps = {"ts", "started_at", "last_seen_at"}

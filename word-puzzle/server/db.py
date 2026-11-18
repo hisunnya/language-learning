@@ -372,6 +372,13 @@ class Database:
                 self.execute("ALTER TABLE %s ADD COLUMN deleted_at INTEGER NOT NULL DEFAULT 0" % table)
             if "deleted_by" not in cols:
                 self.execute("ALTER TABLE %s ADD COLUMN deleted_by INTEGER" % table)
+        # 访问记录里再多记几样：打开页面时的查询串、用的是哪个题库（编号 + 当时的标题）
+        pv = {row["name"] for row in self.query("PRAGMA table_info(page_views)")}
+        for column, ddl in (("query", "TEXT NOT NULL DEFAULT ''"), ("bank_id", "INTEGER"), ("bank_title", "TEXT NOT NULL DEFAULT ''")):
+            if column not in pv:
+                self.execute("ALTER TABLE page_views ADD COLUMN %s %s" % (column, ddl))
+        self.execute("CREATE INDEX IF NOT EXISTS ix_pv_bank ON page_views(bank_id, started_at)")
+        self.execute("CREATE INDEX IF NOT EXISTS ix_pv_path ON page_views(path, started_at)")
         if "teacher_group" not in {row["name"] for row in self.query("PRAGMA table_info(users)")}:
             # 教研组：同一组的老师之间导入同一个学号时自动共享（不用逐个批准）；空 = 不在任何组
             self.execute("ALTER TABLE users ADD COLUMN teacher_group TEXT NOT NULL DEFAULT ''")

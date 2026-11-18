@@ -21,7 +21,7 @@ function makePage(opts) {
       querySelector: () => ({ content: '/word-puzzle' }), title: '首页', referrer: 'https://x/', get visibilityState() { return visibility; },
       addEventListener: (n, f) => { docListeners[n] = f; },
     },
-    location: { pathname: '/word-puzzle/stats.html' },
+    location: { pathname: '/word-puzzle/stats.html', search: '?bank=7' },
     navigator: { language: 'zh-CN', languages: ['zh-CN', 'en'], platform: 'iPhone', hardwareConcurrency: 6, maxTouchPoints: 5, onLine: true, cookieEnabled: true,
       connection: { effectiveType: '4g', downlink: 10, rtt: 50 },
       sendBeacon: opts.noBeacon ? undefined : (url, blob) => { beacons.push({ url, body: JSON.parse(blob.text) }); return true; },
@@ -79,6 +79,7 @@ function makePage(opts) {
   p = makePage({ uad: true }); await Promise.resolve(); await Promise.resolve();
   const env = p.sent.filter((x) => x.body.event === 'env');
   check('取得到详细型号时补报一次 env', env.length === 1 && env[0].body.client.ua_model === 'Pixel 8' && env[0].body.vid === p.sent[0].body.vid);
+  check('view 里带页面地址的查询串（服务器据此记下用的是哪个题库）', p.sent[0].body.search === '?bank=7');
   check('view 里带 Client Hints 的品牌和平台', p.sent[0].body.client.ua_platform === 'Android' && /Chrome 120/.test(p.sent[0].body.client.ua_brands));
 
   p = makePage(); p.hide();
