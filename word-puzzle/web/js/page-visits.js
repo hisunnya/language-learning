@@ -84,6 +84,26 @@
     }).catch(function () { $('countHint').textContent = t('visits_fail'); });
   }
 
+  /* 长文字的单元格：默认窄，右下角可拖宽；被截断时鼠标指上去显示全文（悬浮窗自动换行），点进去可以像表格那样选中、移动光标 */
+  function clip(text) { return '<div class="clip" tabindex="0">' + esc(text) + '</div>'; }
+
+  var tip = null;
+  function showTip(el) {
+    if (el.scrollWidth <= el.clientWidth + 1) return;
+    hideTip();
+    tip = document.createElement('div');
+    tip.className = 'clip-tip';
+    tip.textContent = el.textContent;
+    document.body.appendChild(tip);
+    var r = el.getBoundingClientRect();
+    var left = Math.max(8, Math.min(r.left, window.innerWidth - tip.offsetWidth - 8));
+    var top = r.bottom + 6;
+    if (top + tip.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - tip.offsetHeight - 6);
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+  function hideTip() { if (tip) { tip.remove(); tip = null; } }
+
   function key(r) { return r.sid + '|' + (r.user_id || 0); }
 
   function pagesHtml(k) {
@@ -108,7 +128,7 @@
       return '<tr class="sum-row" tabindex="0" role="button" aria-expanded="' + isOpen + '" data-key="' + esc(k) + '" title="' + esc(t(isOpen ? 'visits_collapse' : 'visits_expand')) + '">' +
         '<td><span class="caret">▸</span></td><td>' + esc(stamp(r.first_at)) + '</td><td>' + esc(r.class_name) + '</td><td>' + esc(r.student_no) + '</td><td>' + nameCell(r) + '</td>' +
         '<td>' + esc(ipText(r)) + '</td><td>' + esc(deviceText(r)) + '</td><td>' + esc(osText(r)) + '</td><td>' + esc(browserText(r)) + '</td>' +
-        '<td>' + esc((r.pages_seen || []).map(pageLabel).join('、')) + '</td><td>' + esc((r.banks || []).join('、')) + '</td>' +
+        '<td>' + clip((r.pages_seen || []).map(pageLabel).join('、')) + '</td><td>' + clip((r.banks || []).join('、')) + '</td>' +
         '<td class="num">' + r.pages + '</td><td>' + esc(dur(r.active_seconds)) + '</td></tr>' +
         (isOpen ? '<tr class="detail-row"><td colspan="13">' + pagesHtml(k) + '</td></tr>' : '');
     }).join('');
@@ -237,11 +257,17 @@
     });
     var body = document.querySelector('#visitTable tbody');
     body.addEventListener('click', function (ev) {
-      if (ev.target.closest('.raw-row')) return;
+      if (ev.target.closest('.raw-row') || ev.target.closest('.clip')) return;   /* 点文字格是选字，不展开 */
       var row = ev.target.closest('.sum-row');
       if (row) toggle(row.getAttribute('data-key'));
     });
+    body.addEventListener('mouseover', function (ev) { var c = ev.target.closest('.clip'); if (c) showTip(c); });
+    body.addEventListener('mouseout', function (ev) { if (ev.target.closest('.clip')) hideTip(); });
+    body.addEventListener('focusin', function (ev) { var c = ev.target.closest('.clip'); if (c) showTip(c); });
+    body.addEventListener('focusout', hideTip);
+    window.addEventListener('scroll', hideTip, true);
     body.addEventListener('keydown', function (ev) {
+      if (ev.target.closest('.clip')) return;                /* 文字格里按空格 / 回车不触发展开 */
       if (ev.key !== 'Enter' && ev.key !== ' ') return;
       var row = ev.target.closest('.sum-row');
       if (row) { ev.preventDefault(); toggle(row.getAttribute('data-key')); }

@@ -194,3 +194,21 @@ class TestOptionsAndScope(FilterCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestLongCellsInVisitsTable(unittest.TestCase):
+    """访问记录里「看过的页面」「用到的题库」很长，不能把单元格撑宽：默认窄、可拖宽、悬浮显示全文。"""
+
+    def test_long_cells_are_clipped_resizable_and_show_a_wrapping_tip(self):
+        from pathlib import Path
+        web = Path(__file__).resolve().parent.parent / "web"
+        js = (web / "js" / "page-visits.js").read_text(encoding="utf-8")
+        css = (web / "css" / "auth.css").read_text(encoding="utf-8")
+        self.assertIn("clip((r.pages_seen", js)
+        self.assertIn("clip((r.banks", js)
+        self.assertIn("closest('.clip')) return", js, "点文字格不能展开行，否则没法选字")
+        self.assertIn("scrollWidth", js, "只有被截断时才显示悬浮窗")
+        self.assertRegex(css, r"\.sum-row \.clip \{[^}]*resize: horizontal[^}]*\}")
+        self.assertRegex(css, r"\.sum-row \.clip \{[^}]*text-overflow: ellipsis[^}]*\}")
+        self.assertRegex(css, r"\.sum-row \.clip \{[^}]*user-select: text[^}]*\}")
+        self.assertRegex(css, r"\.clip-tip \{[^}]*white-space: normal[^}]*overflow-wrap: anywhere")

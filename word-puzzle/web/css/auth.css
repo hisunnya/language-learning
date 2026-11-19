@@ -100,6 +100,12 @@ html.role-student .student-only { display: block; }
 .sum-row:hover td, .sum-row:focus td { background: var(--chip-bg); outline: none; }
 .sum-row .caret { display: inline-block; width: 1em; color: var(--ink3); transition: transform .12s; }
 .sum-row[aria-expanded="true"] .caret { transform: rotate(90deg); }
+.sum-row .clip { width: 15em; min-width: 5em; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  resize: horizontal; cursor: text; user-select: text; -webkit-user-select: text; padding-bottom: 1px; }
+.sum-row .clip:focus { outline: 2px solid var(--accent, #3b6ea5); outline-offset: 1px; }
+.clip-tip { position: fixed; z-index: 1000; max-width: min(480px, calc(100vw - 16px)); padding: 8px 10px; border-radius: 8px;
+  background: var(--heading, #222); color: var(--card, #fff); font-size: 13px; line-height: 1.5;
+  white-space: normal; overflow-wrap: anywhere; box-shadow: 0 6px 20px rgba(0,0,0,.25); pointer-events: none; }
 .caret-col { width: 26px; }
 .detail-row > td { padding: 0 0 10px 26px; background: var(--chip-bg); }
 .detail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
