@@ -32,7 +32,7 @@ WP_PUBLIC_URL="https://$DOMAIN" \
 WP_BACKUP_DIR="$BACKUP_DIR" \
   bash "$SRC_DIR/deploy/family/install.sh"
 
-say "安装公网 nginx 入口（80 / 443，只认 $DOMAIN）"
+say "安装公网 nginx 入口（80 / 443，只认 ${DOMAIN}）"
 WP_DOMAIN="$DOMAIN" bash "$CLOUD_DIR/render-nginx.sh"
 
 cat <<EOF2

@@ -30,7 +30,7 @@ install -d "$WEBROOT/.well-known/acme-challenge"
 echo ok > "$WEBROOT/.well-known/acme-challenge/lexica-probe"
 code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 8 -H "Host: $DOMAIN" "http://127.0.0.1/.well-known/acme-challenge/lexica-probe" || true)"
 rm -f "$WEBROOT/.well-known/acme-challenge/lexica-probe"
-[[ "$code" == "200" ]] || die "本机访问验证目录返回 $code，应为 200：看 nginx -t 和 $WEBROOT 的权限"
+[[ "$code" == "200" ]] || die "本机访问验证目录返回 ${code}，应为 200：看 nginx -t 和 $WEBROOT 的权限"
 
 say "申请证书"
 args=(certonly --webroot -w "$WEBROOT" -d "$DOMAIN" --agree-tos --non-interactive)

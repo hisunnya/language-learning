@@ -422,6 +422,12 @@ backup and watchdog, and adds the public nginx entrance (`render-nginx.sh`); `ha
 installs fail2ban; `enable-tls.sh` issues the Let's Encrypt certificate once the domain is filed (备案) and resolves
 to the server. The site content of the public entrance is generated from the family nginx config, so the two never
 drift apart. The home edition (LAN, no login) is retired; the Funnel setup of the home container is left as it is.
+`migrate-data.sh` swaps a consistent database backup into the cloud (check by default, `--apply` to do it: snapshot of
+the old database first, stop, swap, health check, row counts must match, automatic rollback on any failure) and
+`sync-from-home.sh` drives it from the workstation (`rehearse` leaves the home service running, `cutover --yes` stops it
+first and restarts it if the cutover fails). The database is replaced as a whole: accounts created on the cloud before the
+cutover are discarded, the home accounts come over. Live databases are only opened by the service account, never by root
+(a root-owned `-shm` next to a WAL database stops the service from opening it).
 
 - The domain and server address are private values (6): `AGENTS.local.md`, never a tracked file.
 - Before there is a certificate the site is reachable only from the server itself (SSH tunnel): login cookies are

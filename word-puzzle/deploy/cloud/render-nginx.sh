@@ -27,7 +27,7 @@ die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
 install -d "$WEBROOT" "$CONF_DIR"
 
-# 转给后端的头：直接面对公网，客户端地址就是 nginx 看到的 $remote_addr，不信任客户端自己带的任何转发头。
+# 转给后端的头：直接面对公网，客户端地址就是 nginx 看到的 ${remote_addr}，不信任客户端自己带的任何转发头。
 # （后端取 X-Wp-Edge-Xff 里最后一个地址当访客 IP，所以这里只放 nginx 亲眼看到的地址。）
 sed -e 's|^proxy_set_header X-Wp-Edge-Xff .*|proxy_set_header X-Wp-Edge-Xff $remote_addr;|' \
     -e 's|^proxy_set_header X-Wp-Edge-Real-Ip .*|proxy_set_header X-Wp-Edge-Real-Ip $remote_addr;|' \

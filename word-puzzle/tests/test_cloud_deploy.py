@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CLOUD = ROOT / "deploy" / "cloud"
 FAMILY = ROOT / "deploy" / "family"
-SCRIPTS = ("install.sh", "render-nginx.sh", "enable-tls.sh", "harden.sh")
+SCRIPTS = ("install.sh", "render-nginx.sh", "enable-tls.sh", "harden.sh")  # 加 migrate-data.sh / sync-from-home.sh 另见各自的测试
 DOMAIN = "lexica.example.test"
 
 
@@ -29,6 +29,17 @@ class TestScriptsParse(unittest.TestCase):
             self.assertEqual(done.returncode, 0, "%s: %s" % (name, done.stderr))
             self.assertTrue(path.stat().st_mode & stat.S_IXUSR, "%s 不可执行" % name)
             self.assertIn("set -euo pipefail", path.read_text(encoding="utf-8"))
+
+
+class TestShellPitfalls(unittest.TestCase):
+    def test_a_variable_is_never_directly_followed_by_a_non_ascii_character(self):
+        """bash 把非 ASCII 字符的第一个字节当成变量名的一部分（macOS 自带的 bash、LANG=C 的环境），
+        set -u 之下 "$SNAP（" 会变成 "SNAP\\xef: unbound variable"。紧挨着中文的变量一律写成 ${NAME}。"""
+        pattern = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*(?=[^\x00-\x7f])")
+        for name in SCRIPTS + ("migrate-data.sh", "sync-from-home.sh"):
+            bad = [m.group(0) for line in read(name).splitlines() if not line.lstrip().startswith("#")
+                   for m in pattern.finditer(line)]
+            self.assertEqual(bad, [], "%s: 变量后面紧跟中文，要写成 ${NAME}" % name)
 
 
 class TestInstall(unittest.TestCase):
@@ -240,7 +251,8 @@ class TestGuide(unittest.TestCase):
 
     def test_the_guide_covers_the_steps_and_the_rules_around_them(self):
         for needle in ("install.sh", "harden.sh", "enable-tls.sh", "ssh -L 8081:127.0.0.1:8081",
-                       "备案", "流量穿透", "快照", "WP_ACME_STAGING"):
+                       "备案", "流量穿透", "快照", "WP_ACME_STAGING",
+                       "migrate-data.sh", "sync-from-home.sh", "rehearse", "cutover --yes", "自动把快照放回去"):
             self.assertIn(needle, self.TEXT)
 
 
