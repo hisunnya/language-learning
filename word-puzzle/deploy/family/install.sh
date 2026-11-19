@@ -211,7 +211,9 @@ chmod 0755 /usr/local/sbin/wp-family-admin
 say "记录对外网址，并和 Tailscale 里的比对"
 printf '%s\n' "$PUBLIC_URL" > "$DATA_DIR/public-url"
 chown "$RUN_USER:$RUN_USER" "$DATA_DIR/public-url"
-if command -v tailscale >/dev/null 2>&1; then
+if [[ "${WP_CLOUD:-}" == "1" ]]; then
+  echo "    云服务器（deploy/cloud/install.sh 调用）：没有 Tailscale Funnel，对外网址由 nginx + 域名提供，跳过比对"
+elif command -v tailscale >/dev/null 2>&1; then
   bash "$INSTALL_DIR/deploy/family/check-url.sh" "$PUBLIC_URL" \
     || warn "对外网址和 Tailscale 里的不一致（见上），请先弄清楚再把网址发给学生"
 else
@@ -240,7 +242,7 @@ cat <<EOF2
 
   本机入口 ： http://127.0.0.1:$NGINX_PORT/word-puzzle/
 $( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/word-puzzle/   （家庭版：不登录能做题，管理要登录）" )
-  对外地址 ： $PUBLIC_URL/word-puzzle/   （要先开 Tailscale Funnel，见 部署说明.md）
+$( if [[ "${WP_CLOUD:-}" == "1" ]]; then echo "  对外地址 ： $PUBLIC_URL/word-puzzle/   （由 deploy/cloud/ 的 nginx 提供，见 deploy/cloud/部署说明.md）"; else echo "  对外地址 ： $PUBLIC_URL/word-puzzle/   （要先开 Tailscale Funnel，见 部署说明.md）"; fi )
   数据库   ： $DATA_DIR/app.db
   服务     ： systemctl status $SITE_NAME
 
@@ -248,7 +250,6 @@ $( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/w
   1) 创建管理员：  sudo wp-family-admin create-admin 你的工号 --name 你的名字   （超级管理员；老师在网页「老师与分配」里加）
   2) 导入名单：    sudo wp-family-admin import /tmp/名单.xlsx --out /tmp/初始密码.csv
      （或者登录后在「账号管理」页面上传名单）
-  3) 开 Funnel：   tailscale funnel --bg $NGINX_PORT      （确认过再开，见 部署说明.md 的检查清单）
-  4) 网址会不会变： bash $INSTALL_DIR/deploy/family/check-url.sh   （重建容器、改名之后都要跑）
+$( if [[ "${WP_CLOUD:-}" == "1" ]]; then echo "  3) （云服务器）不需要 Funnel，也不用 check-url.sh；接着看 deploy/cloud/部署说明.md"; else printf '%s\n' "  3) 开 Funnel：   tailscale funnel --bg $NGINX_PORT      （确认过再开，见 部署说明.md 的检查清单）" "  4) 网址会不会变： bash $INSTALL_DIR/deploy/family/check-url.sh   （重建容器、改名之后都要跑）"; fi )
 
 EOF2

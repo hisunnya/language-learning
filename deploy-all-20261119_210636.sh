@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261119_094812.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261119_210636.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -31,6 +31,11 @@ command -v curl >/dev/null 2>&1 || die "缺少 curl，请先安装 curl"
 
 for path in \
   word-puzzle/deploy/install.sh \
+  word-puzzle/deploy/family/install.sh \
+  word-puzzle/deploy/cloud/install.sh \
+  word-puzzle/deploy/cloud/render-nginx.sh \
+  word-puzzle/deploy/cloud/enable-tls.sh \
+  word-puzzle/deploy/cloud/harden.sh \
   word-puzzle/web/img/icon.svg \
   word-puzzle/web/js/release-presets.js \
   word-puzzle/web/js/i18n.js \

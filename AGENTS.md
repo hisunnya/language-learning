@@ -408,6 +408,29 @@ Tailscale. Install it in its own container or VM, not on the PVE host
 Container: unprivileged LXC, hostname `lexica`, static address on `vmbr0` (the concrete
 id and addresses are in `AGENTS.local.md`; pick a free id with `qm list; pct list`).
 
+### 5.3 Environments: workstation, development VM, home test, cloud production
+
+| Environment | Where | Used for |
+|---|---|---|
+| Workstation + development VM (6.2.1) | macOS, Ubuntu arm64 | unit tests, rehearsing the installers |
+| **Test** | the home PVE (6.2) | staging: the same code and the same installer, with a daily copy of the production data |
+| **Production** | one Debian 13 server of a cloud provider in mainland China (Beijing), see 6.4 | the real student edition: backend, database and backups on one machine, nginx in front on 80 / 443 |
+
+`word-puzzle/deploy/cloud/` installs the production server (`部署说明.md` there is the runbook):
+`install.sh` reuses `deploy/family/install.sh` (with `WP_CLOUD=1`) for the backend, database, systemd units,
+backup and watchdog, and adds the public nginx entrance (`render-nginx.sh`); `harden.sh` limits SSH to keys and
+installs fail2ban; `enable-tls.sh` issues the Let's Encrypt certificate once the domain is filed (备案) and resolves
+to the server. The site content of the public entrance is generated from the family nginx config, so the two never
+drift apart. The home edition (LAN, no login) is retired; the Funnel setup of the home container is left as it is.
+
+- The domain and server address are private values (6): `AGENTS.local.md`, never a tracked file.
+- Before there is a certificate the site is reachable only from the server itself (SSH tunnel): login cookies are
+  `Secure`, and clear text over the public internet is not acceptable. Serving the public before the filing is
+  approved is not done.
+- Never run frp, proxies, VPNs or reverse tunnels on the cloud server (the provider forbids traffic penetration and
+  illegal proxying and shuts such instances down), and never put the database back on a home machine.
+- Code is pushed to the server from the workstation (`scp` of a tarball), not pulled from GitHub there (6.4).
+
 **Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
 previous one with `git mv` to the new timestamp (never keep two side by side),
 keep its file checks, smoke checks and printed URLs in step with the code — a
@@ -477,6 +500,23 @@ An Ubuntu 26.04 arm64 VM used as the test target for the deploy scripts. It is
 reachable over SSH with passwordless `sudo`, so `sudo bash deploy-all-<timestamp>.sh`
 (with its own `deploy.local.env`) runs there for real. Never grant passwordless
 `sudo` on the production host.
+
+### 6.4 The cloud production server (mainland China)
+
+Unlike the home network (6.1), a server in a mainland data centre does **not** reach everything directly:
+
+- **GitHub is slow and unreliable** (a single request took about 8 s when measured): push code from the workstation
+  or the development VM, never `git pull` on the server.
+- `apt` uses the provider's mirror and PyPI answers in about a second, so installing dependencies works as usual.
+- **Edge TTS works from there** (measured: `en-US-AriaNeural`, about 2–3 s for the first synthesis of a word, about 13 KB
+  per clip, then served from the cache). Edge Neural TTS stays mandatory (7); espeak-ng remains the fallback only.
+- The instance is a lightweight-server plan whose bandwidth peak is a ceiling, not a promise. Traffic is not limited.
+- A website for the public on a mainland server needs the ICP filing; until it is approved the provider blocks the
+  domain on 80 / 443, so the certificate cannot be issued yet (`enable-tls.sh` explains this when it fails).
+- SSH: key only (`harden.sh`), the provider firewall allows 22 / 80 / 443 and nothing else.
+- Backups: the daily database backup lands in a directory on the same machine, so it protects against mistakes, not
+  against losing the machine. The provider snapshot and the daily pull to the test environment (started from home,
+  read-only, because the home broadband is behind NAT) cover that.
 
 ### 6.3 Where the work happens
 
