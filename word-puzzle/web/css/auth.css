@@ -100,9 +100,6 @@ html.role-student .student-only { display: block; }
 .sum-row:hover td, .sum-row:focus td { background: var(--chip-bg); outline: none; }
 .sum-row .caret { display: inline-block; width: 1em; color: var(--ink3); transition: transform .12s; }
 .sum-row[aria-expanded="true"] .caret { transform: rotate(90deg); }
-.sum-row .clip { width: 15em; min-width: 5em; max-width: 90vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  resize: horizontal; cursor: text; user-select: text; -webkit-user-select: text; padding-bottom: 1px; }
-.sum-row .clip:focus { outline: 2px solid var(--accent, #3b6ea5); outline-offset: 1px; }
 .clip-tip { position: fixed; z-index: 1000; max-width: min(480px, calc(100vw - 16px)); padding: 8px 10px; border-radius: 8px;
   background: var(--heading, #222); color: var(--card, #fff); font-size: 13px; line-height: 1.5;
   white-space: normal; overflow-wrap: anywhere; box-shadow: 0 6px 20px rgba(0,0,0,.25); pointer-events: none; }
@@ -167,3 +164,24 @@ html.role-student .student-only { display: block; }
 .pick-row:first-child { border-top: 0; }
 .pick-row small { color: var(--ink3); margin-left: auto; text-align: right; }
 .pick-row:hover { background: var(--chip-bg); }
+
+/* 访问记录：一行工具条 + Excel 式表头筛选 + 可拖列宽 */
+.visit-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 4px 0 10px; }
+.visit-toolbar .vt-search { flex: 1 1 320px; min-width: 200px; padding: 9px 14px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--field-bg); color: var(--field-ink); font: inherit; }
+.vt-date { display: inline-flex; align-items: center; gap: 6px; color: var(--ink3); font-size: 13px; }
+.vt-date input { padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--field-bg); color: var(--field-ink); font: inherit; }
+.vt-quick { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.vt-export { margin-left: auto; }
+table.grid { table-layout: fixed; width: auto; }
+table.grid th, table.grid td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.grid tbody td { user-select: text; -webkit-user-select: text; cursor: text; }
+table.grid tbody tr.sum-row td:nth-child(-n+2) { cursor: pointer; }
+table.grid .detail-row > td { white-space: normal; overflow: visible; cursor: default; }
+table.grid thead th { position: relative; }
+table.grid thead tr.filter-row th { padding: 3px 4px 7px; background: transparent; font-weight: 400; overflow: visible; }
+table.grid .filter-row input, table.grid .filter-row select { width: 100%; min-width: 0; box-sizing: border-box; padding: 4px 6px; font: inherit; font-size: 12px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--field-bg); color: var(--field-ink); }
+table.grid .filter-row select { background-image: none; padding-right: 4px; }
+.col-grip { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 2; touch-action: none; }
+.col-grip::after { content: ""; position: absolute; left: 3px; top: 25%; height: 50%; width: 1px; background: var(--line); }
+.col-grip:hover::after, .col-grip.on::after { width: 3px; left: 2px; background: var(--ink3); }

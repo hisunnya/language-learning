@@ -196,19 +196,43 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class TestLongCellsInVisitsTable(unittest.TestCase):
-    """访问记录里「看过的页面」「用到的题库」很长，不能把单元格撑宽：默认窄、可拖宽、悬浮显示全文。"""
+class TestVisitsTableLayout(unittest.TestCase):
+    """访问记录：长内容不能撑宽表格（固定列宽、可拖、悬浮全文），筛选合并进表头，顶部只留搜索 + 日期 + 导出。"""
 
-    def test_long_cells_are_clipped_resizable_and_show_a_wrapping_tip(self):
+    def setUp(self):
         from pathlib import Path
         web = Path(__file__).resolve().parent.parent / "web"
-        js = (web / "js" / "page-visits.js").read_text(encoding="utf-8")
-        css = (web / "css" / "auth.css").read_text(encoding="utf-8")
-        self.assertIn("clip((r.pages_seen", js)
-        self.assertIn("clip((r.banks", js)
-        self.assertIn("closest('.clip')) return", js, "点文字格不能展开行，否则没法选字")
-        self.assertIn("scrollWidth", js, "只有被截断时才显示悬浮窗")
-        self.assertRegex(css, r"\.sum-row \.clip \{[^}]*resize: horizontal[^}]*\}")
-        self.assertRegex(css, r"\.sum-row \.clip \{[^}]*text-overflow: ellipsis[^}]*\}")
-        self.assertRegex(css, r"\.sum-row \.clip \{[^}]*user-select: text[^}]*\}")
-        self.assertRegex(css, r"\.clip-tip \{[^}]*white-space: normal[^}]*overflow-wrap: anywhere")
+        self.js = (web / "js" / "page-visits.js").read_text(encoding="utf-8")
+        self.css = (web / "css" / "auth.css").read_text(encoding="utf-8")
+        self.html = (web / "visits.html").read_text(encoding="utf-8")
+
+    def test_tables_have_fixed_layout_resizable_columns(self):
+        self.assertEqual(self.html.count('class="tbl grid"'), 3)
+        self.assertRegex(self.css, r"table\.grid \{[^}]*table-layout: fixed")
+        self.assertRegex(self.css, r"table\.grid th, table\.grid td \{[^}]*text-overflow: ellipsis")
+        self.assertIn("col-grip", self.js)
+        self.assertIn("pointerdown", self.js)
+        self.assertIn("localStorage.setItem(WKEY", self.js)
+
+    def test_hover_tip_wraps_and_cells_are_selectable(self):
+        self.assertIn("scrollWidth", self.js, "只有被截断时才显示悬浮窗")
+        self.assertRegex(self.css, r"\.clip-tip \{[^}]*white-space: normal[^}]*overflow-wrap: anywhere")
+        self.assertRegex(self.css, r"table\.grid tbody td \{[^}]*user-select: text")
+        self.assertIn("td.cellIndex > 1", self.js, "点其他格子是选字，不展开")
+
+    def test_filters_live_in_the_header_and_the_toolbar_is_small(self):
+        self.assertIn("filter-row", self.js)
+        for field in ("class_name", "who", "page", "bank", "device", "os", "app", "stay", "failed"):
+            self.assertIn("'" + field + "'", self.js, field)
+        for needle in ('id="fSearch"', 'id="fSince"', 'id="fUntil"', 'id="btnExport"'):
+            self.assertIn(needle, self.html)
+        for gone in ('id="fWho"', 'id="fClass"', 'id="fBank"', 'id="fOs"', 'id="moreFilters"'):
+            self.assertNotIn(gone, self.html)
+
+    def test_brand_subtitle(self):
+        from pathlib import Path
+        for page in (Path(__file__).resolve().parent.parent / "web").glob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            self.assertNotIn("英语词汇练习", text, page.name)
+            if "portal-brand-copy" in text:
+                self.assertIn(">词汇练习</small>", text, page.name)
