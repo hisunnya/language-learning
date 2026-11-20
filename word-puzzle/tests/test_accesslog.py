@@ -428,10 +428,11 @@ class TestWiring(unittest.TestCase):
         self.assertNotIn("/api/track", offline.ADAPTER_FILE.read_text(encoding="utf-8"))
         self.assertNotIn("tracker.js", (ROOT / "server" / "offline.py").read_text(encoding="utf-8"))
 
-    def test_the_login_page_tells_people_what_is_recorded(self):
+    def test_the_login_page_has_no_recording_notice(self):
+        """负责人决定：登录页不放记录说明（2026-11-20）。记录本身照旧。"""
         html = (WEB / "login.html").read_text(encoding="utf-8")
-        self.assertIn("IP 地址", html)
-        self.assertIn("IP address", html)
+        self.assertNotIn("IP 地址", html)
+        self.assertNotIn("IP address", html)
 
     def test_service_runs_in_beijing_time_and_nginx_passes_the_edge_headers(self):
         self.assertIn("Environment=TZ=Asia/Shanghai", (FAMILY / "systemd" / "word-puzzle-family.service").read_text(encoding="utf-8"))

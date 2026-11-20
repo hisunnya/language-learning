@@ -9,7 +9,7 @@
 <link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
-<link rel="stylesheet" href="/word-puzzle/css/app.css?v=4601c7ec">
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=56f3c20c">
 <link rel="stylesheet" href="/word-puzzle/css/auth.css?v=9c566b76">
 <link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
 </head>
@@ -26,12 +26,11 @@
   </header>
 
   <div class="card auth-card">
-    <h2 data-module-zh="登录" data-module-en="Sign in">登录</h2>
-    <p class="sub" data-module-zh="用学号登录。第一次登录用老师发的初始密码，登录后要先改成自己的密码。" data-module-en="Sign in with your student number. The first time, use the initial password from your teacher; you will be asked to choose your own.">用学号登录。第一次登录用老师发的初始密码，登录后要先改成自己的密码。</p>
+    <h2 data-module-zh="请登录" data-module-en="Please sign in">请登录</h2>
     <p class="hint" id="guestHint" hidden data-module-zh="这是家庭版入口：不登录也能做题；管理题库、标签、账号、访问记录时才需要教师登录。教师账号和学生版是同一套。" data-module-en="This is the home entrance: you can play without signing in; managing word banks, tags, accounts and visits needs a teacher sign-in. The teacher account is the same as on the student edition.">这是家庭版入口：不登录也能做题；管理题库、标签、账号、访问记录时才需要教师登录。教师账号和学生版是同一套。</p>
     <form id="loginForm" autocomplete="on" novalidate>
       <div class="field">
-        <label for="studentNo" data-module-zh="学号" data-module-en="Student number">学号</label>
+        <label for="studentNo" data-module-zh="用户名" data-module-en="Username">用户名</label>
         <input type="text" id="studentNo" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="64" required>
       </div>
       <div class="field">
@@ -40,11 +39,10 @@
       </div>
       <div class="msg" id="loginMsg" role="alert"></div>
       <div class="actions">
-        <button class="btn lg gold" type="submit" id="btnLogin" data-module-zh="登录" data-module-en="Sign in">登录</button>
+        <button class="btn gold" type="submit" id="btnLogin" data-module-zh="登录" data-module-en="Sign in">登录</button>
       </div>
     </form>
-    <p class="hint" data-module-zh="忘记密码？请联系老师重置。连续输错 5 次会临时锁定 15 分钟。" data-module-en="Forgot your password? Ask your teacher to reset it. Five wrong tries in a row lock the account for 15 minutes.">忘记密码？请联系老师重置。连续输错 5 次会临时锁定 15 分钟。</p>
-    <p class="hint" data-module-zh="为了教学管理，系统会记录登录和使用情况：账号、IP 地址、设备和浏览器、访问了哪些页面、停留多久。" data-module-en="For classroom management the system records sign-ins and usage: account, IP address, device and browser, which pages were visited and for how long.">为了教学管理，系统会记录登录和使用情况：账号、IP 地址、设备和浏览器、访问了哪些页面、停留多久。</p>
+    <p class="hint" data-module-zh="忘记密码？请联系管理员重置。连续输错 5 次会临时锁定 15 分钟。" data-module-en="Forgot your password? Ask an administrator to reset it. Five wrong tries in a row lock the account for 15 minutes.">忘记密码？请联系管理员重置。连续输错 5 次会临时锁定 15 分钟。</p>
   </div>
 
 </div>
@@ -53,7 +51,7 @@
 <script src="/word-puzzle/js/api.js?v=e44053c6"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=ec37383f"></script>
 <script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
-<script src="/word-puzzle/js/page-login.js?v=59cc31fe"></script>
+<script src="/word-puzzle/js/page-login.js?v=b249b739"></script>
 <script src="/shared/module-header.js?v=0b00f0ec"></script>
 </body>
 </html>

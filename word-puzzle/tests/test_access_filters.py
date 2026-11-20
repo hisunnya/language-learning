@@ -236,3 +236,26 @@ class TestVisitsTableLayout(unittest.TestCase):
             self.assertNotIn("英语词汇练习", text, page.name)
             if "portal-brand-copy" in text:
                 self.assertIn(">词汇练习</small>", text, page.name)
+
+
+class TestLoginPageAndButtonSize(unittest.TestCase):
+    """登录页只留必要的字；模块内部的按钮是普通大小（加大的只是语林主页进入模块的按钮）。"""
+
+    def test_login_page_wording(self):
+        from pathlib import Path
+        web = Path(__file__).resolve().parent.parent / "web"
+        html = (web / "login.html").read_text(encoding="utf-8")
+        self.assertIn('>请登录</h2>', html)
+        self.assertIn('>用户名</label>', html)
+        self.assertIn("请联系管理员重置", html)
+        for gone in ("用学号登录", "为了教学管理", "联系老师重置"):
+            self.assertNotIn(gone, html)
+
+    def test_no_oversized_buttons_inside_the_module(self):
+        from pathlib import Path
+        web = Path(__file__).resolve().parent.parent / "web"
+        for page in web.glob("*.html"):
+            self.assertNotIn("btn lg", page.read_text(encoding="utf-8"), page.name)
+        css = (web / "css" / "app.css").read_text(encoding="utf-8")
+        self.assertNotIn(".btn.lg", css)
+        self.assertIn(".actions .btn { flex: 0 0 auto; }", css)

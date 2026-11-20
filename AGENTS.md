@@ -592,7 +592,7 @@ were requesting `/.env`, `/AGENTS.md`, `/CLAUDE.md`, `/config.js` (observed).
   permanent **access log** (`page_views`, `login_events`) with account, IP address,
   device, browser, pages visited and time on page. Nothing is deleted
   automatically and there is no "keep as little as possible" rule — more detail is
-  better. The login page tells users that this is recorded. The roster importer
+  better. The login page deliberately carries no recording notice (owner's decision, 2026-11-20). The roster importer
   still drops phone-number columns (they are not needed), and passwords are stored
   as scrypt hashes, never in the log. Initial passwords are shared with the
   students by the administrator and every account must change its password at the

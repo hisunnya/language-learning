@@ -154,10 +154,9 @@ select { appearance: none; -webkit-appearance: none;
 .btn.green { background: var(--green); box-shadow: 0 3px 0 #187f53; }
 .btn.danger { background: var(--red); box-shadow: 0 3px 0 #b93a3e; }
 .btn.sm { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
-.btn.lg { padding: 14px 26px; font-size: 16px; border-radius: 14px; }
 
 .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
-.actions .btn { flex: 1 1 200px; }
+.actions .btn { flex: 0 0 auto; }
 
 .pill {
   display: inline-block; padding: 3px 10px; border-radius: 99px;

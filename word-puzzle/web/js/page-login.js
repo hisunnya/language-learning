@@ -1,4 +1,4 @@
-/* page-login.js —— 学号 + 密码登录 */
+/* page-login.js —— 用户名 + 密码登录 */
 (function () {
   'use strict';
 
