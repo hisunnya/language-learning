@@ -436,3 +436,17 @@ class TestUrlStabilityGuide(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDeployAllUpdatesTheContainer(unittest.TestCase):
+    """deploy-all 要连学生版容器一起更新：宿主机的 install.sh 碰不到容器里的词境。"""
+
+    def test_script_pushes_the_repo_into_the_container_and_verifies(self):
+        script = next(ROOT.parent.glob("deploy-all-*.sh")).read_text(encoding="utf-8")
+        for needle in ("LEXICA_CTID", "LEXICA_PUBLIC_URL", "pct push", "family/install.sh", "sha256sum",
+                       "WP_TRUSTED_PROXIES", "word-puzzle hub/shared"):
+            self.assertIn(needle, script, needle)
+        self.assertLess(script.index("pct push"), script.index("部署词境后端"), "先更新容器")
+        env = (ROOT.parent / "deploy.local.env.example").read_text(encoding="utf-8")
+        self.assertIn("LEXICA_PUBLIC_URL", env)
+        self.assertNotRegex(script, r"\b10\.\d+\.\d+\.\d+\b", "私有地址不能写进脚本")
