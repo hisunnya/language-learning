@@ -355,8 +355,11 @@ class TestPages(unittest.TestCase):
         self.assertLess(index.index('id="bankList"'), index.index('id="recentCard"'), "最近玩过放在最下面")
         self.assertNotIn("练习英语词汇，听美式发音并完成中英配对", index)
         css = (self.WEB / "css" / "items.css").read_text(encoding="utf-8")
-        for needle in (".type-card.t-spell { --tc: var(--orange); }", ".type-card.t-order { --tc: var(--green); }", ".tc-go"):
+        for needle in (".type-card.t-spell { --tc: var(--orange); }", ".type-card.t-order { --tc: var(--green); }", ".tc-go",
+                       "order: var(--after, 99);", ".type-cards > .in-types"):
             self.assertIn(needle, css)
+        self.assertIn("(on ? ' <span class=\"tc-arrow\"", home, "向下的箭头只在选中的那张上出现")
+        self.assertIn("box.appendChild(list)", home, "题库列表放进卡片网格，手机上紧跟在选中的卡片下面")
 
     def test_the_notice_follows_the_palette(self):
         js = (ROOT.parent / "hub" / "shared" / "site-footer.js").read_text(encoding="utf-8")
@@ -402,3 +405,26 @@ class TestOfflineAndDeployment(unittest.TestCase):
             self.assertFalse(asr.available())
             (Path(tmp) / "models--x").mkdir()
             self.assertTrue(asr.available())
+
+
+class TestMatchScoresHalved(unittest.TestCase):
+    def test_old_matching_scores_are_halved_once_and_new_types_untouched(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = str(Path(tmp) / "old.db")
+            db = Database(path)
+            db.execute("PRAGMA user_version = 2")            # 假装是升级前的库
+            for score, kind in ((1000, "match"), (125, "match"), (0, "match"), (200, "order"), (105, "spell")):
+                db.insert_score({"score": score, "game_type": kind})
+            db.close()
+            db = Database(path)                               # 打开时升级
+            self.assertEqual([r["score"] for r in db.query("SELECT score FROM scores ORDER BY id")], [500, 63, 0, 200, 105])
+            self.assertEqual(db.one("PRAGMA user_version")[0], 3)
+            db.close()
+            db = Database(path)                               # 再打开不会再减一次
+            self.assertEqual([r["score"] for r in db.query("SELECT score FROM scores ORDER BY id")], [500, 63, 0, 200, 105])
+            db.close()
+
+    def test_new_matching_points_are_half(self):
+        core = (ROOT / "web" / "js" / "game-core.js").read_text(encoding="utf-8")
+        for needle in ("PAIR_SCORE = 50;", "COMBO_STEP = 10;", "MISS_SCORE = 10;", "TIME_BONUS = 5;"):
+            self.assertIn(needle, core)

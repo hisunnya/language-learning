@@ -66,7 +66,14 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 .ig-big { font-size: 34px; font-weight: 800; color: var(--heading); }
 
 /* 首页：先选游戏类型。每种玩法一个色块（颜色取自当前配色，换配色跟着变），右下角一个「进入」按钮 */
-.type-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.type-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+/* 选中玩法的题库列表：在网格里占满一整行；电脑上排在三张卡片后面，手机上（一列）紧跟在选中的那张后面 */
+.type-cards > .in-types { grid-column: 1 / -1; order: 99; margin-top: 2px; }
+.type-cards > .in-types[hidden] { display: none; }
+@media (max-width: 720px) {
+  .type-cards { grid-template-columns: 1fr; }
+  .type-cards > .in-types { order: var(--after, 99); }
+}
 .type-card { --tc: var(--blue); display: flex; flex-direction: column; gap: 4px; padding: 16px 16px 14px; border-radius: 14px; cursor: pointer;
   text-align: left; font: inherit; color: var(--ink); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, var(--line));
   border-left: 6px solid var(--tc); background: color-mix(in srgb, var(--tc) 9%, var(--card)); transition: transform .1s, box-shadow .15s; }
@@ -76,6 +83,8 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 .type-card b { font-size: 17px; color: var(--heading); }
 .type-card small { color: var(--ink2); line-height: 1.5; }
 .type-card .tc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.type-card .tc-arrow { display: inline-block; margin-left: 2px; animation: tc-bob 1.2s ease-in-out infinite; }
+@keyframes tc-bob { 50% { transform: translateY(2px); } }
 .type-card .tc-go { padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 13px; background: var(--tc); color: var(--on-primary); }
 .type-card.on { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 45%, transparent); }
 .type-card.empty { border-left-color: color-mix(in srgb, var(--tc) 45%, var(--line)); }

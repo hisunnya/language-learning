@@ -58,7 +58,7 @@ class TestMigrationFromTheSingleTeacherVersion(unittest.TestCase):
             self.make_old_db(path)
             db = Database(str(path))
             try:
-                self.assertEqual(db.one("PRAGMA user_version")[0], 2)
+                self.assertGreaterEqual(db.one("PRAGMA user_version")[0], 2)      # 之后还有更新的升级（v3 配对分值减半）
                 self.assertEqual(sorted(tuple(r) for r in db.query("SELECT user_id, tag, teacher_id FROM user_tags")),
                                  [(8, "一班", 7), (9, "二班", 7)])
                 self.assertEqual(sorted(tuple(r) for r in db.query("SELECT bank_id, tag, teacher_id FROM bank_tags")),

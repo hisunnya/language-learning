@@ -13,12 +13,13 @@
   var LEVEL_TIME = 60;        /* 每关基础时间（秒） */
   var LEVEL_BONUS_MAX = 20;   /* 过关结转到下一关的最多奖励秒数 */
   var LEVEL_LIMIT_MAX = LEVEL_TIME + LEVEL_BONUS_MAX;
-  var PAIR_SCORE = 100;       /* 每配对成功基础分 */
-  var COMBO_STEP = 20;        /* 连击每级加分 */
-  var COMBO_CAP = 5;          /* 连击加成最多 5 级（+100） */
+  /* 2026-11-21 起分值减半（原来 100 / 20 / 20 / 10）：和新题型（每题 10 分、每句最多 60 分）放在同一个积分榜上不至于差太多 */
+  var PAIR_SCORE = 50;       /* 每配对成功基础分 */
+  var COMBO_STEP = 10;        /* 连击每级加分 */
+  var COMBO_CAP = 5;          /* 连击加成最多 5 级（+50） */
   var MISS_TIME = 3;          /* 配错扣秒 */
-  var MISS_SCORE = 20;        /* 配错扣分 */
-  var TIME_BONUS = 10;        /* 剩余每秒折算分 */
+  var MISS_SCORE = 10;        /* 配错扣分 */
+  var TIME_BONUS = 5;        /* 剩余每秒折算分 */
 
   function Game(opts) {
     opts = opts || {};

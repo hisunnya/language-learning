@@ -227,7 +227,7 @@ function match(game, n) {
 check('重玩本关会收回这一关里拿到的分', () => {
   const { game } = newGame();
   match(game, 2);
-  eq(game.state.score, 100 + 120, '先配对两个词');
+  eq(game.state.score, 50 + 60, '先配对两个词（每对 50，第二对多 10 连击分）');
   game.replay();
   eq(game.state.score, 0, '重玩后这一关的分应清零');
   eq(game.state.matched, 0);

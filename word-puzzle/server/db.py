@@ -451,6 +451,11 @@ class Database:
                 self.execute("INSERT OR IGNORE INTO teacher_students(teacher_id, student_id, added_at) "
                              "SELECT ?, id, ? FROM users WHERE role='student'", (owner, int(time.time())))
             self.execute("PRAGMA user_version = 2")
+        # v3（2026-11-21）：中英配对的分值减半（每对 100 → 50，连击、扣分、时间分同比例），历史成绩也按比例减半，
+        # 和新的成绩、新题型放在同一个积分榜上标准一致。只做一次（user_version 记着），新题型的成绩不动。
+        if self.one("PRAGMA user_version")[0] < 3:
+            self.execute("UPDATE scores SET score = CAST((score + 1) / 2 AS INTEGER) WHERE game_type='match'")
+            self.execute("PRAGMA user_version = 3")
 
     def default_teacher_id(self) -> int:
         """第一位（编号最小的）没被删除的超级管理员；没有就是 0（家庭版、或者还没建管理员）。

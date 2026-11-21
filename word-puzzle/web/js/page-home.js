@@ -79,18 +79,33 @@
   }
   function renderTypes() {
     var box = document.getElementById('typeCards');
+    var list = document.getElementById('bankList');
     var types = availableTypes();
-    if (types.length <= 1) { box.hidden = true; chosen = types[0] || 'match'; return; }
+    if (types.length <= 1) {
+      box.hidden = true;
+      chosen = types[0] || 'match';
+      box.parentNode.insertBefore(list, box.nextSibling);     /* 只有一种玩法：题库列表回到原来的位置 */
+      list.style.order = '';
+      list.classList.remove('in-types');
+      list.hidden = false;
+      return;
+    }
     if (types.indexOf(chosen) < 0) chosen = '';
     box.hidden = false;
-    box.innerHTML = types.map(function (type) {
-      var n = countOf(type);
-      return '<button type="button" class="type-card t-' + type + (type === chosen ? ' on' : '') + (n ? '' : ' empty') + '" data-type="' + type +
-        '" aria-pressed="' + (type === chosen) + '">' +
+    /* 题库列表放进卡片的网格里：手机上卡片上下排，列表紧跟在选中的那张下面；电脑上三张并排，列表在这一排下面。
+       顺序用 CSS 的 order 控制（--after = 选中那张后面的位置，见 items.css） */
+    box.innerHTML = types.map(function (type, k) {
+      var n = countOf(type), on = type === chosen;
+      return '<button type="button" class="type-card t-' + type + (on ? ' on' : '') + (n ? '' : ' empty') + '" data-type="' + type +
+        '" aria-pressed="' + on + '" aria-controls="bankList" aria-expanded="' + on + '" style="order:' + (k * 2) + '">' +
         '<b>' + esc(t('type_' + type)) + '</b><small>' + esc(t('type_' + type + 'Desc')) + '</small>' +
         '<span class="tc-foot"><span class="pill gray">' + esc(n ? t('type_count', { n: n }) : t('type_soon')) + '</span>' +
-        '<span class="tc-go">' + esc(t('type_go')) + '</span></span></button>';
+        '<span class="tc-go">' + esc(t('type_go')) + (on ? ' <span class="tc-arrow" aria-hidden="true">↓</span>' : '') + '</span></span></button>';
     }).join('');
+    box.appendChild(list);
+    list.classList.add('in-types');
+    list.style.setProperty('--after', String(types.indexOf(chosen) * 2 + 1));
+    list.hidden = !chosen;
   }
 
   /* 每本书（分类）一个色块：带名字的书用主色标题条，「其他」用灰色标题条，一眼分得开 */
@@ -98,7 +113,7 @@
     var box = document.getElementById('bankList');
     var student = isStudentView();
     renderTypes();
-    if (!chosen) { box.innerHTML = '<div class="empty">' + esc(t('type_pick')) + '</div>'; return; }
+    if (!chosen) { box.innerHTML = ''; return; }          /* 还没选玩法：卡片本身就是入口，不另外提示 */
     var shown = banks.filter(function (b) { return typeOf(b) === chosen; });
     if (!shown.length) {
       var many = !document.getElementById('typeCards').hidden;
@@ -151,8 +166,9 @@
     document.getElementById('typeCards').addEventListener('click', function (ev) {
       var card = ev.target.closest('[data-type]');
       if (!card) return;
-      chosen = card.getAttribute('data-type');
-      history.replaceState(null, '', '#type=' + chosen);
+      var type = card.getAttribute('data-type');
+      chosen = chosen === type ? '' : type;                 /* 再点一次选中的那张 = 收起 */
+      history.replaceState(null, '', chosen ? '#type=' + chosen : location.pathname + location.search);
       renderBanks();
     });
     API.get('/api/meta').then(function (meta) {

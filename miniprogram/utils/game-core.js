@@ -10,12 +10,12 @@
 var LEVEL_TIME = 60;
 var LEVEL_BONUS_MAX = 20;
 var LEVEL_LIMIT_MAX = LEVEL_TIME + LEVEL_BONUS_MAX;
-var PAIR_SCORE = 100;
-var COMBO_STEP = 20;
+var PAIR_SCORE = 50;
+var COMBO_STEP = 10;
 var COMBO_CAP = 5;
 var MISS_TIME = 3;
-var MISS_SCORE = 20;
-var TIME_BONUS = 10;
+var MISS_SCORE = 10;
+var TIME_BONUS = 5;
 
 function Game(opts) {
   opts = opts || {};
