@@ -34,11 +34,11 @@
   function gameName(game, lang) { return (GAME[game] || GAME.all)[lang === 'en' ? 'en' : 'zh']; }
 
   function lang() { return global.WPI18N && global.WPI18N.lang() === 'en' ? 'en' : 'zh'; }
-  /* 徽章的说明文字（提示、读屏）：金奖 · 总分 · 连续 30 天榜首 */
+  /* 徽章的说明文字（提示、读屏）：金奖 · 总分 · 周榜累计 30 天第一 */
   function label(award) {
     var m = metal(award), l = lang();
-    return l === 'en' ? m.en.charAt(0) + m.en.slice(1).toLowerCase() + ' · ' + gameName(award.game, 'en') + ' · No. 1 for ' + award.days + ' days in a row'
-      : m.zh + ' · ' + gameName(award.game, 'zh') + ' · 连续 ' + award.days + ' 天榜首';
+    return l === 'en' ? m.en.charAt(0) + m.en.slice(1).toLowerCase() + ' · ' + gameName(award.game, 'en') + ' · No. 1 on the weekly board for ' + award.days + ' days'
+      : m.zh + ' · ' + gameName(award.game, 'zh') + ' · 周榜累计 ' + award.days + ' 天第一';
   }
 
   var uid = 0;
@@ -281,13 +281,13 @@
     }
 
     /* 正文：英文、中文 */
-    var label = award.board === 'overall' ? (award.board_label || '') : award.board_label;
-    var boardEn = award.board === 'overall' ? 'the overall ' + gameName(award.game, 'en') + ' leaderboard' + (label ? ' (' + label + ')' : '')
-      : 'the ' + gameName(award.game, 'en') + ' leaderboard of ' + label;
-    var en = 'for holding the No. 1 position on ' + boardEn + ' for ' + award.days + ' consecutive days, from ' +
-      award.start_day + ' to ' + award.end_day + '.';
-    var zh = '在' + (award.board === 'overall' ? (label ? '「' + label + '」' : '总榜') : '「' + label + '」') + gameName(award.game, 'zh') +
-      '积分榜上连续 ' + award.days + ' 天位居榜首（' + award.start_day + ' 至 ' + award.end_day + '），成绩卓越，特发此证，以资鼓励。';
+    var label = award.board_label || '';                         /* 总榜的标题，或者班级名 */
+    var gameEn = award.game === 'all' ? 'overall' : gameName(award.game, 'en');
+    var gameZh = award.game === 'all' ? '总分' : gameName(award.game, 'zh');
+    var en = 'for holding the No. 1 position on the weekly ' + gameEn + ' leaderboard' + (label ? ' (' + label + ')' : '') +
+      ' on ' + award.days + ' days in total, from ' + award.start_day + ' to ' + award.end_day + '.';
+    var zh = '在' + (label ? '「' + label + '」的' : '') + gameZh + '周榜上，累计 ' + award.days + ' 天位居榜首（' +
+      award.start_day + ' 至 ' + award.end_day + '），成绩卓越，特发此证，以资鼓励。';
     /* 宽度和行数都有上限：右下角是印章，正文不能伸进去（班级名很长时字号自动变小） */
     ctx.fillStyle = '#25304A';
     var size = 40, enLines, zhLines;
@@ -443,7 +443,7 @@
       var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset);
       return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
     }
-    [[30, 'gold', 'all'], [15, 'silver', 'spell'], [5, 'bronze', 'order']].forEach(function (x, i) {
+    [[30, 'gold', 'all'], [15, 'silver', 'spell'], [10, 'bronze', 'order']].forEach(function (x, i) {
       out.push({ id: 0, days: x[0], tier: x[1], game: x[2], board: 'sample', board_label: t('me_sampleClass'),
                  name: t('me_sampleName'), class_name: t('me_sampleClass'), teacher: teacher || '', start_day: day(x[0]), end_day: day(1),
                  created_at: Math.floor(Date.now() / 1000), serial: 'LX-SAMPLE-' + (i + 1), seen: true });

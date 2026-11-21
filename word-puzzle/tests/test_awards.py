@@ -1,4 +1,4 @@
-"""奖状：连续 5 / 15 / 30 天在积分榜（总分或某一种玩法）榜首。结算规则、并列、断了重来、只发一次、谁能看到。"""
+"""奖状：在周榜（总分或某一种玩法）上累计 10 / 15 / 30 天是榜首。周榜每周一重新排、天数累计不要求连续、并列都算、只发一次、谁能看到。"""
 from __future__ import annotations
 
 import datetime
@@ -16,7 +16,8 @@ from server.auth import AuthService                       # noqa: E402
 from server.db import Database                            # noqa: E402
 from tests.test_auth import Client, HttpCase              # noqa: E402
 
-DAY0 = datetime.date(2026, 10, 1)
+MON = datetime.date(2026, 10, 5)            # 一个周一：周榜从这天重新开始排
+assert MON.weekday() == 0
 
 
 def ts(day: datetime.date, hour: int = 12) -> str:
@@ -47,68 +48,103 @@ class AwardsCase(unittest.TestCase):
         sid = self.db.insert_score({"score": points, "game_type": game}, user_id=user["id"])
         self.db.execute("UPDATE scores SET created_at=? WHERE id=?", (ts(day), sid))
 
+    def daily(self, user, start, count, points, game="match"):
+        for i in range(count):
+            self.score(user, start + datetime.timedelta(days=i), points, game)
+
+    def settle_to(self, day):
+        return awards.catch_up(self.db, now=after(day))
+
     def mine(self, user):
         return [(a["game"], a["days"], a["start_day"], a["end_day"]) for a in awards.of_user(self.db, user["id"])]
 
 
-class TestStreaks(AwardsCase):
-    def test_five_days_on_top_earns_bronze_once(self):
-        self.score(self.a, DAY0, 100)
-        self.score(self.b, DAY0, 50)
-        made = awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=4)))
-        self.assertEqual(made, 2, "总分榜和中英配对榜各一张")
-        self.assertEqual(sorted(self.mine(self.a)), [("all", 5, "2026-10-01", "2026-10-05"), ("match", 5, "2026-10-01", "2026-10-05")])
+def d(offset: int) -> datetime.date:
+    return MON + datetime.timedelta(days=offset)
+
+
+class TestWeeklyCumulative(AwardsCase):
+    def test_ten_days_on_top_earn_bronze_once_and_nine_do_not(self):
+        self.daily(self.a, MON, 10, 100)
+        self.daily(self.b, MON, 10, 10)
+        self.assertEqual(self.settle_to(d(8)), 0, "第 9 天结束：还差一天")
+        self.assertEqual(self.mine(self.a), [])
+        self.assertEqual(self.settle_to(d(9)), 2, "第 10 天：总分榜和中英配对榜各一张")
+        self.assertEqual(sorted(self.mine(self.a)), [("all", 10, "2026-10-05", "2026-10-14"), ("match", 10, "2026-10-05", "2026-10-14")])
         self.assertEqual(self.mine(self.b), [])
-        self.assertEqual(awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=4))), 0, "同一天不会再结算一次")
+        self.assertEqual(self.settle_to(d(9)), 0, "同一天不会再结算一次")
         a = awards.of_user(self.db, self.a["id"])[0]
         self.assertEqual((a["tier"], a["name"], a["class_name"], a["teacher"]), ("bronze", "安安", "一班", "孙老师"))
         self.assertRegex(a["serial"], r"^LX-2026-\d{6}$")
 
-    def test_fifteen_and_thirty_days_earn_silver_and_gold(self):
-        self.score(self.a, DAY0, 10, "spell")
-        awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=29)))
-        self.assertEqual(sorted(d for g, d, _s, _e in self.mine(self.a) if g == "spell"), [5, 15, 30])
-        self.assertEqual({a["tier"] for a in awards.of_user(self.db, self.a["id"])}, {"bronze", "silver", "gold"})
+    def test_the_leader_is_decided_per_week_and_days_add_up_across_weeks(self):
+        self.score(self.a, d(0), 100)             # 第 1 周：周一周二 a 领先
+        self.score(self.b, d(2), 300)             # 周三 b 超过 a，领先到周日
+        self.score(self.a, d(7), 100)             # 第 2 周周一重新排：b 的周积分归零，a 领先一整周
+        self.score(self.a, d(14), 100)            # 第 3 周周一：a 的第 10 个榜首日
+        self.settle_to(d(13))
+        self.assertEqual(self.mine(self.a), [], "到第 2 周末 a 一共 2 + 7 = 9 天")
+        leaders = lambda day: [r["user_id"] for r in self.db.query("SELECT user_id FROM board_leaders WHERE day=? AND game='all'", (day.isoformat(),))]
+        self.assertEqual(leaders(d(7)), [self.a["id"]], "b 的累计积分更高，但周榜每周一重新开始")
+        self.assertEqual(leaders(d(3)), [self.b["id"]])
+        self.settle_to(d(14))
+        self.assertIn(("match", 10, "2026-10-05", "2026-10-19"), self.mine(self.a), "跨周、中间被超过也接着累计")
+        self.assertEqual(self.mine(self.b), [], "b 只有 5 天")
 
-    def test_each_game_has_its_own_board(self):
-        self.score(self.a, DAY0, 500, "match")
-        self.score(self.b, DAY0, 30, "spell")
-        awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=4)))
-        self.assertIn(("all", 5, "2026-10-01", "2026-10-05"), self.mine(self.a))
-        self.assertEqual(self.mine(self.b), [("spell", 5, "2026-10-01", "2026-10-05")], "总分不是第一，但单词大比拼是")
+    def test_silver_at_fifteen_and_gold_at_thirty(self):
+        self.daily(self.a, MON, 30, 10, "spell")
+        self.settle_to(d(29))
+        self.assertEqual(sorted((days, a["tier"]) for g, days, _s, _e in self.mine(self.a) if g == "spell"
+                                for a in [next(x for x in awards.of_user(self.db, self.a["id"]) if x["game"] == g and x["days"] == days)]),
+                         [(10, "bronze"), (15, "silver"), (30, "gold")])
+
+    def test_each_game_has_its_own_weekly_board(self):
+        self.daily(self.a, MON, 10, 500, "match")
+        self.daily(self.b, MON, 10, 30, "spell")
+        self.settle_to(d(9))
+        self.assertIn(("all", 10, "2026-10-05", "2026-10-14"), self.mine(self.a))
+        self.assertEqual(self.mine(self.b), [("spell", 10, "2026-10-05", "2026-10-14")], "总分不是第一，但单词大比拼是")
 
     def test_ties_count_for_everyone_tied(self):
-        self.score(self.a, DAY0, 40)
-        self.score(self.b, DAY0, 40)
-        awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=4)))
+        self.daily(self.a, MON, 10, 40)
+        self.daily(self.b, MON, 10, 40)
+        self.settle_to(d(9))
         self.assertEqual(len(self.mine(self.a)), 2)
         self.assertEqual(len(self.mine(self.b)), 2)
 
-    def test_a_broken_streak_starts_again(self):
-        self.score(self.a, DAY0, 100)
-        self.score(self.b, DAY0 + datetime.timedelta(days=3), 200)        # 第 4 天贝贝超过安安
-        self.score(self.a, DAY0 + datetime.timedelta(days=5), 300)        # 第 6 天安安又回到第一
-        awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=8)))
-        self.assertEqual(self.mine(self.a), [], "安安 10-01~03 第一（3 天），10-06 起又是第一，到 10-09 才 4 天")
-        awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=9)))
-        self.assertIn(("all", 5, "2026-10-06", "2026-10-10"), self.mine(self.a), "第二段满 5 天")
-        self.assertEqual(self.mine(self.b), [], "贝贝只第一了 2 天")
-
     def test_classes_are_separate_boards_and_zero_points_never_lead(self):
-        self.score(self.a, DAY0, 100)
-        self.score(self.c, DAY0, 1)
-        awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=4)))
+        self.daily(self.a, MON, 10, 100)
+        self.daily(self.c, MON, 10, 1)
+        self.settle_to(d(9))
         self.assertTrue(self.mine(self.c), "二班只有丙丙一个人有分，他是二班的第一")
         self.assertEqual(self.mine(self.b), [], "0 分不上榜")
 
     def test_with_an_overall_board_only_that_board_counts(self):
         leaderboard.set_config(self.db, "全校榜", ["一班", "二班"], self.teacher["id"])
-        self.score(self.a, DAY0, 100)
-        self.score(self.c, DAY0, 1)
-        awards.catch_up(self.db, now=after(DAY0 + datetime.timedelta(days=4)))
+        self.daily(self.a, MON, 10, 100)
+        self.daily(self.c, MON, 10, 1)
+        self.settle_to(d(9))
         self.assertEqual(self.mine(self.c), [])
         a = awards.of_user(self.db, self.a["id"])[0]
         self.assertEqual((a["board"], a["board_label"]), ("overall", "全校榜"))
+
+    def test_a_rules_change_recomputes_the_leaders_but_keeps_issued_certificates(self):
+        self.daily(self.a, MON, 10, 100)
+        self.settle_to(d(9))
+        before = len(awards.of_user(self.db, self.a["id"]))
+        self.db.execute("UPDATE app_settings SET value='old-rules' WHERE key='awards_rules'")
+        self.db.execute("INSERT INTO board_leaders(day, board, game, user_id, points) VALUES ('2025-01-01','x','all',999,1)")
+        awards.ensure(self.db)
+        self.assertEqual(self.db.one("SELECT COUNT(*) AS n FROM board_leaders")["n"], 0, "旧规则的榜首记录作废")
+        self.assertEqual(self.db.one("SELECT COUNT(*) AS n FROM award_days")["n"], 0)
+        self.assertEqual(self.settle_to(d(9)), 0, "重新补算不会重复发奖状")
+        self.assertEqual(len(awards.of_user(self.db, self.a["id"])), before)
+        awards.ensure(self.db)
+        self.assertGreater(self.db.one("SELECT COUNT(*) AS n FROM board_leaders")["n"], 0, "规则没变就不会再清")
+
+    def test_thresholds_and_tiers(self):
+        self.assertEqual(awards.THRESHOLDS, (10, 15, 30))
+        self.assertEqual([awards.tier_of(n) for n in (10, 14, 15, 29, 30)], ["bronze", "bronze", "silver", "silver", "gold"])
 
 
 class TestAwardsOverHttp(HttpCase):
@@ -119,10 +155,11 @@ class TestAwardsOverHttp(HttpCase):
         cls.s1, _ = cls.svc.create_user("S001", "安安", password="Ready2026x", must_change=False, class_name="一班")
         cls.s2, _ = cls.svc.create_user("S002", "贝贝", password="Ready2026x", must_change=False, class_name="一班")
         db = cls.app.Handler.db
-        day = datetime.date.today() - datetime.timedelta(days=7)
-        for user, points, game in ((cls.s1, 100, "match"), (cls.s2, 30, "spell")):
-            sid = db.insert_score({"score": points, "game_type": game}, user_id=user["id"])
-            db.execute("UPDATE scores SET created_at=? WHERE id=?", (ts(day), sid))
+        for back in range(11, 0, -1):             # 最近 11 天每天都玩：第 10 天满 10 个榜首日
+            day = datetime.date.today() - datetime.timedelta(days=back)
+            for user, points, game in ((cls.s1, 100, "match"), (cls.s2, 30, "spell")):
+                sid = db.insert_score({"score": points, "game_type": game}, user_id=user["id"])
+                db.execute("UPDATE scores SET created_at=? WHERE id=?", (ts(day), sid))
 
     def login(self, no, pw):
         c = Client(self.port)
@@ -133,7 +170,7 @@ class TestAwardsOverHttp(HttpCase):
         c = self.login("S001", "Ready2026x")
         status, body = c.json("GET", "/api/awards")
         self.assertEqual(status, 200, body)
-        self.assertEqual({(a["game"], a["days"]) for a in body["awards"]}, {("all", 5), ("match", 5)})
+        self.assertEqual({(a["game"], a["days"]) for a in body["awards"]}, {("all", 10), ("match", 10)})
         self.assertEqual(body["unseen"], 2)
         self.assertEqual(c.json("POST", "/api/awards/seen", {})[0], 200)
         self.assertEqual(c.json("GET", "/api/awards")[1]["unseen"], 0)
@@ -149,12 +186,12 @@ class TestAwardsOverHttp(HttpCase):
         c = self.login("S002", "Ready2026x")
         c.json("GET", "/api/awards")
         spell = c.json("GET", "/api/leaderboard?game=spell")[1]
-        self.assertEqual([(e["name"], e["points"]) for e in spell["entries"]], [("贝贝", 30)])
+        self.assertEqual([(e["name"], e["points"]) for e in spell["entries"]], [("贝贝", 330)])
         self.assertEqual(spell["game"], "spell")
         overall = c.json("GET", "/api/leaderboard")[1]
         first = overall["entries"][0]
         self.assertEqual(first["name"], "安安")
-        self.assertIn({"game": "all", "days": 5, "tier": "bronze"}, first["badges"])
+        self.assertIn({"game": "all", "days": 10, "tier": "bronze"}, first["badges"])
         self.assertNotIn("id", first, "不把账号编号发给页面")
 
 
@@ -191,6 +228,16 @@ class TestPages(unittest.TestCase):
         self.assertIn("if (info.public || !info.user) return;", js, "公开版没有账号，不显示荣誉")
         self.assertIn("/api/admin/awards", js)
         self.assertIn("WPAwards.samples(", js)
+
+    def test_texts_say_weekly_and_cumulative(self):
+        ui = (self.WEB / "js" / "awards-ui.js").read_text(encoding="utf-8")
+        self.assertIn("days in total", ui)
+        self.assertIn("周榜上，累计 ", ui)
+        self.assertNotIn("consecutive", ui)
+        for page in ("me.html", "stats.html"):
+            html = (self.WEB / page).read_text(encoding="utf-8")
+            self.assertIn("累计 10 天、15 天、30 天", html, page)
+            self.assertNotIn("连续 5", html, page)
 
 
 if __name__ == "__main__":

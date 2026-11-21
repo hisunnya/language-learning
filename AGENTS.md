@@ -365,15 +365,18 @@ word accuracy of the recognised text against the reference. The order score is c
 `tools/asr_worker.py`; no prompt with the answer, VAD on, offline at run time), one at a time in a background
 queue; without recognition a recording ≥ 1 s still earns the 30 points. Students replay their recordings under
 Scores, teachers those of their students. Recording needs https (the plain-http LAN entrance cannot record).
-**Certificates and badges** (2026-11-21, `server/awards.py`): No. 1 on a leaderboard for 5 / 15 / 30 consecutive
-days earns a bronze / silver / gold certificate and badge, separately for the overall board and each game
-(`/api/leaderboard?game=`). The board is the one the student sees (the overall board if configured, otherwise
-class + responsible teacher), ranked by accumulated points; a day is a Beijing calendar day, settled after it ends,
-lazily (`catch_up` when the leaderboard or awards are requested, back to 120 days); ties all count; each threshold
-once per streak. Students see them on `me.html` (the header name links there; password change is there too);
-certificates are drawn in the browser (`web/js/awards-ui.js`, canvas 2400×1697, bilingual, fixed metal colours) and
-saved as PNG / JPG; in WeChat the image is shown for long-press saving. Teachers can read a student's awards with
-`/api/awards?user_id=`.
+**Certificates and badges** (`server/awards.py`; rules changed 2026-11-21): being No. 1 on the **weekly** board on 10 / 15 / 30
+days **in total** (not necessarily consecutive, across weeks) earns a bronze / silver / gold certificate and badge,
+separately for the overall board and each game (`/api/leaderboard?game=`). A day's leader is whoever has the most points
+from that week's Monday 00:00 (Beijing time) to the end of that day, so the ranking restarts every Monday and early
+leaders do not dominate; ties all count; points must be > 0. The board is the one the student sees (the overall board if
+configured, otherwise class + responsible teacher). A day is a Beijing calendar day, settled after it ends, lazily
+(`catch_up` when the leaderboard or awards are requested, back to 120 days); each threshold once per board. The rule
+version is stored in `app_settings.awards_rules`: changing `RULES` discards the stored leader records and settling
+progress and recomputes them (issued certificates stay). Students see them on `stats.html` ("My honours") and
+`me.html` (the header name links there); certificates are drawn in the browser (`web/js/awards-ui.js`, canvas
+2400×1697, bilingual, fixed metal colours) and saved as PNG / JPG; in WeChat the image is shown for long-press saving.
+Teachers get a list of their students' certificates with downloads and a sample preview (`/api/admin/awards`).
 **Templates for teachers** (`server/templates.py`, `server/xlsx.py`): `/api/templates/{wordlist,roster}.{xlsx,csv}?lang=`
 (staff only) with exactly the headers the parsers recognise, sample rows and a notes sheet; linked from the
 word-list upload in the workbench and the roster import. Word-list uploads accept .xlsx; an empty unit cell means
