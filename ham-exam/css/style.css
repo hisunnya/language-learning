@@ -76,6 +76,9 @@ body{
 }
 .nav-btn:hover{background:var(--bg); color:var(--ink)}
 .nav-btn.active{background:var(--brand); color:var(--brand-ink)}
+/* 回网站主页：外观和切换按钮一样，但它是链接，不参与 .nav-btn 的切换 */
+.nav-home{color:var(--ink2); font-size:14px; font-weight:500; padding:8px 15px; border-radius:9px; text-decoration:none; transition:.15s}
+.nav-home:hover{background:var(--bg); color:var(--ink)}
 .topright{display:flex; align-items:center; gap:10px}
 .cls-switch{display:flex; background:var(--bg); border:1px solid var(--line); border-radius:9px; overflow:hidden}
 .cls-switch button{

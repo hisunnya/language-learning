@@ -460,3 +460,21 @@ class TestDeployment(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestModulesLinkBackToTheHomepage(unittest.TestCase):
+    """每个不用登录的模块页眉里都有「返回主页」，指向网站根路径；旧名字「语林」不再出现。"""
+
+    PAGES = ("chemistry/index.html", "physics/index.html", "topic-app/topic-app/index.html", "ham-exam/index.html")
+
+    def test_every_module_has_a_visible_home_link(self):
+        for rel in self.PAGES:
+            html = (HUB.parent / rel).read_text(encoding="utf-8")
+            self.assertRegex(html, r'<a [^>]*href="/" data-module-zh="返回主页" data-module-en="Website home">返回主页</a>', rel)
+            self.assertNotIn("语林", html, rel)
+            self.assertNotIn("Lingua", html, rel)
+
+    def test_the_ham_home_link_is_not_a_view_switch(self):
+        html = (HUB.parent / "ham-exam" / "index.html").read_text(encoding="utf-8")
+        link = re.search(r'<a class="([^"]*)" href="/" data-module-zh="返回主页"', html).group(1)
+        self.assertNotIn("nav-btn", link, "带 nav-btn 的元素会被 app.js 当成切换视图的按钮，点了不会跳转")
