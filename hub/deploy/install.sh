@@ -45,7 +45,7 @@ say "部署五个前端项目"
 [[ -f "$REPO_DIR/chemistry/index.html" ]] || die "缺少化学探秘页面"
 [[ -f "$REPO_DIR/physics/index.html" ]] || die "缺少物理探秘页面"
 install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT"
-cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$HUB_ROOT/"
+cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/privacy.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$HUB_ROOT/"
 cp -a "$REPO_DIR/hub/shared/." "$HUB_ROOT/shared/"
 # 每次部署给 css/js 链接打上新版本号，浏览器一定会重新取。
 sed -i "s/__ASSET_VERSION__/$(date +%Y%m%d%H%M%S)/g" "$HUB_ROOT/index.html"
@@ -80,14 +80,14 @@ if [[ -e "$LEXICA_ENABLED" || -L "$LEXICA_ENABLED" ]]; then
   rm -f "$LEXICA_ENABLED"
 fi
 
-# 后端在别处时：upstream 换成它的内网入口，接口路径带上它那边的 /word-puzzle 前缀
-UPSTREAM_SERVER="127.0.0.1:8765"
-UPSTREAM_PATH="/api/"
-if [[ -n "$LEXICA_UPSTREAM" ]]; then UPSTREAM_SERVER="$LEXICA_UPSTREAM"; UPSTREAM_PATH="/word-puzzle/api/"; fi
-sed -e "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" \
-    -e "s|server 127.0.0.1:8765;|server $UPSTREAM_SERVER;|" \
-    -e "s|proxy_pass http://lexica_api/api/;|proxy_pass http://lexica_api${UPSTREAM_PATH};|" \
-  "$REPO_DIR/hub/deploy/lingua-grove.conf" > "$TEMP_CONF"
+if [[ -n "$LEXICA_UPSTREAM" ]]; then
+  # 整站都在容器里：宿主机只做转发，局域网看到的和公网一模一样（hub/deploy/site-proxy.conf）
+  sed -e "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" -e "s|__UPSTREAM__|$LEXICA_UPSTREAM|g" \
+    "$REPO_DIR/hub/deploy/site-proxy.conf" > "$TEMP_CONF"
+else
+  # 没有容器（开发 VM）：本机布局，主页和模块是上面拷到 /var/www 的文件，词境后端在本机 127.0.0.1:8765
+  sed -e "s|__LINGUA_SERVER_NAME__|$SERVER_NAME|g" "$REPO_DIR/hub/deploy/lingua-grove.conf" > "$TEMP_CONF"
+fi
 chmod 0644 "$TEMP_CONF"
 mv "$TEMP_CONF" "$CONF_FILE"
 
@@ -104,7 +104,7 @@ cat <<EOF
 
 部署完成。
 
-  总主页：http://$SERVER_NAME/
+  词境主页：http://$SERVER_NAME/
   每日话题：http://$SERVER_NAME/topics/
   无线电执照：http://$SERVER_NAME/ham/
   化学探秘：http://$SERVER_NAME/chemistry/

@@ -420,13 +420,15 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("__LINGUA_SERVER_NAME__", INSTALL_SCRIPT)
         self.assertIn("nginx -t", INSTALL_SCRIPT)
 
-    def test_installer_can_point_the_word_puzzle_api_at_a_backend_elsewhere(self):
-        # install.sh 里的两条 sed 必须正好改到模板里的这两处（各一处），否则 LEXICA_UPSTREAM 就悄悄不生效
-        self.assertEqual(NGINX.count("server 127.0.0.1:8765;"), 1)
-        self.assertEqual(NGINX.count("proxy_pass http://lexica_api/api/;"), 1)
-        self.assertIn('-e "s|server 127.0.0.1:8765;|server $UPSTREAM_SERVER;|"', INSTALL_SCRIPT)
-        self.assertIn('-e "s|proxy_pass http://lexica_api/api/;|proxy_pass http://lexica_api${UPSTREAM_PATH};|"', INSTALL_SCRIPT)
-        self.assertIn('UPSTREAM_PATH="/word-puzzle/api/"', INSTALL_SCRIPT)
+    def test_with_a_container_the_host_forwards_the_whole_site(self):
+        """整站在容器里时，宿主机 80 端口原样转发，局域网和公网看到的一样（只维护一份）。"""
+        proxy = (HUB / "deploy" / "site-proxy.conf").read_text(encoding="utf-8")
+        self.assertIn("server __UPSTREAM__;", proxy)
+        self.assertIn("location / {", proxy)
+        self.assertIn("proxy_pass http://lexica_site;", proxy)
+        self.assertIn("include /etc/nginx/conf.d/tv-*.inc;", proxy, "电视直播列表照常可用")
+        self.assertIn('"$REPO_DIR/hub/deploy/site-proxy.conf"', INSTALL_SCRIPT)
+        self.assertIn('-e "s|__UPSTREAM__|$LEXICA_UPSTREAM|g"', INSTALL_SCRIPT)
         self.assertIn("LEXICA_UPSTREAM", INSTALL_SCRIPT)
 
     def test_deploy_all_reads_private_targets_from_the_untracked_env_file(self):

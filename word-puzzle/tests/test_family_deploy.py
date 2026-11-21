@@ -90,10 +90,12 @@ class TestNginx(unittest.TestCase):
         self.assertIn("limit_req zone=wp_family_login", block)
         self.assertIn("limit_req_status 429;", block)
 
-    def test_scanner_targets_are_refused_and_root_redirects(self):
+    def test_scanner_targets_are_refused_and_root_is_the_homepage(self):
         for needle in (r"location ~ /\.(?!well-known/) { return 404; }", "AGENTS|CLAUDE|README", "env)$",
-                       "location = / { return 302 /word-puzzle/; }"):
+                       "root @INSTALL_DIR@/site/hub;", "location ^~ /chemistry/", "location ^~ /physics/",
+                       "location ^~ /topics/", "location ^~ /ham/"):
             self.assertIn(needle, CONF)
+        self.assertNotIn("return 302 /word-puzzle/", CONF, "根路径是主页，不再跳到要登录的词境")
 
     def test_no_regex_location_is_shadowed_by_a_caret_tilde_prefix(self):
         """有 ^~ 前缀的 location 会让同一路径下的正则 location 永远不生效，这类写法等于没写。"""
@@ -128,6 +130,12 @@ class TestNginx(unittest.TestCase):
             (install / "web").mkdir(parents=True)
             (install / "shared").mkdir()
             (install / "web" / "app.css").write_text("body{}", encoding="utf-8")
+            (install / "site" / "hub").mkdir(parents=True)
+            (install / "site" / "hub" / "index.html").write_text("<title>词境</title>", encoding="utf-8")
+            (install / "site" / "hub" / "privacy.html").write_text("隐私说明", encoding="utf-8")
+            (install / "site" / "hub" / ".env").write_text("SECRET", encoding="utf-8")
+            (install / "site" / "chemistry").mkdir()
+            (install / "site" / "chemistry" / "index.html").write_text("化学", encoding="utf-8")
             inc = tmp / "proxy.inc"
             inc.write_text(PROXY, encoding="utf-8")
             conf = (CONF.replace("@INSTALL_DIR@", str(install)).replace("@PORT@", "1")
@@ -147,7 +155,21 @@ class TestNginx(unittest.TestCase):
                     def redirect_request(self, *args, **kwargs):
                         return None
                 opener = urllib.request.build_opener(NoFollow)
-                for path, status in (("/", 302), ("/word-puzzle", 301)):
+                for path, body in (("/", "词境"), ("/privacy.html", "隐私说明"), ("/chemistry/", "化学")):
+                    for _ in range(20):
+                        try:
+                            with opener.open(urllib.request.Request("http://127.0.0.1:%d%s" % (port, path)), timeout=2) as res:
+                                self.assertIn(body, res.read().decode("utf-8"), path)
+                            break
+                        except urllib.error.URLError:
+                            time.sleep(0.1)      # nginx 还没起来
+                    else:
+                        self.fail("nginx 没有响应")
+                for path in ("/.env", "/AGENTS.md", "/nothing-here"):
+                    with self.assertRaises(urllib.error.HTTPError, msg=path) as caught:
+                        opener.open(urllib.request.Request("http://127.0.0.1:%d%s" % (port, path)), timeout=2)
+                    self.assertEqual(caught.exception.code, 404, path)
+                for path, status in (("/word-puzzle", 301), ("/chemistry", 301)):
                     request = urllib.request.Request("http://127.0.0.1:%d%s" % (port, path),
                                                      headers={"Host": "lexica.example.ts.net"})
                     for _ in range(20):
@@ -156,7 +178,7 @@ class TestNginx(unittest.TestCase):
                             self.fail("应该是重定向")
                         except urllib.error.HTTPError as exc:
                             location = exc.headers.get("Location")
-                            self.assertEqual((exc.code, location), (status, "/word-puzzle/"), path)
+                            self.assertEqual((exc.code, location), (status, path + "/"), path)
                             break
                         except urllib.error.URLError:
                             time.sleep(0.1)      # nginx 还没起来
@@ -444,9 +466,42 @@ class TestDeployAllUpdatesTheContainer(unittest.TestCase):
     def test_script_pushes_the_repo_into_the_container_and_verifies(self):
         script = next(ROOT.parent.glob("deploy-all-*.sh")).read_text(encoding="utf-8")
         for needle in ("LEXICA_CTID", "LEXICA_PUBLIC_URL", "pct push", "family/install.sh", "sha256sum",
-                       "WP_TRUSTED_PROXIES", "word-puzzle hub/shared"):
+                       "WP_TRUSTED_PROXIES", "word-puzzle hub topic-app/topic-app ham-exam chemistry physics"):
             self.assertIn(needle, script, needle)
         self.assertLess(script.index("pct push"), script.index("部署词境后端"), "先更新容器")
         env = (ROOT.parent / "deploy.local.env.example").read_text(encoding="utf-8")
         self.assertIn("LEXICA_PUBLIC_URL", env)
         self.assertNotRegex(script, r"\b10\.\d+\.\d+\.\d+\b", "私有地址不能写进脚本")
+
+
+class TestSiteFooterAndPrivacy(unittest.TestCase):
+    """备案要求：每个对外页面最下面都有备案号；页脚里有隐私说明链接；隐私说明页本身符合页面规范（双语、配色、页眉）。"""
+
+    PAGES = (sorted((ROOT / "web").glob("*.html")) +
+             [ROOT.parent / p for p in ("hub/index.html", "hub/privacy.html", "chemistry/index.html", "physics/index.html",
+                                        "topic-app/topic-app/index.html", "ham-exam/index.html")])
+
+    def test_every_page_loads_the_footer(self):
+        for page in self.PAGES:
+            self.assertRegex(page.read_text(encoding="utf-8"), r'<script src="/shared/site-footer\.js\?v=[0-9a-f]{8}"></script>', page.name)
+
+    def test_footer_has_the_filing_number_its_link_and_the_privacy_link(self):
+        js = (ROOT.parent / "hub" / "shared" / "site-footer.js").read_text(encoding="utf-8")
+        self.assertRegex(js, r"icp: '[^']*ICP备[^']+号'")
+        self.assertIn("https://beian.miit.gov.cn/", js)
+        self.assertIn("privacy: '/privacy.html'", js)
+        self.assertIn("lx_notice_ok", js, "第一次来访的提示点「知道了」后不再出现")
+        self.assertIn("attributeFilter: ['lang']", js, "跟着页面语言切换")
+        for word in ("隐私说明", "Privacy", "知道了", "OK"):
+            self.assertIn(word, js)
+
+    def test_privacy_page_follows_the_page_rules(self):
+        html = (ROOT.parent / "hub" / "privacy.html").read_text(encoding="utf-8")
+        self.assertIn('id="portalHeaderControls"', html, "语言切换和配色在页眉右上角")
+        self.assertIn("/shared/module-header.js", html)
+        self.assertIn("/shared/module-header.css", html)
+        for tag in re.findall(r"<(?:h1|h2|p|li)\b[^>]*>", html):
+            self.assertIn("data-module-en", tag, tag)
+        for topic in ("IP 地址", "设备编号", "Cookie", "第三方"):
+            self.assertIn(topic, html)
+        self.assertNotRegex(html, r"[\w.+-]+@[\w-]+\.[\w.]+", "公开仓库里不放邮箱")

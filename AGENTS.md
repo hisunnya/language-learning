@@ -167,6 +167,7 @@ page in the repository that implements all of §3 today, and the hub test
 | `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
 | `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
 | `word-puzzle/web/{login,change-password,admin,tenants,leaderboard}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
+| `hub/privacy.html` | `data-module-zh/en` (shared header) | 5 (shared header) | top-right, square swatches (shared header) | ✅ |
 | `miniprogram/` (WeChat) | `utils/i18n.js` | 5 (same names) | top-right, square swatches (tap, name shown below) | ✅ adapted, see 3.4.1 |
 
 The two ⚠️ pages predate this convention. When you touch one of them, bring
@@ -287,7 +288,7 @@ cd miniprogram && python3 -m unittest discover -s tests -v  # 小程序
 language-learning/
 ├── AGENTS.md               # 本文件
 ├── README.md               # 仓库总说明（中文）
-├── hub/                    # 总主页「语林 Lingua Grove」—— 五个工具的入口
+├── hub/                    # 网站主页「词境 Lexica」（原「语林」）—— 五个模块的入口、隐私说明、全站页脚
 ├── word-puzzle/            # 词境 Lexica —— 英语词汇游戏（网站版）
 ├── topic-app/              # 每日话题 Daily Topics —— 初中生家庭讨论
 ├── ham-exam/               # 无线电执照 Ham Exam —— 业余无线电模拟考试
@@ -315,7 +316,10 @@ language-learning/
 | Chemistry learning | 化学探秘 | Chem Quest | `chemistry/` |
 | Physics learning | 物理探秘 | Phys Quest | `physics/` |
 | Vocabulary mini program | 词境 · 单词消消乐 | Lexica (WeChat) | `miniprogram/` |
-| Portal (hub) | 语林 | Lingua Grove | `hub/` |
+| Site / homepage (hub) | 词境 | Lexica | `hub/` |
+
+The whole site is called 「词境 Lexica」 (the name of the ICP filing); the homepage was called 「语林
+Lingua Grove」 until 2026-11-21. The vocabulary module keeps the same name — the repetition is intended.
 
 The vocabulary game was called 「单词消消乐」 while it was a single file. That
 was a working name, not a product name — the product covers word and language
@@ -333,6 +337,15 @@ visits and scores by device — the *home edition* (家庭版, formerly "局域�
 teacher login only when a management function is used, with the same accounts because it
 is the same database. nginx marks the entrance with `X-Wp-Entry` (cleared on the public
 side); the backend honours it only from a loopback peer with `WP_LAN_GUEST=1`.
+**The container serves the whole site** (2026-11-21): `/` is the homepage (`hub/`), plus `/privacy.html`,
+`/topics/`, `/ham/`, `/chemistry/`, `/physics/` (static, no login) and `/word-puzzle/` (login). The LAN entrance
+shows exactly the same as the public one (`WP_LAN_GUEST` defaults to 0 now; the guest code stays for the coming
+public `/words/` entrance), and the host's port 80 forwards everything to it (`hub/deploy/site-proxy.conf`).
+`deploy-all` packs `word-puzzle hub topic-app/topic-app ham-exam chemistry physics` into the container.
+**Every page carries the site footer** `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
+an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
+is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)
+are not linked from the homepage.
 The database lives **outside the container** (a host directory, backups on another disk,
 both bind-mounted; paths in `AGENTS.local.md`); the container stays stateless. The old
 separate home backend on the host is retired. Other subjects plug in through

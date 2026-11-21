@@ -1,5 +1,5 @@
 /* =============================================================
-   hub.js —— 语林 / Lingua Grove 总主页
+   hub.js —— 词境 Lexica 主页（原「语林」）
 
    两件事：
    1. 中英双语切换（data-i18n 属性 + i18n 表）
@@ -18,7 +18,9 @@
   /* ---------------- 词典 ---------------- */
   var I18N = {
     zh: {
-      "brand.name": "语林",
+      "brand.name": "词境",
+      "brand.tagline": "寓教于乐的课本学习",
+      "brand.en": "LEXICA",
       "hero.title": "学习工具集",
 
       "stat.words": "4791",
@@ -81,21 +83,23 @@
       "physics.f4": "每题附解题步骤",
       "physics.cta": "开始挑战",
 
-      "notes.a.title": "全部本地运行",
-      "notes.a.body": "词汇游戏用 Python 标准库加 SQLite，话题和考试是纯前端，不依赖任何云服务，也不需要大模型。",
-      "notes.b.title": "局域网内直连",
-      "notes.b.body": "在家庭网络内直接用浏览器打开，不需要 VPN。部署细节见仓库 README。",
-      "notes.c.title": "随时能带走",
-      "notes.c.body": "题库可以导出成单个 HTML 离线页，拷到任何电脑上双击就能继续做题。",
+      "notes.a.title": "内容来自课本",
+      "notes.a.body": "英语词汇按人教版教材的学段、年级、册别和单元整理；化学、物理按初中、高中、大学分级出题。",
+      "notes.b.title": "玩着学",
+      "notes.b.body": "配对、闯关、计时和积分，把背单词、记公式、练题目变成一个个小游戏。",
+      "notes.c.title": "打开就能用",
+      "notes.c.body": "不需要注册，也不用安装，用浏览器打开就能练；手机、平板、电脑都可以。",
 
-      "foot.left": "语林 Lingua Grove · 语言学习工具集",
-      "foot.right": "家庭局域网 · 即开即用",
+      "foot.left": "词境 Lexica · 把课本搬到网上，寓教于乐",
+      "foot.right": "个人学习网站",
 
       "themePicker": "配色"
     },
 
     en: {
-      "brand.name": "Lingua Grove",
+      "brand.name": "Lexica",
+      "brand.tagline": "Learning from the textbook, playfully",
+      "brand.en": "LEXICA",
       "hero.title": "Learning Toolkit",
 
       "stat.words": "4791",
@@ -158,15 +162,15 @@
       "physics.f4": "Worked answers",
       "physics.cta": "Start the challenge",
 
-      "notes.a.title": "Everything runs locally",
-      "notes.a.body": "The vocabulary game is Python standard library plus SQLite; topics and the exam are pure front end. No cloud service, no language model.",
-      "notes.b.title": "Straight over the LAN",
-      "notes.b.body": "Open it from any browser inside the home network — no VPN involved. Deployment details live in the repository README.",
-      "notes.c.title": "Take it with you",
-      "notes.c.body": "Any bank can be exported as one self-contained HTML page; copy it to any computer and keep playing by double-clicking.",
+      "notes.a.title": "From the textbook",
+      "notes.a.body": "English words follow the PEP textbooks by stage, grade, volume and unit; chemistry and physics are graded from middle school to university.",
+      "notes.b.title": "Learn by playing",
+      "notes.b.body": "Matching, levels, timers and points turn words, formulas and exercises into small games.",
+      "notes.c.title": "Ready to use",
+      "notes.c.body": "No sign-up and nothing to install: open it in a browser on a phone, tablet or computer.",
 
-      "foot.left": "Lingua Grove · Language Learning Suite",
-      "foot.right": "Home network · Ready to use",
+      "foot.left": "Lexica · Textbook material, learned through play",
+      "foot.right": "A personal learning site",
 
       "themePicker": "Palettes"
     }

@@ -129,14 +129,15 @@ echo "$WP_PUBLIC_URL"          # 应该是 https://lexica.你的tailnet名.ts.ne
 
 ## 五、把代码放进容器并安装（宿主机 + 容器内）
 
-容器里没有仓库时，从宿主机上的检出目录（`/root/language-learning`）推进去，只需要两个目录：
+容器里没有仓库时，从宿主机上的检出目录（`/root/language-learning`）推进去。容器提供整站（根路径是词境主页，加上四个模块和要登录的 /word-puzzle/），所以这几个目录都要带上（平时 `deploy-all` 会自动做这一步）：
 
 ```bash
 : "${CTID:?先设置容器编号，例如 CTID=120}"
 # 宿主机
 cd /root/language-learning && git pull
 tar czf /tmp/lexica-src.tgz --exclude='word-puzzle/var' --exclude='__pycache__' --exclude='.DS_Store' \
-    word-puzzle hub/shared
+    --exclude='*/tests' --exclude='ham-exam/raw-files' --exclude='ham-exam/tools' \
+    word-puzzle hub topic-app/topic-app ham-exam chemistry physics
 pct push $CTID /tmp/lexica-src.tgz /root/lexica-src.tgz
 pct exec $CTID -- mkdir -p /root/language-learning
 pct exec $CTID -- tar xzf /root/lexica-src.tgz -C /root/language-learning

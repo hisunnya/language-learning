@@ -1,10 +1,10 @@
-# language-learning · 语林 Lingua Grove
+# language-learning · 词境 Lexica
 
 家庭学习工具集。四个项目互相独立，各自都能单独跑起来，另有一个总主页把它们串起来。
 
 | 项目 | 内容 | 技术栈 |
 | --- | --- | --- |
-| [`hub/`](hub/) | **语林 Lingua Grove** 总主页：五个工具的入口，中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
+| [`hub/`](hub/) | **词境 Lexica** 网站主页（原「语林」）：五个模块的入口、隐私说明、全站页脚（备案号），中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
 | [`word-puzzle/`](word-puzzle/) | **词境 Lexica**（网站版）：人教版 PEP 初中 + 高中英语词汇题库、四级层级选题、上传资料、导出单文件离线测试页、成绩入库；另有**带登录的学生版**（学号登录、成绩按人记录、导入名单、按班级导出、**题库按标签开放给学生（题库管理只有老师）**，经 Tailscale Funnel 对外，见 `word-puzzle/deploy/family/`） | Python 标准库 + SQLite + 原生 JS，nginx 部署 |
 | [`topic-app/`](topic-app/) | **每日话题 Daily Topics**：适合初中水平的家庭话题讨论，随机抽题 + 参考方向 + 历史记录 | 纯前端，零依赖，localStorage |
 | [`ham-exam/`](ham-exam/) | **无线电执照 Ham Exam**：业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
@@ -44,7 +44,7 @@ language-learning/
 ├── README.md
 ├── AGENTS.md                               # 仓库级约定（给人和给 AI 看的）
 ├── .gitignore
-├── hub/                                   # 总主页「语林 Lingua Grove」
+├── hub/                                   # 网站主页「词境 Lexica」（原「语林」）
 │   ├── index.html                         # 三件工具的入口
 │   ├── css/hub.css                        # 五套配色（[data-theme]）
 │   ├── js/hub.js                          # 中英切换 + 配色切换
@@ -104,7 +104,7 @@ language-learning/
 
 ---
 
-# 一、hub · 语林 Lingua Grove（总主页）
+# 一、hub · 词境 Lexica（网站主页，原「语林」）
 
 ## 是什么
 

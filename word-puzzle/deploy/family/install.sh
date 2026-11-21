@@ -51,9 +51,17 @@ die() { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 [[ "$PORT" =~ ^[0-9]+$ && "$NGINX_PORT" =~ ^[0-9]+$ && "$LAN_PORT" =~ ^[0-9]+$ ]] || die "端口必须是数字"
 [[ -z "$BACKUP_DIR" || "$BACKUP_DIR" =~ ^/[A-Za-z0-9._/-]+$ ]] || die "WP_BACKUP_DIR 必须是绝对路径（字母、数字、._/-）"
 [[ "$TRUSTED_PROXIES" =~ ^[0-9a-fA-F:.,]*$ ]] || die "WP_TRUSTED_PROXIES 只能是逗号分隔的 IP 地址"
-LAN_GUEST=0; [[ -z "$LAN_ADDR" ]] || LAN_GUEST=1
+# 内网入口和公网入口现在完全一样（2026-11-21 决定）：/word-puzzle 要登录。要恢复「内网不登录也能做题」才设 WP_LAN_GUEST=1。
+LAN_GUEST="${WP_LAN_GUEST:-0}"
+[[ "$LAN_GUEST" == "0" || "$LAN_GUEST" == "1" ]] || die "WP_LAN_GUEST 只能是 0 或 1"
+[[ "$LAN_GUEST" == "0" || -n "$LAN_ADDR" ]] || die "WP_LAN_GUEST=1 需要同时设 WP_LAN_ADDR"
 [[ -z "$LAN_ADDR" || "$LAN_ADDR" =~ ^(10|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9.]+$ ]] || die "WP_LAN_ADDR 必须是内网地址（10.x / 172.16-31.x / 192.168.x），不能是公网地址"
 [[ -f "$REPO_DIR/hub/shared/module-header.js" ]] || die "找不到 hub/shared（页眉和配色切换用）：请在完整的仓库里运行"
+# 主页和不用登录的模块也由这里提供（网站根路径 / 就是主页），缺一个就不装，免得上线一个残缺的网站
+for f in hub/index.html hub/privacy.html hub/css hub/js topic-app/topic-app/index.html ham-exam/index.html \
+         chemistry/index.html chemistry/data physics/index.html physics/data; do
+  [[ -e "$REPO_DIR/$f" ]] || die "缺少 $f：主页和模块要一起部署（打包时带上 hub topic-app ham-exam chemistry physics）"
+done
 
 say "检查并安装系统依赖"
 bash "$SRC_DIR/deploy/check-deps.sh"
@@ -67,14 +75,33 @@ say "同步代码到 $INSTALL_DIR"
 install -d "$INSTALL_DIR"
 if command -v rsync >/dev/null 2>&1; then
   rsync -a --delete \
-    --exclude 'var/' --exclude '.*' --exclude '__pycache__/' --exclude 'tests/' \
+    --exclude 'var/' --exclude '.*' --exclude '__pycache__/' --exclude 'tests/' --exclude '/site/' --exclude '/shared/' \
     "$SRC_DIR"/ "$INSTALL_DIR"/
 else
   find "$SRC_DIR" -mindepth 1 -maxdepth 1 ! -name var ! -name '.*' ! -name tests -exec cp -a {} "$INSTALL_DIR"/ \;
 fi
-# 页眉和配色切换是仓库里 hub/shared 的公共文件，网站里用 /shared/ 访问
+# 页眉、配色切换、页脚是仓库里 hub/shared 的公共文件，网站里用 /shared/ 访问
 install -d "$INSTALL_DIR/shared"
 cp -a "$REPO_DIR/hub/shared/." "$INSTALL_DIR/shared/"
+
+say "同步主页和不用登录的模块到 $INSTALL_DIR/site"
+# 先在旁边拼好一份完整的，再整体换上去：换的那一瞬间之外，网站上永远是一份完整的旧版或新版
+SITE_NEW="$INSTALL_DIR/site.new.$$"
+rm -rf "$SITE_NEW"
+install -d "$SITE_NEW/hub" "$SITE_NEW/topics" "$SITE_NEW/ham" "$SITE_NEW/chemistry" "$SITE_NEW/physics"
+cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/privacy.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$SITE_NEW/hub/"
+sed -i "s/__ASSET_VERSION__/$(date +%Y%m%d%H%M%S)/g" "$SITE_NEW/hub/index.html"
+cp -a "$REPO_DIR/topic-app/topic-app/." "$SITE_NEW/topics/"
+for f in index.html css data images js; do cp -a "$REPO_DIR/ham-exam/$f" "$SITE_NEW/ham/"; done
+for m in chemistry physics; do
+  for f in index.html css data js; do cp -a "$REPO_DIR/$m/$f" "$SITE_NEW/$m/"; done
+done
+find "$SITE_NEW" -name '.*' -prune -exec rm -rf {} +
+chmod -R a+rX "$SITE_NEW"
+rm -rf "$INSTALL_DIR/site.old"
+[[ ! -d "$INSTALL_DIR/site" ]] || mv "$INSTALL_DIR/site" "$INSTALL_DIR/site.old"
+mv "$SITE_NEW" "$INSTALL_DIR/site"
+rm -rf "$INSTALL_DIR/site.old"
 
 say "准备数据目录 $DATA_DIR"
 install -d "$DATA_DIR" "$INSTALL_DIR/var/offline" "$INSTALL_DIR/var/audio"
@@ -164,7 +191,7 @@ if ! nginx -t; then
 fi
 
 if [[ -n "$LAN_ADDR" ]]; then
-  say "安装内网入口 $LAN_ADDR:$LAN_PORT（家庭版：不登录能做题，管理要登录；只给内网）"
+  say "安装内网入口 $LAN_ADDR:$LAN_PORT（和公网入口内容一样，走明文 http；只给内网）"
   # 在公网配置的基础上：换监听地址；标记为内网入口；告诉后端这是明文 http（会话 Cookie 不带 Secure）；转发链交给后端算真实 IP
   sed -e 's|^proxy_set_header X-Forwarded-Proto .*|proxy_set_header X-Forwarded-Proto http;|' \
       -e 's|^proxy_set_header X-Wp-Edge-Xff .*|proxy_set_header X-Wp-Edge-Xff $proxy_add_x_forwarded_for;|' \
@@ -235,13 +262,19 @@ code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http:
 code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT/word-puzzle/login.html")"
 [[ "$code" == "200" ]] || die "登录页打不开（HTTP $code）"
 echo "    OK 登录已启用；未登录访问接口被拒绝（401）；登录页可访问"
+for page in / /privacy.html /topics/ /ham/ /chemistry/ /physics/ /shared/site-footer.js; do
+  code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT$page")"
+  [[ "$code" == "200" ]] || die "主页 / 模块打不开：$page（HTTP $code）"
+done
+curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/" | grep -q '词境' || die "根路径不是词境主页"
+echo "    OK 主页、隐私说明和四个模块都能打开"
 
 cat <<EOF2
 
 部署完成（还没有对外开放）。
 
   本机入口 ： http://127.0.0.1:$NGINX_PORT/word-puzzle/
-$( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/word-puzzle/   （家庭版：不登录能做题，管理要登录）" )
+$( [[ -z "$LAN_ADDR" ]] || echo "  内网入口 ： http://$LAN_ADDR:$LAN_PORT/   （和公网一样：主页和模块不用登录，/word-puzzle/ 要登录）" )
 $( if [[ "${WP_CLOUD:-}" == "1" ]]; then echo "  对外地址 ： $PUBLIC_URL/word-puzzle/   （由 deploy/cloud/ 的 nginx 提供，见 deploy/cloud/部署说明.md）"; else echo "  对外地址 ： $PUBLIC_URL/word-puzzle/   （要先开 Tailscale Funnel，见 部署说明.md）"; fi )
   数据库   ： $DATA_DIR/app.db
   服务     ： systemctl status $SITE_NAME
