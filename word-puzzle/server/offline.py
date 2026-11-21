@@ -450,7 +450,7 @@ var WP_DATA = {data};
   function pick() {{
     var mount = document.getElementById('igMount');
     mount.innerHTML = '<div class="card"><h2>' + t('ig_pickLevel') + '</h2><div class="list">' + WP_DATA.groups.map(function (g, k) {{
-      return '<div class="item"><div class="main"><b>' + g.unit.replace(/</g, '&lt;') + '</b> <small>' + t('ig_levelCount', {{ n: g.items.length }}) +
+      return '<div class="item"><div class="main"><b>' + WPItemCore.levelName(g, k, t).replace(/</g, '&lt;') + '</b> <small>' + t('ig_levelCount', {{ n: g.items.length }}) +
         '</small></div><div class="ops"><button type="button" class="btn sm" data-level="' + k + '">' + t('home_play') + '</button></div></div>';
     }}).join('') + '</div></div>';
     mount.onclick = function (ev) {{
@@ -480,7 +480,8 @@ def build_items_html(bank: dict, groups: list[dict], audio: dict[int, bytes] | N
     for g in groups:
         n = len(g.get("items") or [])
         if n:
-            out_groups.append({"unit": g.get("unit") or "", "items": g["items"], "ords": list(range(start, start + n))})
+            out_groups.append({"unit": g.get("unit") or "", "part": g.get("part") or 1, "parts": g.get("parts") or 1,
+                               "items": g["items"], "ords": list(range(start, start + n))})
         start += n
     if not out_groups:
         raise ValueError("题库里没有题目，无法生成离线页")

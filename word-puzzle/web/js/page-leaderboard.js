@@ -130,9 +130,12 @@
     select.value = state.cls;
   }
 
+  var loadSeq = 0;                 /* 快速连点切换周期 / 玩法时，只用最后一次请求的结果（先发的可能后到） */
   function load() {
     var url = '/api/leaderboard?period=' + state.period + '&game=' + state.game + (state.cls ? '&class_name=' + encodeURIComponent(state.cls) : '');
+    var seq = ++loadSeq;
     return API.get(url).then(function (res) {
+      if (seq !== loadSeq) return;
       /* 老师第一次进来：默认选第一个班（一个班一个榜），而不是把所有班混在一起 */
       if (res.scope === 'staff' && !res.configured && !state.picked && !state.cls && res.classes && res.classes.length) {
         state.picked = true;
@@ -143,6 +146,7 @@
       state.data = res;
       render();
     }).catch(function (err) {
+      if (seq !== loadSeq) return;
       $('lbPodium').hidden = true;
       $('lbList').hidden = true;
       $('lbEmpty').hidden = false;

@@ -134,13 +134,62 @@ class TestWeeklyCumulative(AwardsCase):
         before = len(awards.of_user(self.db, self.a["id"]))
         self.db.execute("UPDATE app_settings SET value='old-rules' WHERE key='awards_rules'")
         self.db.execute("INSERT INTO board_leaders(day, board, game, user_id, points) VALUES ('2025-01-01','x','all',999,1)")
+        self.db._awards_ready = False             # 规则只会随新代码改变，新代码意味着服务重启：模拟重启
         awards.ensure(self.db)
         self.assertEqual(self.db.one("SELECT COUNT(*) AS n FROM board_leaders")["n"], 0, "旧规则的榜首记录作废")
         self.assertEqual(self.db.one("SELECT COUNT(*) AS n FROM award_days")["n"], 0)
         self.assertEqual(self.settle_to(d(9)), 0, "重新补算不会重复发奖状")
         self.assertEqual(len(awards.of_user(self.db, self.a["id"])), before)
+        self.db._awards_ready = False
         awards.ensure(self.db)
         self.assertGreater(self.db.one("SELECT COUNT(*) AS n FROM board_leaders")["n"], 0, "规则没变就不会再清")
+
+    def test_the_board_is_the_one_the_student_sees_on_the_leaderboard(self):
+        """和积分榜同一条规则：同班级名 + 共同的老师。另一位老师的「一班」是另一张榜。"""
+        svc = AuthService(self.db)
+        other, _ = svc.create_user("T2", "李老师", password="Teach3r!pw", role="teacher", must_change=False)
+        far, _ = svc.create_user("S9", "远远", password="Ready2026x", must_change=False, class_name="一班", teacher_id=other["id"])
+        self.daily(self.a, MON, 10, 100)
+        self.daily(far, MON, 10, 5)
+        self.settle_to(d(9))
+        self.assertTrue(self.mine(far), "远远和安安都叫「一班」，但没有共同的老师，互相看不到，各是各的第一")
+        self.assertEqual(awards.of_user(self.db, far["id"])[0]["board"], "c|一班")
+
+    def test_a_deleted_classmate_does_not_block_the_leader(self):
+        self.daily(self.a, MON, 10, 500)
+        self.daily(self.b, MON, 10, 100)
+        self.db.execute("UPDATE users SET deleted_at=1 WHERE id=?", (self.a["id"],))
+        self.settle_to(d(9))
+        self.assertEqual(len(self.mine(self.b)), 2, "积分榜上看不到被删除的安安，贝贝就是第一")
+        self.assertEqual(self.mine(self.a), [])
+
+    def test_one_certificate_per_game_and_tier_even_when_the_board_changes(self):
+        self.daily(self.a, MON, 10, 100)
+        self.settle_to(d(9))
+        self.assertEqual(len(self.mine(self.a)), 2)
+        self.db.execute("UPDATE users SET class_name='三班' WHERE id=?", (self.a["id"],))
+        self.daily(self.a, d(10), 10, 100)
+        self.settle_to(d(19))
+        self.assertEqual(sorted((g, n) for g, n, _s, _e in self.mine(self.a)), [("all", 10), ("match", 10)],
+                         "换到三班又当了 10 天第一，但铜奖已经有了，不重复发")
+
+    def test_catch_up_does_not_wait_for_a_backfill_already_running(self):
+        self.daily(self.a, MON, 10, 100)
+        self.assertTrue(awards._lock.acquire(blocking=False))
+        try:
+            self.assertEqual(self.settle_to(d(9)), 0, "别的请求正在补算：直接返回，不排队")
+        finally:
+            awards._lock.release()
+        self.assertEqual(self.settle_to(d(9)), 2)
+
+    def test_a_failed_day_leaves_nothing_behind(self):
+        self.daily(self.a, MON, 1, 100)
+        groups = [{"key": "x", "label": "x", "members": {self.a["id"]}, "candidates": {self.a["id"]}},
+                  {"key": "broken"}]                # 第二组缺字段：结算到一半出错
+        with self.assertRaises(KeyError):
+            awards.settle_day(self.db, MON, groups)
+        self.assertEqual(self.db.one("SELECT COUNT(*) AS n FROM board_leaders")["n"], 0, "整天回滚")
+        self.assertIsNone(self.db.one("SELECT 1 FROM award_days WHERE day=?", (MON.isoformat(),)))
 
     def test_thresholds_and_tiers(self):
         self.assertEqual(awards.THRESHOLDS, (10, 15, 30))

@@ -26,9 +26,12 @@ from . import asr, items as items_mod
 from .db import Database
 
 ARRANGE, WRONG, FLOOR, RECORDING, BONUS_MAX = 10, 2, 2, 30, 20
-MIN_MS, MAX_MS = 1000, 35000
+MIN_MS, MAX_MS = 1000, 35000          # 页面最多录 30 秒，留 5 秒余量
 MAX_BYTES = 4 * 1024 * 1024
 WAIT = 12.0
+# 交给 ffmpeg 的输入只许是这些音频容器（防止伪装成播放列表的文件让 ffmpeg 去读服务器上的别的文件）。
+# 2026-11-21 在家里容器（ffmpeg 7.1）实测：webm / m4a / ogg / wav 正常转换，伪装成 webm 的 m3u8 被拒。
+FORMATS = "matroska,webm,mov,mp4,m4a,ogg,wav,mp3,aac"
 EXT = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/aac": "aac", "audio/mpeg": "mp3", "audio/wav": "wav"}
 
 
@@ -82,12 +85,17 @@ def store(db: Database, *, user_id: int | None, bank: dict, item_ord: int, play_
     raw = Path(raw)
     target = base / (stem + ".mp3")
     exe = ffmpeg()
-    if exe and _run([exe, "-y", "-v", "error", "-i", str(raw), "-ac", "1", "-ar", "22050", "-b:a", "32k", str(target)]):
+    if exe and _run([exe, "-y", "-v", "error", "-format_whitelist", FORMATS, "-i", str(raw),
+                     "-ac", "1", "-ar", "22050", "-b:a", "32k", str(target)]):
         raw.unlink(missing_ok=True)
     else:                                   # 没有 ffmpeg（或转不了）：原样留着
         target = base / (stem + "." + raw_ext)
         os.replace(raw, target)
-    ms = probe_ms(target) or max(0, min(int(client_ms or 0), MAX_MS))
+    measured = probe_ms(target)
+    if measured is not None and measured > MAX_MS:
+        target.unlink(missing_ok=True)
+        raise ValueError("录音太长（最长 %d 秒）" % (MAX_MS // 1000))
+    ms = measured if measured is not None else max(0, min(int(client_ms or 0), MAX_MS))
     rel = str(target.relative_to(root(db)))
     status = "pending" if asr.available() else "noasr"
     valid = 1 if (status == "noasr" and ms >= MIN_MS) else 0
@@ -134,7 +142,8 @@ def score_one(db: Database, rid: int) -> dict | None:
         exe = ffmpeg()
         with tempfile.TemporaryDirectory() as tmp:
             wav = Path(tmp) / "in.wav"
-            source = wav if exe and _run([exe, "-y", "-v", "error", "-i", str(path), "-ac", "1", "-ar", "16000", str(wav)]) else path
+            source = wav if exe and _run([exe, "-y", "-v", "error", "-format_whitelist", FORMATS, "-i", str(path),
+                                          "-ac", "1", "-ar", "16000", str(wav)]) else path
             text = asr.transcribe(source)
     long_enough = rec["duration_ms"] >= MIN_MS
     if text is None:                         # 识别本身出错：不怪学生，按时长算有效，没有奖励
@@ -187,8 +196,11 @@ class Worker:
                 score_one(self.db, rid)
             except Exception:                 # pragma: no cover - 一条出错不影响后面的
                 traceback.print_exc()
-                self.db.execute("UPDATE recordings SET status='failed', scored_at=? WHERE id=? AND status='pending'",
-                                (int(time.time()), rid))
+                self.db.execute("UPDATE recordings SET status='failed', valid=(duration_ms>=?), scored_at=? "
+                                "WHERE id=? AND status='pending'", (MIN_MS, int(time.time()), rid))
+                rec = get(self.db, rid)
+                if rec and rec["score_id"]:
+                    rescore(self.db, rec["score_id"])
             finally:
                 with self.lock:
                     event = self.done.pop(rid, None)
@@ -198,10 +210,17 @@ class Worker:
 
 # ------------------------------------------------------------------ 一局的总分
 
-def order_score(db: Database, bank_id: int, user_id: int | None, detail: list) -> tuple[int, int, list]:
+def order_score(db: Database, bank_id: int, user_id: int | None, detail: list,
+                score_id: int | None = None) -> tuple[int, int, list]:
     """排排坐一局：按页面报的每句「拼接出错几次、排对没有、用的哪条录音」，由服务器算分。
-    录音必须是这个人、这个题库、这道题的；返回 (总分, 排对的句数, 整理后的明细)。"""
-    total, arranged, clean = 0, 0, []
+
+    页面报的东西一样都不直接信：
+    * 每道题（ord）只算一次，必须在这个题库的题目范围内，条数不会超过题目数——否则同一句报一万次就能刷分；
+    * 录音必须是这个人、这个题库、这道题的，而且还没算进别的局（score_id 为空，或者就是正在重算的这一局 score_id）——
+      否则同一条录音换一局再交一遍又能得分。
+    返回 (总分, 排对的句数, 整理后的明细)。"""
+    count = db.one("SELECT COUNT(*) AS n FROM bank_items WHERE bank_id=?", (bank_id,))["n"]
+    total, arranged, clean, seen = 0, 0, [], set()
     for entry in detail if isinstance(detail, list) else []:
         if not isinstance(entry, dict):
             continue
@@ -210,6 +229,9 @@ def order_score(db: Database, bank_id: int, user_id: int | None, detail: list) -
             wrong = max(0, min(50, int(entry.get("wrong") or 0)))
         except (TypeError, ValueError):
             continue
+        if not 0 <= ordinal < count or ordinal in seen:
+            continue
+        seen.add(ordinal)
         ok = bool(entry.get("arranged"))
         rec = None
         try:
@@ -217,8 +239,8 @@ def order_score(db: Database, bank_id: int, user_id: int | None, detail: list) -
         except (TypeError, ValueError):
             rid = 0
         if rid:
-            row = db.one("SELECT * FROM recordings WHERE id=? AND bank_id=? AND item_ord=? AND user_id IS ?",
-                         (rid, bank_id, ordinal, user_id))
+            row = db.one("SELECT * FROM recordings WHERE id=? AND bank_id=? AND item_ord=? AND user_id IS ? "
+                         "AND (score_id IS NULL OR score_id IS ?)", (rid, bank_id, ordinal, user_id, score_id))
             rec = dict(row) if row else None
         points = (arrange_points(wrong) if ok else 0) + ((RECORDING + rec["bonus"]) if (ok and rec and rec["valid"]) else 0)
         total += points
@@ -229,22 +251,24 @@ def order_score(db: Database, bank_id: int, user_id: int | None, detail: list) -
 
 
 def attach(db: Database, score_id: int, detail: list) -> None:
-    ids = [d["recording_id"] for d in detail if d.get("recording_id")]
-    for rid in ids:
-        db.execute("UPDATE recordings SET score_id=? WHERE id=?", (score_id, rid))
+    """把这一局用到的录音连到这一局（之后它们不能再算进别的局）。"""
+    for rid in [d["recording_id"] for d in detail if d.get("recording_id")]:
+        db.execute("UPDATE recordings SET score_id=? WHERE id=? AND score_id IS NULL", (score_id, rid))
 
 
 def rescore(db: Database, score_id: int) -> None:
-    """有录音识别完了：按存着的明细重算这一局的总分。"""
-    row = db.one("SELECT bank_id, user_id, detail FROM scores WHERE id=?", (score_id,))
-    if not row:
-        return
-    try:
-        detail = json.loads(row["detail"] or "[]")
-    except ValueError:
-        return
-    total, _arranged, clean = order_score(db, row["bank_id"], row["user_id"], detail)
-    db.execute("UPDATE scores SET score=?, detail=? WHERE id=?", (total, json.dumps(clean, ensure_ascii=False), score_id))
+    """有录音识别完了：按存着的明细重算这一局的总分。
+    整个读—算—写在数据库锁里做：请求线程和识别线程同时重算同一局时，后写的不会是一个过时的结果。"""
+    with db._lock:
+        row = db.one("SELECT bank_id, user_id, detail FROM scores WHERE id=?", (score_id,))
+        if not row:
+            return
+        try:
+            detail = json.loads(row["detail"] or "[]")
+        except ValueError:
+            return
+        total, _arranged, clean = order_score(db, row["bank_id"], row["user_id"], detail, score_id=score_id)
+        db.execute("UPDATE scores SET score=?, detail=? WHERE id=?", (total, json.dumps(clean, ensure_ascii=False), score_id))
 
 
 def for_scores(db: Database, score_ids: list[int]) -> dict[int, list[dict]]:

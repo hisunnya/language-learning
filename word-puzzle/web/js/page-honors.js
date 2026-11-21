@@ -30,12 +30,15 @@
     }
   }
 
+  var loadSeq = 0;                 /* 快速切换班级时只用最后一次请求的结果 */
   function loadStaff() {
+    var seq = ++loadSeq;
     return API.get('/api/admin/awards' + (picked ? '?class_name=' + encodeURIComponent(picked) : '')).then(function (res) {
+      if (seq !== loadSeq) return;
       students = res.awards || [];
       classes = res.classes || [];
       renderStaff();
-    }).catch(function (e) { $('staffAwards').innerHTML = '<div class="empty">' + API.esc(AuthUI.errorText(e)) + '</div>'; });
+    }).catch(function (e) { if (seq === loadSeq) $('staffAwards').innerHTML = '<div class="empty">' + API.esc(AuthUI.errorText(e)) + '</div>'; });
   }
 
   WPI18N.onChange(function () {

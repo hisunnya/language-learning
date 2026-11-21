@@ -61,11 +61,14 @@ def _sheet(rows: list[list[str]], text_columns: int, notes: bool) -> str:
             cells.append('<c r="%s%d" t="inlineStr" s="%d"><is><t xml:space="preserve">%s</t></is></c>'
                          % (_col(c), r, style, escape(value)))
         body.append('<row r="%d">%s</row>' % (r, "".join(cells)))
-    cols = "".join('<col min="%d" max="%d" width="%.1f" customWidth="1"/>' % (c + 1, c + 1, w) for c, w in sorted(widths.items()))
+    # 文本列的格式也写在 <col> 上：老师在示例行下面新加的行同样是文本，长学号不会变成 2.026E+06
+    cols = "".join('<col min="%d" max="%d" width="%.1f" customWidth="1"%s/>'
+                   % (c + 1, c + 1, w, ' style="3"' if c < text_columns else "") for c, w in sorted(widths.items()))
+    cols = "<cols>%s</cols>" % cols if cols else ""          # 空的 <cols/> 不合规范，Excel 会报文件损坏
     freeze = ("" if notes else '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" '
               'activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>')
     return ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">%s<cols>%s</cols>'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">%s%s'
             '<sheetData>%s</sheetData></worksheet>' % (freeze, cols, "".join(body)))
 
 

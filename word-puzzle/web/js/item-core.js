@@ -111,12 +111,20 @@
     return orderArrangePoints(state.wrong) + (state.recordingValid ? ORDER.recording : 0) + (state.bonus || 0);
   }
 
+  /* 关名：服务器给 {unit, part, parts}（见 server/items.py 的 levels）。t 是翻译函数（WPI18N.t），
+     由页面传进来，这个文件本身不依赖界面。单元名空着就叫「第 k+1 关」；一个单元分成几段时加上「(i/n)」。 */
+  function levelName(group, k, t) {
+    var unit = group.unit || t('ig_level', { n: k + 1 });
+    if ((group.parts || 1) > 1 && group.unit) return t('ig_levelPart', { unit: unit, i: group.part, n: group.parts });
+    return unit;
+  }
+
   global.WPItemCore = {
     SPELL: SPELL, ORDER: ORDER,
     squash: squash, key: key, distance: distance,
     spellCheck: spellCheck, spellPoints: spellPoints, spellHint: spellHint,
     rng: rng, shuffle: shuffle, fragmentText: fragmentText,
     orderCheck: orderCheck, orderSentence: orderSentence, placeAt: placeAt,
-    orderArrangePoints: orderArrangePoints, orderPoints: orderPoints
+    orderArrangePoints: orderArrangePoints, orderPoints: orderPoints, levelName: levelName
   };
 })(typeof window !== 'undefined' ? window : this);

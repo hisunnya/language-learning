@@ -45,13 +45,17 @@ def docx_paragraphs(data: bytes) -> list[list[tuple[str, str]]]:
     for p in root.iter(_W + "p"):
         runs = []
         for r in p.iter(_W + "r"):
-            text = "".join((t.text or "") for t in r.iter(_W + "t"))
-            if r.find(_W + "tab") is not None:
-                text += " "
-            if not text:
-                continue
             hl = r.find(_W + "rPr/" + _W + "highlight")
-            runs.append((text, hl.get(_W + "val", "") if hl is not None else ""))
+            color = hl.get(_W + "val", "") if hl is not None else ""
+            for child in r:                       # 按顺序看 run 里的东西：文字、Tab、软回车（Shift+Enter）
+                tag = child.tag[len(_W):] if child.tag.startswith(_W) else child.tag
+                if tag == "t" and child.text:
+                    runs.append((child.text, color))
+                elif tag == "tab":
+                    runs.append((" ", color))
+                elif tag in ("br", "cr"):
+                    out.append(runs)              # 软回车 = 另起一行：排排坐里每行是一个片段
+                    runs = []
         out.append(runs)
     return out
 
@@ -158,7 +162,7 @@ def parse_order(paragraphs: list[list[tuple[str, str]]]) -> tuple[list[dict], li
         answer = item.get("answer") or joined
         if not item.get("answer"):
             problems.append("第 %d 题没有绿色的参考答案，按片段拼出来的句子当答案：%s" % (item["no"], joined))
-        elif joined != answer:
+        elif re.sub(r"\s+", "", joined) != re.sub(r"\s+", "", answer):     # 空格多少、片段之间有没有空格都不算
             problems.append("第 %d 题的片段拼起来和参考答案不一样：\n  片段：%s\n  答案：%s" % (item["no"], joined, answer))
             return
         if len(item["fragments"]) < 2:
@@ -200,12 +204,14 @@ def parse(game_type: str, data: bytes) -> tuple[list[dict], list[str], str]:
 
 
 def levels(game_type: str, items: list[dict], unit: str = "") -> list[dict]:
-    """把题目分成关：每关最多 PER_LEVEL 道。"""
+    """把题目分成关：每关最多 PER_LEVEL 道。
+
+    返回 [{unit, part, parts, items}]：unit 是单元名（可能为空），part / parts 是「第几段 / 共几段」。
+    关名由页面按当前语言拼（WPI18N 的 ig_level / ig_levelPart），服务器不写死中文括号。"""
     size = PER_LEVEL.get(game_type, 10)
     chunks = [items[i:i + size] for i in range(0, len(items), size)] or [[]]
     total = len(chunks)
-    return [{"unit": unit if total == 1 else "%s（%d/%d）" % (unit, i + 1, total), "items": chunk}
-            for i, chunk in enumerate(chunks)]
+    return [{"unit": unit, "part": i + 1, "parts": total, "items": chunk} for i, chunk in enumerate(chunks)]
 
 
 def speech_text(game_type: str, item: dict) -> str:

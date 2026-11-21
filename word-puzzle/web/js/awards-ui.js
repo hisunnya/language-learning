@@ -1,10 +1,10 @@
 /* ============================================================
    awards-ui.js —— 奖状和徽章的样子（「我的」页面、积分榜共用）
    ------------------------------------------------------------
-   WPAwards.badge(award, size)        徽章 SVG：铜（5 天）/ 银（15 天）/ 金（30 天）
+   WPAwards.badge(award, size)        徽章 SVG：铜（10 天）/ 银（15 天）/ 金（30 天）
    WPAwards.mini(award)               积分榜名字旁边的小徽章
    WPAwards.draw(canvas, award)       在 canvas 上画奖状（2400×1697，A4 横版比例），中英双语
-   WPAwards.save(award, type)         画好并下载 PNG / JPG
+   WPAwards.save(award, type)         画好并下载 PNG / JPG（Promise；失败时弹提示并 reject）
    奖状不跟网站配色走：深蓝底、象牙白纸、按档次的金属色（固定颜色，打印、转发都一样好看）。
    ============================================================ */
 (function (global) {
@@ -338,18 +338,30 @@
   function save(award, type) {
     type = type === 'jpeg' ? 'jpeg' : 'png';
     return render(award).then(function (canvas) {
-      return new Promise(function (resolve) {
-        canvas.toBlob(function (blob) {
+      return new Promise(function (resolve, reject) {
+        function download(href, revoke) {
           var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
+          a.href = href;
           a.download = filename(award, type);
           document.body.appendChild(a);
           a.click();
           a.remove();
-          setTimeout(function () { URL.revokeObjectURL(a.href); }, 60000);
+          if (revoke) setTimeout(function () { URL.revokeObjectURL(href); }, 60000);
           resolve();
-        }, 'image/' + type, 0.93);
+        }
+        try {
+          /* toBlob 在内存不够等情况下会给 null：退回到 dataURL（大一些，但能下载） */
+          canvas.toBlob(function (blob) {
+            try {
+              if (blob) download(URL.createObjectURL(blob), true);
+              else download(canvas.toDataURL('image/' + type, 0.93), false);
+            } catch (e) { reject(e); }
+          }, 'image/' + type, 0.93);
+        } catch (e) { reject(e); }
       });
+    }).catch(function (e) {
+      if (global.API && global.API.toast) global.API.toast(t('me_saveFailed'), 5000);
+      throw e;
     });
   }
 
@@ -399,12 +411,13 @@
       if (b.hasAttribute('data-aw-view')) view(list[+b.getAttribute('data-aw-view')]);
       if (b.hasAttribute('data-aw-save')) {
         b.disabled = true;
-        save(list[+b.getAttribute('data-aw-save')], b.getAttribute('data-type')).then(function () { b.disabled = false; });
+        var again = function () { b.disabled = false; };
+        save(list[+b.getAttribute('data-aw-save')], b.getAttribute('data-type')).then(again, again);
       }
     });
   }
 
-  var modal = null;
+  var modal = null, viewSeq = 0;
   function view(a) {
     if (!a) return;
     if (!modal) {
@@ -424,16 +437,18 @@
     modal.querySelector('[data-k="png"]').textContent = t('me_dlPng');
     modal.querySelector('[data-k="jpeg"]').textContent = t('me_dlJpg');
     modal.querySelector('[data-k="close"]').textContent = t('me_close');
-    modal.querySelector('[data-k="png"]').onclick = function () { save(a, 'png'); };
-    modal.querySelector('[data-k="jpeg"]').onclick = function () { save(a, 'jpeg'); };
+    modal.querySelector('[data-k="png"]').onclick = function () { save(a, 'png').catch(function () { }); };
+    modal.querySelector('[data-k="jpeg"]').onclick = function () { save(a, 'jpeg').catch(function () { }); };
     modal.hidden = false;
     img.removeAttribute('src');
     msg.textContent = t('me_drawing');
+    var seq = ++viewSeq;                       /* 连着点两张奖状：只显示最后点的那一张（先点的可能后画完） */
     render(a).then(function (canvas) {
+      if (seq !== viewSeq) return;
       img.src = canvas.toDataURL('image/png');
       img.alt = title(a);
       msg.textContent = t('me_longPress');
-    });
+    }).catch(function () { if (seq === viewSeq) msg.textContent = t('me_saveFailed'); });
   }
 
   /* 样张：示例学生的金、银、铜三张（老师预览用，也能下载） */

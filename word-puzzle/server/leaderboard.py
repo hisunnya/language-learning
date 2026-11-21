@@ -28,14 +28,19 @@ def week_start(now: float | None = None) -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(monday))
 
 
+CLASSMATES = ("u.deleted_at=0 AND u.role='student' AND (u.id=? OR (u.class_name=? AND EXISTS ("
+              "SELECT 1 FROM teacher_students a JOIN teacher_students b ON a.teacher_id=b.teacher_id "
+              "JOIN users t ON t.id=a.teacher_id AND t.deleted_at=0 WHERE a.student_id=? AND b.student_id=u.id)))")
+"""学生看到的同学（SQL 条件，表别名 u，参数 [自己, 自己的班级, 自己]）：同一个班级名、并且至少有一位共同的（没被删除的）老师；
+自己总在里面（没有老师的学生也看得到自己）。被删除的学生不在里面。奖状（server/awards.py）用的也是这一条。"""
+
+
 def _pool(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str) -> tuple[str, list]:
     """参与排名的学生（SQL 条件，表别名 u）。"""
     if scope.kind == tenancy.STUDENT and user:
         if not user.get("class_name"):
             return "u.id=?", [user["id"]]
-        return ("u.class_name=? AND EXISTS (SELECT 1 FROM teacher_students a JOIN teacher_students b "
-                "ON a.teacher_id=b.teacher_id WHERE a.student_id=? AND b.student_id=u.id)",
-                [user["class_name"], user["id"]])
+        return CLASSMATES, [user["id"], user["class_name"], user["id"]]
     cond, args = tenancy.student_where(scope)
     where, args = [cond, "u.role='student'"], list(args)
     if class_name:

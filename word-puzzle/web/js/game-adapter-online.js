@@ -28,7 +28,7 @@
 
     device: deviceId,
 
-    /** 存一次成绩；失败静默（不影响游戏） */
+    /** 存一次成绩。不影响游戏：失败时只弹一条提示（成绩没存上，比如登录过期、网络断了），返回 Promise<是否存上> */
     save: function (report, meta) {
       var body = {
         bank_id: (meta && meta.bank_id) || null,
@@ -46,14 +46,19 @@
         detail: report.detail,
         play_token: report.play_token || ""        /* 排排坐：服务器按它找到这一局的录音，重新算分 */
       };
+      function notSaved() {
+        try { API.toast(WPI18N.t('ig_scoreNotSaved'), 6000); } catch (e) { }
+        return false;
+      }
       try {
-        fetch(API.path('/api/scores'), {
+        return fetch(API.path('/api/scores'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
-        }).catch(function () { /* 网络问题不影响游戏 */ });
-      } catch (e) { }
-      return true;
+        }).then(function (res) { return res.ok ? true : notSaved(); }, notSaved);
+      } catch (e) {
+        return Promise.resolve(notSaved());
+      }
     },
 
     history: function () {

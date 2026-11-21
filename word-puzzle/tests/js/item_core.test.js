@@ -78,5 +78,14 @@ check('拖动放片段：框里换位置、拖到框外退回、从上面拖到�
   const orig = [3, 1, 2]; C.placeAt(orig, 2, 0, 2); eq(orig, [3, 1, 2], '不改原数组');
 });
 
+check('关名：按语言拼，单元分段时加 (i/n)，没有单元名叫第几关', () => {
+  const tables = { zh: { ig_level: '第 {n} 关', ig_levelPart: '{unit}（{i}/{n}）' }, en: { ig_level: 'Level {n}', ig_levelPart: '{unit} ({i}/{n})' } };
+  const tr = (lang) => (key, vars) => tables[lang][key].replace(/\{(\w+)\}/g, (m, k) => vars[k]);
+  eq(C.levelName({ unit: 'Unit 3', part: 2, parts: 3 }, 1, tr('en')), 'Unit 3 (2/3)');
+  eq(C.levelName({ unit: 'Unit 3', part: 2, parts: 3 }, 1, tr('zh')), 'Unit 3（2/3）');
+  eq(C.levelName({ unit: 'Unit 3', part: 1, parts: 1 }, 0, tr('en')), 'Unit 3');
+  eq(C.levelName({ unit: '', part: 2, parts: 2 }, 1, tr('en')), 'Level 2');
+});
+
 if (failures.length) { console.log(failures.join('\n')); process.exit(1); }
 console.log('item-core 全部通过（' + passed + ' 项）');

@@ -128,6 +128,18 @@ class TestDatabaseRollback(unittest.TestCase):
                 db.close()
 
 
+    def test_failed_item_bank_insert_leaves_no_empty_bank(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = Database(Path(tmp) / "t.db")
+            try:
+                before = db.one("SELECT COUNT(*) AS n FROM banks")["n"]
+                with self.assertRaises(TypeError):
+                    db.insert_item_bank({"title": "坏", "level1": "大学", "level2": "大一", "level3": "上册", "level4": "U1", "game_type": "spell", "source": "import"}, [{"x": object()}])
+                self.assertEqual(db.one("SELECT COUNT(*) AS n FROM banks")["n"], before, "题目写不进去就不留空题库")
+            finally:
+                db.close()
+
+
 class TestInputLimits(unittest.TestCase):
     def test_bank_range_rejects_non_numbers(self):
         units = [{"label": "U1", "words": []}]
@@ -141,6 +153,14 @@ class TestInputLimits(unittest.TestCase):
         with mock.patch.object(docx, "MAX_DOCUMENT_BYTES", 1024):
             with self.assertRaises(docx.DocxError):
                 docx.docx_to_lines(buf.getvalue())
+
+
+class TestCsvExport(unittest.TestCase):
+    def test_formula_cells_are_quoted_and_empty_cells_stay_empty(self):
+        from server.app import csv_safe
+        self.assertEqual([csv_safe(v) for v in ("=1+1", "+86", "-x", "@a", "\tx", "\rx")], ["'=1+1", "'+86", "'-x", "'@a", "'\tx", "'\rx"])
+        self.assertEqual(csv_safe(""), "", "空格子不能变成一个单引号")
+        self.assertEqual([csv_safe(v) for v in ("张三", 12, None, -3)], ["张三", 12, None, -3], "数字和普通文字不动")
 
 
 class TestHttpHardening(unittest.TestCase):

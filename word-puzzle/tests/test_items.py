@@ -86,6 +86,20 @@ class TestParsing(unittest.TestCase):
         self.assertEqual(found, [])
         self.assertIn("不一样", problems[0])
 
+    def test_soft_line_breaks_split_fragments_and_punctuation_may_start_a_fragment(self):
+        """Shift+Enter（<w:br/>）在 Word 里看起来是另起一行，就当一个新片段；片段以逗号开头时，拼起来和答案比较不受空格影响。"""
+        para = ('<w:p><w:r><w:t>The city</w:t><w:br/><w:t>, famous for its tea</w:t><w:tab/><w:t>,</w:t></w:r></w:p>')
+        doc = ('<?xml version="1.0"?><w:document xmlns:w="%s"><w:body><w:p><w:r><w:t>1. 这座城市以茶闻名。</w:t></w:r></w:p>%s'
+               '<w:p><w:r><w:t>is lovely.</w:t></w:r></w:p>'
+               '<w:p><w:r><w:rPr><w:highlight w:val="green"/></w:rPr><w:t>The city, famous for its tea , is lovely.</w:t></w:r></w:p>'
+               '</w:body></w:document>') % (W, para)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("word/document.xml", doc)
+        found, problems, _ = items.parse("order", buf.getvalue())
+        self.assertEqual(problems, [])
+        self.assertEqual([items.fragment_text(f) for f in found[0]["fragments"]], ["The city", ", famous for its tea ,", "is lovely."])
+
     def test_not_a_docx(self):
         with self.assertRaises(items.ItemError):
             items.parse("spell", b"hello")
@@ -93,6 +107,9 @@ class TestParsing(unittest.TestCase):
     def test_levels(self):
         self.assertEqual(len(items.levels("order", [{}] * 13, "Unit 3")), 3)
         self.assertEqual(items.levels("spell", [{}] * 12, "Unit 3")[0]["unit"], "Unit 3")
+        parts = items.levels("order", [{}] * 13, "Unit 3")
+        self.assertEqual([(g["unit"], g["part"], g["parts"]) for g in parts], [("Unit 3", 1, 3), ("Unit 3", 2, 3), ("Unit 3", 3, 3)],
+                         "关名由页面按语言拼，服务器不写中文括号")
 
 
 class TestAccuracy(unittest.TestCase):
@@ -260,6 +277,14 @@ class TestRecordings(ItemsCase):
         self.assertEqual(self.upload(c, data=b"x")[0], 400)
         self.assertEqual(Client(self.port).request("POST", "/api/recordings", raw=b"", headers={"Content-Type": "multipart/form-data; boundary=x"})[0], 401)
 
+    def test_a_recording_longer_than_the_limit_is_refused(self):
+        user, c = self.student()
+        with mock.patch.object(asr, "available", return_value=False), mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
+                mock.patch.object(rec_mod, "probe_ms", return_value=rec_mod.MAX_MS + 5000):
+            status, body = self.upload(c)
+        self.assertEqual((status, body.get("code")), (400, "too_long"), body)
+        self.assertIsNone(self.db.one("SELECT id FROM recordings WHERE user_id=?", (user["id"],)), "太长的录音不入库（文件也删掉）")
+
     def test_playback_for_the_student_and_their_teacher_only(self):
         _, c = self.student()
         with mock.patch.object(asr, "available", return_value=False), mock.patch.object(rec_mod, "ffmpeg", return_value=None):
@@ -290,6 +315,22 @@ class TestOrderScoreIsComputedByTheServer(ItemsCase):
         plays = c.json("GET", "/api/scores/plays?user_id=%d&bank_id=%d" % (user["id"], self.order))[1]["plays"]
         self.assertEqual([r["id"] for r in plays[0]["recordings"]], [mine["id"]])
 
+    def test_one_recording_counts_once_and_only_for_one_play(self):
+        """同一条录音在 detail 里写好几遍、写到不存在的题号、或者拿到下一局再用一次，都只算一次。"""
+        _, c = self.student()
+        with mock.patch.object(asr, "available", return_value=False), mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
+                mock.patch.object(rec_mod, "probe_ms", return_value=None):
+            rid = self.upload(c, ordinal=0, token="pdup")[1]["recording"]["id"]
+        entry = {"ord": 0, "wrong": 0, "arranged": True, "recording_id": rid}
+        detail = [entry, dict(entry), dict(entry, ord=1), dict(entry, ord=99), dict(entry, ord=-1)]
+        status, first = c.json("POST", "/api/scores", {"bank_id": self.order, "score": 0, "matched": 2, "total_pairs": 2,
+                                                      "level_count": 1, "detail": detail, "play_token": "pdup"})
+        self.assertEqual(status, 201, first)
+        self.assertEqual(first["score"], 10 + 30 + 10, "第 0 题拼接 + 录音各一次；第 1 题只有拼接分（录音不是这题的）；越界的题号不算")
+        status, second = c.json("POST", "/api/scores", {"bank_id": self.order, "score": 0, "matched": 1, "total_pairs": 2,
+                                                       "level_count": 1, "detail": [entry], "play_token": "pdup2"})
+        self.assertEqual(second["score"], 10, "录音已经属于上一局，这一局只有拼接分")
+
     def test_a_bonus_that_arrives_later_is_added_to_the_score(self):
         user, c = self.student()
         with mock.patch.object(asr, "available", return_value=True), mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
@@ -310,6 +351,11 @@ class TestOrderScoreIsComputedByTheServer(ItemsCase):
 class TestItemCoreJs(unittest.TestCase):
     def test_behaviour(self):
         proc = subprocess.run([NODE, str(ROOT / "tests" / "js" / "item_core.test.js")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("全部通过", proc.stdout)
+
+    def test_order_ui_recording_stages(self):
+        proc = subprocess.run([NODE, str(ROOT / "tests" / "js" / "order_ui.test.js")], capture_output=True, text=True, timeout=60)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("全部通过", proc.stdout)
 

@@ -76,6 +76,18 @@ class TestWhoSeesWhat(LeaderboardCase):
         res = self.board(self.login_as(me, "Teach3r!pw"))
         self.assertEqual([e["name"] for e in res["entries"]], ["甲的学生"])
 
+    def test_a_student_does_not_see_deleted_or_disabled_classmates(self):
+        cls = self.fresh_class(self.ta, "删")
+        me, me_id = self.pupil(self.ta, "留下的", cls)
+        _, gone = self.pupil(self.ta, "删掉的", cls)
+        _, off = self.pupil(self.ta, "停用的", cls)
+        for uid, pts in ((me_id, 5), (gone, 500), (off, 400)):
+            self.play(uid, pts)
+        self.ta.json("POST", "/api/admin/users/delete", {"user_ids": [gone]})
+        self.svc.set_disabled(off, True)
+        res = self.board(self.login_as(me, "Teach3r!pw"))
+        self.assertEqual([e["name"] for e in res["entries"]], ["留下的"])
+
     def test_a_student_without_a_class_sees_only_themselves(self):
         me, me_id = self.pupil(self.ta, "无班", "")
         _, other = self.pupil(self.ta, "另一个无班", "")

@@ -295,6 +295,8 @@ CREATE TABLE IF NOT EXISTS bank_items (
     data     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_items_bank ON bank_items(bank_id, ord);
+-- 公开版只给公开题库里的词合成读音（tenancy.public_word 按不分大小写的英文查）：用表达式索引，不必每次扫全表
+CREATE INDEX IF NOT EXISTS ix_bw_en_lower ON bank_words(lower(en));
 
 -- 排排坐的朗读录音：文件在数据目录的 recordings/ 下（统一转成 MP3），这里记谁、哪道题、识别结果和得分
 CREATE TABLE IF NOT EXISTS recordings (
@@ -453,9 +455,11 @@ class Database:
             self.execute("PRAGMA user_version = 2")
         # v3（2026-11-21）：中英配对的分值减半（每对 100 → 50，连击、扣分、时间分同比例），历史成绩也按比例减半，
         # 和新的成绩、新题型放在同一个积分榜上标准一致。只做一次（user_version 记着），新题型的成绩不动。
-        if self.one("PRAGMA user_version")[0] < 3:
-            self.execute("UPDATE scores SET score = CAST((score + 1) / 2 AS INTEGER) WHERE game_type='match'")
-            self.execute("PRAGMA user_version = 3")
+        # 「看版本 → 减半 → 改版本」在同一个事务里：中途断电不会留下「已经减半、版本还是 2」，下次启动也就不会再减一次。
+        with self._tx() as conn:
+            if conn.execute("PRAGMA user_version").fetchone()[0] < 3:
+                conn.execute("UPDATE scores SET score = CAST((score + 1) / 2 AS INTEGER) WHERE game_type='match'")
+                conn.execute("PRAGMA user_version = 3")
 
     def default_teacher_id(self) -> int:
         """第一位（编号最小的）没被删除的超级管理员；没有就是 0（家庭版、或者还没建管理员）。
@@ -693,10 +697,14 @@ class Database:
     def insert_item_bank(self, meta: dict, items: list[dict]) -> int:
         """新题型的题库：banks 一行（game_type = spell / order，word_count = 题数）+ bank_items 每题一行。"""
         bid = self.insert_bank(dict(meta, unit_mode="all"), [])
-        with self._tx() as conn:
-            conn.execute("UPDATE banks SET word_count=?, unit_count=1 WHERE id=?", (len(items), bid))
-            conn.executemany("INSERT INTO bank_items(bank_id, ord, data) VALUES (?,?,?)",
-                             [(bid, i, json.dumps(item, ensure_ascii=False)) for i, item in enumerate(items)])
+        try:
+            with self._tx() as conn:
+                conn.execute("UPDATE banks SET word_count=?, unit_count=1 WHERE id=?", (len(items), bid))
+                conn.executemany("INSERT INTO bank_items(bank_id, ord, data) VALUES (?,?,?)",
+                                 [(bid, i, json.dumps(item, ensure_ascii=False)) for i, item in enumerate(items)])
+        except Exception:
+            self.delete_bank(bid)          # 题目没写进去：不留一个空题库
+            raise
         return bid
 
     def bank_items(self, bid: int) -> list[dict]:
@@ -714,6 +722,7 @@ class Database:
             return False
         with self._tx() as conn:
             conn.execute("DELETE FROM bank_words WHERE bank_id=?", (bid,))
+            conn.execute("DELETE FROM bank_items WHERE bank_id=?", (bid,))        # 新题型的题目
             conn.execute("DELETE FROM bank_tags WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM teacher_banks WHERE bank_id=?", (bid,))
             conn.execute("DELETE FROM recent_banks WHERE bank_id=?", (bid,))

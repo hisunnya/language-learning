@@ -131,6 +131,7 @@ class Handler(BaseHTTPRequestHandler):
     track_throttle = accesslog.Throttle(limit=900, seconds=60)     # 每个来源地址每分钟最多收这么多条上报
     public_score_throttle = accesslog.Throttle(limit=60, seconds=60)    # 公开版：每个地址每分钟最多交这么多次成绩
     public_audio_throttle = accesslog.Throttle(limit=240, seconds=60)   # 公开版：每个地址每分钟最多要这么多次读音
+    recording_throttle = accesslog.Throttle(limit=30, seconds=60)       # 排排坐：每人每分钟最多交这么多条录音（一句一条，还能重录）
     login_throttle = accesslog.Throttle(limit=300, seconds=60)
 
     # ---------------- 基础响应 ----------------
@@ -906,8 +907,14 @@ class Handler(BaseHTTPRequestHandler):
         mime = ("audio/mp4" if name.endswith((".m4a", ".mp4")) else "audio/ogg" if name.endswith(".ogg")
                 else "audio/aac" if name.endswith(".aac") else "audio/webm")
         token = re.sub(r"[^A-Za-z0-9_-]", "", field("play_token"))[:64]
-        rec = rec_mod.store(db, user_id=self._uid(), bank=bank, item_ord=item_ord, play_token=token,
-                            data=upload["data"], mime=mime, client_ms=client_ms)
+        who = str(self._uid() or accesslog.request_info(self.headers, self._peer())["ip"])
+        if not self.recording_throttle.allow(who):
+            raise HttpError(429, "交得太频繁，请稍后再试", "rate_limited")
+        try:
+            rec = rec_mod.store(db, user_id=self._uid(), bank=bank, item_ord=item_ord, play_token=token,
+                                data=upload["data"], mime=mime, client_ms=client_ms)
+        except ValueError as exc:                       # 服务器量出来超过 30 秒
+            raise HttpError(400, str(exc), "too_long") from exc
         if rec["status"] == "pending" and self.rec_worker is not None:
             self.rec_worker.submit(rec["id"])
             rec = self.rec_worker.wait(rec["id"]) or rec
@@ -1284,7 +1291,7 @@ class Handler(BaseHTTPRequestHandler):
             cells = [r["class_name"], r["student_no"], r["name"], r["bank_title"], r["plays"], r["completed"],
                      r["best"], r["worst"], r["avg_score"], r["avg_duration"], r["last_at"]]
             # 以 = + - @ 开头的单元格在 Excel 里会被当成公式，前面补一个单引号
-            writer.writerow([("'" + v) if isinstance(v, str) and v[:1] in "=+-@" else v for v in cells])
+            writer.writerow([csv_safe(v) for v in cells])
         return ("\ufeff" + out.getvalue()).encode("utf-8")
 
     def handle_recent(self, method: str, query: dict) -> None:
@@ -1399,9 +1406,7 @@ class Handler(BaseHTTPRequestHandler):
             for col, v in zip(cols, row):
                 if col in stamps and isinstance(v, int):
                     v = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(v + 8 * 3600))
-                if isinstance(v, str) and v[:1] in "=+-@":
-                    v = "'" + v
-                cells.append(v)
+                cells.append(csv_safe(v))
             writer.writerow(cells)
         return ("\ufeff" + out.getvalue()).encode("utf-8")
 
@@ -1425,7 +1430,7 @@ class Handler(BaseHTTPRequestHandler):
                          "错误次数", "最高连击", "用时(秒)", "关数", "时间"])
         for row in self.db.query(sql, args):
             # 以 = + - @ 开头的单元格在 Excel 里会被当成公式，前面补一个单引号
-            writer.writerow([("'" + str(v)) if isinstance(v, str) and v[:1] in "=+-@" else v
+            writer.writerow([csv_safe(v)
                              for v in tuple(row)])
         return ("\ufeff" + out.getvalue()).encode("utf-8")      # BOM：Excel 直接打开不乱码
 
@@ -1554,6 +1559,14 @@ class Handler(BaseHTTPRequestHandler):
             "Content-Disposition":
             f'{disp}; filename="{fallback}"; filename*=UTF-8\'\'{quoted}',
         })
+
+
+def csv_safe(value):
+    """导出 CSV 时防公式注入：以 = + - @（以及 Tab、回车）开头的文字前面补一个 '，Excel 就不会把它当公式。
+    空字符串原样输出（以前的写法 "" in "=+-@" 为真，每个空格子都多出一个 '）。"""
+    if isinstance(value, str) and value and value[0] in "=+-@\t\r":
+        return "'" + value
+    return value
 
 
 def urllib_quote(text: str) -> str:

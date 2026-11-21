@@ -83,7 +83,7 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 .in-types .bank-group .item:hover { background: color-mix(in srgb, var(--tc) 8%, var(--card)); }
 .in-types .btn:not(.ghost) { background: var(--tc); box-shadow: 0 3px 0 color-mix(in srgb, var(--tc) 70%, #000); color: var(--on-primary); }
 .in-types > .empty { padding: 18px 6px; }
-.type-cards > .in-types[hidden] { display: none; }
+.type-cards[hidden], .type-cards > .in-types[hidden] { display: none; }
 @media (max-width: 720px) {
   .type-cards { grid-template-columns: 1fr; }
   .type-cards > .in-types { order: var(--after, 99); }

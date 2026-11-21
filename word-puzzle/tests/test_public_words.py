@@ -44,6 +44,10 @@ class PublicCase(HttpCase):
         cls.senior = bank(db, "高一上", "高中", items=(("galaxy", "星系"),))
         cls.college = bank(db, "大一", "大学", items=(("thesis", "论文"),))
         cls.teachers = bank(db, "老师自己的初中", "初中", owner=admin["id"], items=(("secret", "秘密"),))
+        # 内置的初中「单词大比拼」：公开版只放中英配对（新题型的录音、识别都要账号），所以看不到
+        cls.spell = db.insert_item_bank({"title": "初中拼写", "level1": "初中", "level2": "七年级", "level3": "上册", "level4": "Unit 1",
+                                         "source": "import", "game_type": "spell", "owner_id": None},
+                                        [{"before": "", "answer": "apple", "after": "", "cn": "苹果", "text": "apple"}])
 
     def pub(self, method, path, body=None, c=None, headers=None):
         return (c or Client(self.port)).json(method, "/pub" + path, body, headers=headers)
@@ -55,7 +59,7 @@ class TestWhatTheVisitorSees(PublicCase):
         self.assertEqual(status, 200, body)
         self.assertEqual(sorted(b["id"] for b in body["banks"]), sorted([self.junior, self.senior]))
         self.assertEqual(self.pub("GET", "/api/banks/%d" % self.junior)[0], 200)
-        for hidden in (self.college, self.teachers):
+        for hidden in (self.college, self.teachers, self.spell):
             self.assertEqual(self.pub("GET", "/api/banks/%d" % hidden)[0], 404, hidden)
 
     def test_me_says_public_and_ignores_a_signed_in_teacher(self):

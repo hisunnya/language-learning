@@ -80,7 +80,8 @@ def bank_where(scope: Scope, include_deleted: bool = False) -> tuple[str, tuple]
     if scope.kind == GUEST:
         return alive + " AND (b.owner_id IS NULL OR b.owner_id IN (SELECT id FROM users WHERE role='admin'))", ()
     if scope.kind == PUBLIC:
-        return (alive + " AND b.owner_id IS NULL AND b.level1 IN (" + ",".join("?" * len(PUBLIC_STAGES)) + ")",
+        # 只有中英配对：公开版只有配对游戏和读音练习两个页面，单词大比拼 / 排排坐（要录音、要登录）在那里打不开
+        return (alive + " AND b.owner_id IS NULL AND b.game_type='match' AND b.level1 IN (" + ",".join("?" * len(PUBLIC_STAGES)) + ")",
                 PUBLIC_STAGES)
     return "0", ()
 
@@ -89,7 +90,7 @@ def public_word(db: Database, word: str) -> bool:
     """公开版只给公开题库里的词合成读音：不然任何人都能拿服务器当免费的语音合成器用。"""
     where, args = bank_where(Scope(PUBLIC))
     return db.one("SELECT 1 FROM bank_words w JOIN banks b ON b.id=w.bank_id WHERE " + where +
-                  " AND (w.en=? OR lower(w.en)=lower(?)) LIMIT 1", (*args, word, word)) is not None
+                  " AND lower(w.en)=lower(?) LIMIT 1", (*args, word)) is not None
 
 
 def list_banks(db: Database, scope: Scope, include_deleted: bool = False) -> list[dict]:

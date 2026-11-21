@@ -86,15 +86,47 @@ def _number_text(raw: str) -> str:
     return raw
 
 
-def _read_xlsx(data: bytes) -> list[list[str]]:
+def _first_sheet(zf: zipfile.ZipFile) -> str:
+    """工作簿里排第一的工作表（老师看到的第一个标签页）。
+
+    按 workbook.xml 的顺序和它的关系文件找，而不是按文件名：文件名 sheet10 会排在 sheet2 前面，
+    挪过顺序的工作簿里 sheet1.xml 也不一定是第一页。找不到时退回到编号最小的 sheetN.xml。"""
+    names = set(zf.namelist())
+    try:
+        book = ElementTree.fromstring(zf.read("xl/workbook.xml"))
+        rels = ElementTree.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
+        first = book.find("m:sheets/m:sheet", _NS)
+        rid = first.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id") if first is not None else None
+        for rel in rels:
+            if rel.get("Id") == rid:
+                target = rel.get("Target", "").lstrip("/")
+                path = target if target.startswith("xl/") else "xl/" + target
+                if path in names:
+                    return path
+    except (KeyError, ElementTree.ParseError):
+        pass
+    sheets = [n for n in names if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", n)]
+    if not sheets:
+        raise RosterError("xlsx 里找不到工作表")
+    return min(sheets, key=lambda n: int(re.search(r"(\d+)\.xml$", n).group(1)))
+
+
+def _si_text(si) -> str:
+    """共享字符串：纯文本 <t>，或者富文本的若干 <r><t>；不要日文注音 <rPh> 里的字。"""
+    m = "{%s}" % _NS["m"]
+    parts = [si.findtext(m + "t") or ""]
+    parts += [r.findtext(m + "t") or "" for r in si.findall(m + "r")]
+    return "".join(parts)
+
+
+def _read_xlsx_numbered(data: bytes) -> list[tuple[int, list[str]]]:
+    """第一张工作表的 [(Excel 里的行号, [单元格文本…])]，空行不出现，但行号保持原样（报错时老师能对上）。"""
     try:
         zf = zipfile.ZipFile(io.BytesIO(data))
     except (zipfile.BadZipFile, OSError) as exc:
         raise RosterError(f"不是有效的 xlsx 文件：{exc}") from exc
-    sheets = sorted(n for n in zf.namelist() if re.fullmatch(r"xl/worksheets/sheet\d+\.xml", n))
-    if not sheets:
-        raise RosterError("xlsx 里找不到工作表")
-    if zf.getinfo(sheets[0]).file_size > MAX_SHEET_BYTES:
+    sheet = _first_sheet(zf)
+    if zf.getinfo(sheet).file_size > MAX_SHEET_BYTES:
         raise RosterError("工作表过大（解压后超过 20MB）")
 
     shared: list[str] = []
@@ -102,14 +134,18 @@ def _read_xlsx(data: bytes) -> list[list[str]]:
         if zf.getinfo("xl/sharedStrings.xml").file_size > MAX_SHEET_BYTES:
             raise RosterError("共享字符串表过大")
         root = ElementTree.fromstring(zf.read("xl/sharedStrings.xml"))
-        for si in root.findall("m:si", _NS):
-            shared.append("".join(t.text or "" for t in si.iter("{%s}t" % _NS["m"])))
+        shared = [_si_text(si) for si in root.findall("m:si", _NS)]
 
-    root = ElementTree.fromstring(zf.read(sheets[0]))
-    rows: list[list[str]] = []
+    root = ElementTree.fromstring(zf.read(sheet))
+    rows: list[tuple[int, list[str]]] = []
+    row_no = 0
     for row in root.iter("{%s}row" % _NS["m"]):
+        # 行号、列号优先看 r 属性；有的程序生成的文件不写 r，就按顺序数
+        row_no = int(row.get("r")) if (row.get("r") or "").isdigit() else row_no + 1
         cells: dict[int, str] = {}
+        col = -1
         for c in row.findall("m:c", _NS):
+            col = _col_index(c.get("r")) if c.get("r") else col + 1
             kind = c.get("t")
             v = c.find("m:v", _NS)
             if kind == "inlineStr":
@@ -123,11 +159,16 @@ def _read_xlsx(data: bytes) -> list[list[str]]:
                 text = v.text
             else:
                 text = _number_text(v.text)
-            cells[_col_index(c.get("r", ""))] = text.strip()
-        if cells:
+            cells[col] = text.strip()
+        if any(cells.values()):
             width = max(cells) + 1
-            rows.append([cells.get(i, "") for i in range(width)])
+            rows.append((row_no, [cells.get(i, "") for i in range(width)]))
     return rows
+
+
+def _read_xlsx(data: bytes) -> list[list[str]]:
+    """第一张工作表的行（空行去掉）。词表上传（materials.py）也用它。"""
+    return [cells for _no, cells in _read_xlsx_numbered(data)]
 
 
 # ---------------- 对外入口 ----------------
@@ -137,14 +178,16 @@ def parse_roster(filename: str, data: bytes) -> dict:
     ignored_columns: [...], errors: [...]}。errors 里是没法使用的行，其余行照常返回。"""
     name = (filename or "").lower()
     if name.endswith(".xlsx") or data[:2] == b"PK":
-        table = _read_xlsx(data)
+        numbered = _read_xlsx_numbered(data)
     elif name.endswith(".xls"):
         raise RosterError("不支持旧版 .xls，请另存为 .xlsx 或 CSV")
     else:
-        table = _read_csv(data)
-    table = [row for row in table if any(cell for cell in row)]
-    if not table:
+        numbered = list(enumerate(_read_csv(data), start=1))
+    # 空行去掉，但每行记住它在文件里的行号：报错「第 N 行」要和老师在 Excel 里看到的一致
+    numbered = [(no, row) for no, row in numbered if any(cell for cell in row)]
+    if not numbered:
         raise RosterError("名单是空的")
+    table = [row for _no, row in numbered]
 
     header = [_norm(h) for h in table[0]]
     mapping: dict[int, str] = {}
@@ -164,7 +207,7 @@ def parse_roster(filename: str, data: bytes) -> dict:
         raise RosterError("表头里必须有「学号」和「姓名」两列（可选：班级、学院、院系、初始密码、标签）")
 
     rows, errors = [], []
-    for line_no, raw in enumerate(table[1:], start=2):
+    for line_no, raw in numbered[1:]:
         rec = {"_row": line_no, "student_no": "", "name": "", "class_name": "",
                "college": "", "department": "", "password": ""}
         for i, canonical in mapping.items():

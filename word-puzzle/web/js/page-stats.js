@@ -104,8 +104,13 @@
       updateExport();
       return;
     }
+    /* 展开着的明细行里可能正在放录音：重画表格时，内容没变的明细行原样搬回去（同一个任务里移走再放回，
+       浏览器不会暂停里面的 <audio>），这样展开另一行、切换语言都不会打断正在听的录音。 */
+    var kept = {}, html = {};
+    Array.prototype.forEach.call(body.querySelectorAll('tr.detail-row'), function (tr) { kept[tr.getAttribute('data-key')] = tr; });
     body.innerHTML = rows.map(function (r) {
       var key = keyOf(r), isOpen = !!open[key];
+      if (isOpen) html[key] = detailHtml(key);
       return '<tr class="sum-row" tabindex="0" role="button" aria-expanded="' + isOpen + '" data-key="' + esc(key) + '" title="' +
         esc(t(isOpen ? 'stats_collapse' : 'stats_expand')) + '">' +
         '<td><span class="caret">▸</span></td>' +
@@ -115,8 +120,13 @@
         '<td class="num">' + r.plays + '</td><td class="num">' + r.completed + '</td>' +
         '<td class="num">' + r.best + '</td><td class="num">' + r.worst + '</td><td class="num">' + r.avg_score + '</td>' +
         '<td>' + fmtDur(r.avg_duration) + '</td><td>' + esc(API.fmtTime(r.last_at)) + '</td></tr>' +
-        (isOpen ? '<tr class="detail-row"><td colspan="12">' + detailHtml(key) + '</td></tr>' : '');
+        (isOpen ? '<tr class="detail-row" data-key="' + esc(key) + '"><td colspan="12">' + html[key] + '</td></tr>' : '');
     }).join('');
+    Array.prototype.forEach.call(body.querySelectorAll('tr.detail-row'), function (tr) {
+      var key = tr.getAttribute('data-key'), old = kept[key];
+      if (old && old.wpHtml === html[key]) body.replaceChild(old, tr);
+      else tr.wpHtml = html[key];
+    });
     updateExport();
   }
 

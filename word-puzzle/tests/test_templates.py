@@ -62,6 +62,58 @@ class TestRosterTemplate(unittest.TestCase):
         sheet = zipfile.ZipFile(io.BytesIO(data)).read("xl/worksheets/sheet1.xml").decode("utf-8")
         self.assertIn('r="A2" t="inlineStr" s="3"', sheet, "学号一列是文本格式，长学号不会变成科学计数法")
 
+    def test_rows_added_below_the_samples_are_text_too(self):
+        _name, data, _ctype = templates.build("roster", "xlsx", "zh")
+        sheet = zipfile.ZipFile(io.BytesIO(data)).read("xl/worksheets/sheet1.xml").decode("utf-8")
+        self.assertRegex(sheet, r'<col min="1" max="1" [^>]*style="3"', "整列是文本格式，不只是示例那两格")
+        empty = zipfile.ZipFile(io.BytesIO(xlsx.build([("空", [])]))).read("xl/worksheets/sheet1.xml").decode("utf-8")
+        self.assertNotIn("<cols>", empty, "没有列就不写 <cols>（空的 <cols/> Excel 认为文件损坏）")
+
+
+def _workbook(sheet_xml: str, first: str = "sheet1.xml", extra: dict | None = None) -> bytes:
+    """手写一个最小的 xlsx：工作簿的第一页指向 first。"""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("xl/workbook.xml", '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                   'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                   '<sheets><sheet name="名单" sheetId="1" r:id="rId9"/></sheets></workbook>')
+        z.writestr("xl/_rels/workbook.xml.rels", '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                   '<Relationship Id="rId9" Type="x" Target="worksheets/%s"/></Relationships>' % first)
+        z.writestr("xl/worksheets/" + first, '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                   "<sheetData>%s</sheetData></worksheet>" % sheet_xml)
+        for name, body in (extra or {}).items():
+            z.writestr(name, body)
+    return buf.getvalue()
+
+
+def _row(r, *values, refs=True):
+    cells = "".join('<c%s t="inlineStr"><is><t>%s</t></is></c>' % (' r="%s%s"' % (chr(65 + i), r) if refs else "", v)
+                    for i, v in enumerate(values))
+    return '<row%s>%s</row>' % (' r="%d"' % r if refs else "", cells)
+
+
+class TestRosterXlsxReading(unittest.TestCase):
+    def test_row_numbers_survive_blank_rows(self):
+        data = _workbook(_row(1, "学号", "姓名") + _row(4, "2026009", "王五"))
+        self.assertEqual([(r["_row"], r["student_no"]) for r in roster.parse_roster("a.xlsx", data)["rows"]], [(4, "2026009")],
+                         "报错里的「第 N 行」和 Excel 里一致")
+
+    def test_cells_without_references_are_read_in_order(self):
+        data = _workbook(_row(1, "学号", "姓名", "班级", refs=False) + _row(2, "2026010", "赵六", "二班", refs=False))
+        row = roster.parse_roster("a.xlsx", data)["rows"][0]
+        self.assertEqual((row["student_no"], row["name"], row["class_name"], row["_row"]), ("2026010", "赵六", "二班", 2))
+
+    def test_the_first_tab_is_read_even_when_its_file_is_not_sheet1(self):
+        decoy = '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>%s</sheetData></worksheet>' % (
+            _row(1, "学号", "姓名") + _row(2, "999", "错的"))
+        data = _workbook(_row(1, "学号", "姓名") + _row(2, "2026011", "对的"), first="sheet3.xml",
+                         extra={"xl/worksheets/sheet1.xml": decoy})
+        self.assertEqual(roster.parse_roster("a.xlsx", data)["rows"][0]["name"], "对的")
+
+    def test_csv_row_numbers_survive_blank_lines(self):
+        data = "学号,姓名\r\n\r\n2026012,孙七\r\n".encode("utf-8")
+        self.assertEqual(roster.parse_roster("a.csv", data)["rows"][0]["_row"], 3)
+
 
 class TestTemplateDownload(HttpCase):
     @classmethod

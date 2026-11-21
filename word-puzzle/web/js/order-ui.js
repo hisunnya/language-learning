@@ -5,10 +5,14 @@
      cfg.items      这一关的题目（server/items.py 的 order 格式）
      cfg.ords       每道题在整个题库里的序号（读音、录音按它找题）
      cfg.audioUrl   function(i) → 第 i 句整句读音的地址
-     cfg.upload     function(i, blob, mime, ms) → Promise({id, valid, bonus, status, transcript, accuracy})；
+     cfg.upload     function(i, blob, mime, ms, playToken) → Promise({id, valid, bonus, status, transcript, accuracy})；
                     没有（离线页）= 可以录音、回放，但不评分
      cfg.save       function(report) 交成绩
-     cfg.playToken  这一局的编号（录音和成绩据此连起来）
+     cfg.playToken  function() → 这一局的编号（录音和成绩据此连起来；每次「再玩一次」重新取）
+     cfg.backHref   结束页「返回」按钮的地址（可选）
+   每句的录音阶段 s.stage：idle → starting（等麦克风）→ recording → stopping（等浏览器交出录音）→ idle（有 take 可回放）
+     → uploading → idle（有 rec = 服务器的评分）；麦克风被拒绝是 denied，其他打不开的情况是 micError（可以再试）。
+     starting / recording / stopping 期间不能离开这一句（录音还没收尾），也不因切换语言重画。
    玩法：点上面的片段放到下面的空位，点下面的片段退回去；全放好了点「检查」。拼对后可以听整句，
    然后录一遍自己的朗读，回放满意了再提交（不满意可以重录）。没有麦克风可以跳过录音，只拿拼接分。
    ============================================================ */
@@ -47,16 +51,22 @@
     var self = this;
     return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then(function (stream) {
       self.stream = stream;
-      var mime = pickMime();
-      self.rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
-      self.mime = self.rec.mimeType || mime || 'audio/webm';
-      self.chunks = [];
-      self.rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) self.chunks.push(ev.data); };
-      self.began = Date.now();
-      self.rec.start(250);
+      try {
+        var mime = pickMime();
+        self.rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        self.mime = self.rec.mimeType || mime || 'audio/webm';
+        self.chunks = [];
+        self.rec.ondataavailable = function (ev) { if (ev.data && ev.data.size) self.chunks.push(ev.data); };
+        self.began = Date.now();
+        self.rec.start(250);
+      } catch (e) {
+        stream.getTracks().forEach(function (tr) { tr.stop(); });     /* 录音器起不来：把已经打开的麦克风关掉，再把错误交出去 */
+        throw e;
+      }
       try {
         var Ctx = global.AudioContext || global.webkitAudioContext;
         self.ctx = new Ctx();
+        if (self.ctx.state === 'suspended' && self.ctx.resume) self.ctx.resume().catch(function () { });   /* iOS 上新建的是暂停状态 */
         var source = self.ctx.createMediaStreamSource(stream);
         self.analyser = self.ctx.createAnalyser();
         self.analyser.fftSize = 512;
@@ -104,6 +114,9 @@
     this.items = cfg.items || [];
     this.restart();
   }
+
+  /* 这些阶段麦克风还开着或录音还没交出来：不能换句、不能结束、不因切换语言重画 */
+  Game.BUSY = { starting: true, recording: true, stopping: true };
 
   Game.prototype.restart = function () {
     var seed = Date.now() & 0xffff;
@@ -169,9 +182,11 @@
   Game.prototype.recorderHtml = function (s) {
     var canUpload = !!this.cfg.upload;
     var next = '<button type="button" class="btn" id="orNext">' + esc(t(this.i + 1 < this.items.length ? 'or_nextSentence' : 'ig_finish')) + '</button>';
-    if (!Recorder.supported() || s.stage === 'denied') {
+    if (!Recorder.supported() || s.stage === 'denied' || s.stage === 'micError') {
+      var why = !Recorder.supported() ? 'or_noMic' : s.stage === 'denied' ? 'or_micDenied' : 'or_micFailed';
+      var retry = Recorder.supported() ? '<button type="button" class="btn ghost" id="orRetry">' + esc(t('or_micRetry')) + '</button>' : '';
       return '<div class="ig-rec"><h3>' + esc(t('or_recTitle')) + '</h3><p class="ig-heard">' +
-        esc(t(s.stage === 'denied' ? 'or_micDenied' : 'or_noMic')) + '</p><div class="ig-actions">' + next + '</div></div>';
+        esc(t(why)) + '</p><div class="ig-actions">' + retry + next + '</div></div>';
     }
     var html = '<div class="ig-rec"><h3>' + esc(t(canUpload ? 'or_recTitle' : 'or_recTitleOffline')) + '</h3>';
     if (s.rec) {
@@ -183,6 +198,8 @@
     } else if (s.stage === 'recording') {
       html += '<div class="ig-rec-row"><button type="button" class="btn rec-on" id="orStop">' + esc(t('or_stop')) + '</button>' +
         '<span class="ig-rec-time" id="orTime">0.0s</span><span class="ig-level"><i id="orLevel"></i></span></div>';
+    } else if (s.stage === 'stopping') {
+      html += '<p class="ig-heard">' + esc(t('or_stopping')) + '</p>';
     } else if (s.stage === 'uploading') {
       html += '<p class="ig-heard">' + esc(t('or_uploading')) + '</p>';
     } else if (s.take && s.take.tooShort) {
@@ -196,10 +213,11 @@
       html += '<p class="ig-heard">' + esc(t('or_recHint')) + '</p><div class="ig-rec-row"><button type="button" class="btn" id="orRecord">' +
         esc(t('or_record')) + '</button></div>';
     }
-    if (canUpload && !(s.rec && s.rec.valid) && s.stage !== 'recording' && s.stage !== 'uploading') {
+    var busy = Game.BUSY[s.stage] || s.stage === 'uploading';
+    if (canUpload && !(s.rec && s.rec.valid) && !busy) {
       html += '<div class="ig-actions"><button type="button" class="btn ghost sm" id="orSkip">' + esc(t('or_skip')) + '</button></div>';
     }
-    if (!canUpload && s.stage !== 'recording') html += '<div class="ig-actions">' + next + '</div>';     /* 离线页：录不录都能往下走 */
+    if (!canUpload && !Game.BUSY[s.stage]) html += '<div class="ig-actions">' + next + '</div>';     /* 离线页：录不录都能往下走 */
     return html + '</div>';
   };
 
@@ -252,6 +270,7 @@
       sentence.onkeydown = function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); self.play(self.i); } };
     }
     on('orRecord', function () { self.record(); });
+    on('orRetry', function () { s.stage = 'idle'; self.record(); });
     on('orStop', function () { self.stopRecording(); });
     on('orRedo', function () { self.dropTake(); s.rec = null; self.render(); self.record(); });
     on('orSubmit', function () { self.submit(); });
@@ -273,7 +292,9 @@
 
   Game.prototype.dragFrom = function (ev, el, slots) {
     var self = this, s = this.st();
-    if (ev.button > 0 || s.arranged) return;
+    if (ev.button > 0 || s.arranged || self.dragPointer != null) return;    /* 一次只跟一根手指：第二根手指按下来不算 */
+    var pointer = ev.pointerId;
+    self.dragPointer = pointer;
     var fromSlot = el.hasAttribute('data-slot') ? parseInt(el.getAttribute('data-slot'), 10) : null;
     var frag = fromSlot != null ? s.placed[fromSlot] : parseInt(el.getAttribute('data-frag'), 10);
     var sx = ev.clientX, sy = ev.clientY, drag = null;
@@ -308,6 +329,7 @@
       if (drag.hole.nextSibling !== anchor || drag.hole.parentNode !== slots) slots.insertBefore(drag.hole, anchor);
     }
     function move(e) {
+      if (e.pointerId !== pointer) return;
       if (!drag) {
         if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 8) return;
         drag = begin(e);
@@ -316,10 +338,12 @@
       drag.ghost.style.transform = 'translate(' + (e.clientX - drag.dx) + 'px,' + (e.clientY - drag.dy) + 'px) rotate(-2deg) scale(1.06)';
       place(e);
     }
-    function end() {
+    function end(e) {
+      if (e && e.pointerId !== pointer) return;
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', end);
       document.removeEventListener('pointercancel', end);
+      self.dragPointer = null;
       if (!drag) return;                                   /* 没拖动：交给点击处理 */
       var index = null;
       if (drag.hole.parentNode === slots) {
@@ -359,8 +383,10 @@
     }, function () { self.stopRecording(); }).then(function () {
       s.stage = 'recording';
       self.render();
-    }).catch(function () {
-      s.stage = 'denied';
+    }).catch(function (err) {
+      /* 用户或浏览器拒绝了权限 → denied；设备被占用、找不到麦克风、录音格式不支持… → micError（可以再试） */
+      var name = err && err.name;
+      s.stage = (name === 'NotAllowedError' || name === 'SecurityError' || name === 'PermissionDeniedError') ? 'denied' : 'micError';
       self.render();
     });
   };
@@ -369,6 +395,7 @@
     var self = this, s = this.st();
     if (!this.recorder || s.stage !== 'recording') return;
     s.stage = 'stopping';
+    this.render();                                 /* 「停止」按钮马上换成「正在保存录音」，免得再点一次 */
     this.recorder.stop().then(function (take) {
       self.dropTake();
       take.url = URL.createObjectURL(take.blob);
@@ -397,7 +424,8 @@
   };
 
   Game.prototype.next = function () {
-    if (this.st().stage === 'recording' || this.st().stage === 'starting') return;
+    if (Game.BUSY[this.st().stage]) return;
+    if (this.audio) this.audio.pause();
     this.dropTake();
     if (this.i + 1 < this.items.length) { this.i += 1; this.render(); return; }
     this.finish();
@@ -446,7 +474,7 @@
       if (global.WPI18N && global.WPI18N.onChange) {
         global.WPI18N.onChange(function () {
           var st = game.states[game.i];
-          if (!st || (st.stage !== 'recording' && st.stage !== 'starting')) game.render();
+          if (!st || !Game.BUSY[st.stage]) game.render();
         });
       }
       return game;

@@ -67,7 +67,7 @@
   function pickLevel() {
     $('igMount').innerHTML = '<div class="card"><h2>' + API.esc(t('ig_pickLevel')) + '</h2><div class="list">' +
       groups.map(function (g, k) {
-        return '<div class="item"><div class="main"><b>' + API.esc(g.unit || t('ig_level', { n: k + 1 })) + '</b> <small>' +
+        return '<div class="item"><div class="main"><b>' + API.esc(WPItemCore.levelName(g, k, t)) + '</b> <small>' +
           API.esc(t('ig_levelCount', { n: g.items.length })) + '</small></div><div class="ops"><button type="button" class="btn sm" data-level="' +
           k + '">' + API.esc(t('home_play')) + '</button></div></div>';
       }).join('') + '</div></div>';
