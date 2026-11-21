@@ -16,7 +16,7 @@ function makePage(opts) {
     document: { getElementById: el, querySelector: (q) => (q.indexOf('source') >= 0 ? Object.values(radios).filter((r) => r.checked)[0] : null), querySelectorAll: () => [], addEventListener: (n, f) => { if (n === 'DOMContentLoaded') sandbox.__ready = f; } },
     location: { get hash() { return hash; }, set hash(v) { hash = v; } },
     history: { replaceState: () => {} }, confirm: () => true, window: null,
-    API: { esc: (s) => String(s), get: () => Promise.resolve({ banks: [], materials: [], files: [], tags: [] }), post: () => Promise.resolve({}), del: () => Promise.resolve({}), toast() {}, path: (p) => p, fmtTime: () => '' },
+    API: { esc: (s) => String(s), get: () => Promise.resolve({ banks: [], materials: [], files: [], tags: [] }), post: () => Promise.resolve({}), del: () => Promise.resolve({}), toast() {}, path: (p) => p, fmtTime: () => '', templateLinks() {} },
     WPI18N: { t: (k) => k, onChange() {} },
     AuthUI: { info: () => ({ enabled: opts.accounts !== false }), isAdmin: () => true, ready: Promise.resolve() },
     BankPanels: { set() {}, tagPills: () => '', groupByCategory: () => [] },
