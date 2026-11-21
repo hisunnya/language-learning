@@ -150,12 +150,17 @@ fi
 if [[ -x "$ASR_VENV/bin/python" ]] && "$ASR_VENV/bin/python" -c 'import faster_whisper' >/dev/null 2>&1; then
   # 模型只在安装时下载一次（国内服务器连不上下载站时，可以设 WP_ASR_HF_ENDPOINT 用镜像，或者把这个目录从别处整个拷过来）；
   # 服务运行时只读本地文件，不联网。
-  if env ${WP_ASR_HF_ENDPOINT:+HF_ENDPOINT="$WP_ASR_HF_ENDPOINT"} HF_HUB_DISABLE_TELEMETRY=1 timeout 900 "$ASR_VENV/bin/python" -c \
+  # 家里实测（2026-11-21）：huggingface.co 的域名解析被干扰（解析到无关地址，连接 20 秒超时），镜像 hf-mirror.com 两秒就通。
+  # 所以先用 WP_ASR_HF_ENDPOINT（设了的话）或官方地址，失败了自动换镜像再试一次。
+  fetch_model() {
+    env ${1:+HF_ENDPOINT="$1"} HF_HUB_DISABLE_TELEMETRY=1 timeout 900 "$ASR_VENV/bin/python" -c \
       "from faster_whisper import WhisperModel; WhisperModel('$ASR_MODEL', device='cpu', compute_type='int8', download_root='$ASR_MODELS')" \
-      >/dev/null 2>&1; then
+      >/tmp/lexica-asr-model.log 2>&1
+  }
+  if fetch_model "${WP_ASR_HF_ENDPOINT:-}" || { [[ -z "${WP_ASR_HF_ENDPOINT:-}" ]] && echo "    官方下载站不通（$(tail -1 /tmp/lexica-asr-model.log | cut -c1-120)），换镜像 hf-mirror.com" && fetch_model https://hf-mirror.com; }; then
     echo "    模型 $ASR_MODEL 已就绪（$ASR_MODELS）"
   else
-    warn "模型 $ASR_MODEL 下载失败（$ASR_MODELS）；没有模型时不做识别"
+    warn "模型 $ASR_MODEL 下载失败（$ASR_MODELS）：$(tail -1 /tmp/lexica-asr-model.log | cut -c1-200)；没有模型时不做识别"
   fi
 fi
 chmod -R a+rX "$ASR_MODELS" 2>/dev/null || true
