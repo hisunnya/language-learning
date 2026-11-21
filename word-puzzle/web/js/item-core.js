@@ -90,6 +90,17 @@
     return squash(placed.map(function (i) { return fragmentText(fragments[i]); }).join(' '));
   }
 
+  /* 拖动放片段：fromSlot = 从下面框里第几个拖出来（从上面拖来的是 null）；index = 松手时它在框里的位置
+     （按拿掉它之后剩下的片段数）；index 为 null = 拖到框外松手（从框里拖出来的就退回上面）。返回新的顺序，不改原数组 */
+  function placeAt(placed, frag, index, fromSlot) {
+    var out = placed.slice();
+    if (fromSlot != null) out.splice(fromSlot, 1);
+    if (index == null) return out;
+    index = Math.max(0, Math.min(out.length, index));
+    out.splice(index, 0, frag);
+    return out;
+  }
+
   function orderArrangePoints(wrong) {
     return Math.max(ORDER.floor, ORDER.arrange - ORDER.wrong * (wrong || 0));
   }
@@ -105,7 +116,7 @@
     squash: squash, key: key, distance: distance,
     spellCheck: spellCheck, spellPoints: spellPoints, spellHint: spellHint,
     rng: rng, shuffle: shuffle, fragmentText: fragmentText,
-    orderCheck: orderCheck, orderSentence: orderSentence,
+    orderCheck: orderCheck, orderSentence: orderSentence, placeAt: placeAt,
     orderArrangePoints: orderArrangePoints, orderPoints: orderPoints
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -324,6 +324,15 @@ class TestPages(unittest.TestCase):
                            'data-game="%s"' % page[:-5]):
                 self.assertIn(needle, html, page + " " + needle)
 
+    def test_line_up_pieces_can_be_dragged_with_finger_or_mouse(self):
+        ui = (self.WEB / "js" / "order-ui.js").read_text(encoding="utf-8")
+        for needle in ("addEventListener('pointerdown'", "'pointermove'", "'pointercancel'", "C.placeAt(", "self.justDragged"):
+            self.assertIn(needle, ui)
+        css = (self.WEB / "css" / "items.css").read_text(encoding="utf-8")
+        self.assertIn("touch-action: none", css, "手指拖片段时页面不跟着滚")
+        for needle in (".ig-ghost", ".ig-hole"):
+            self.assertIn(needle, css)
+
     def test_spell_input_does_not_let_the_phone_autocorrect(self):
         ui = (self.WEB / "js" / "spell-ui.js").read_text(encoding="utf-8")
         for attr in ('autocorrect="off"', 'autocapitalize="none"', 'spellcheck="false"', 'autocomplete="off"'):

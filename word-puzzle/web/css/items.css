@@ -36,6 +36,14 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 .ig-frag.placed { background: var(--blue-l); border-color: var(--blue); }
 .ig-frag.wrong { border-color: var(--red); box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 35%, transparent); }
 .ig-frag.locked { cursor: default; box-shadow: none; }
+/* 可以拖：手指按住片段时不滚动页面、不选中文字（在别的地方照样能滑动页面） */
+.ig-frag:not(.locked) { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+/* 拖着走的那张卡片 */
+.ig-ghost { position: fixed; left: 0; top: 0; z-index: 1000; margin: 0; pointer-events: none; cursor: grabbing;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .28); border-color: var(--blue); background: var(--card); will-change: transform; }
+/* 松手会落到的位置 */
+.ig-hole { display: inline-block; flex: none; border: 2px dashed var(--blue); border-radius: 10px;
+  background: color-mix(in srgb, var(--blue) 10%, transparent); }
 .ig-frag[hidden] { display: none; }
 .ig-sentence { font-size: 18px; line-height: 1.7; color: var(--heading); font-weight: 600; cursor: pointer; padding: 10px 12px;
   border-radius: 12px; background: var(--chip-bg); }

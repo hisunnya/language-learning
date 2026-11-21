@@ -221,7 +221,7 @@
     var pool = document.getElementById('orPool');
     if (pool) pool.onclick = function (ev) {
       var b = ev.target.closest('[data-frag]');
-      if (!b) return;
+      if (!b || self.justDragged) return;
       s.placed.push(parseInt(b.getAttribute('data-frag'), 10));
       s.badAt = null;
       self.render();
@@ -229,11 +229,12 @@
     var slots = document.getElementById('orSlots');
     if (slots) slots.onclick = function (ev) {
       var b = ev.target.closest('[data-slot]');
-      if (!b || s.arranged) return;
+      if (!b || s.arranged || self.justDragged) return;
       s.placed.splice(parseInt(b.getAttribute('data-slot'), 10), 1);
       s.badAt = null;
       self.render();
     };
+    this.enableDrag();
     on('orClear', function () { s.placed = []; s.badAt = null; self.render(); });
     on('orCheck', function () {
       var res = C.orderCheck(item.fragments, s.placed);
@@ -256,6 +257,85 @@
     on('orSubmit', function () { self.submit(); });
     on('orSkip', function () { if (global.confirm(t('or_skipConfirm'))) { s.skipped = true; self.next(); } });
     on('orNext', function () { self.next(); });
+  };
+
+  /* 拖动：按住片段拖，片段像卡片一样浮起来跟着走，框里出现一个虚线空位，松手就放到那里。
+     拖框里的片段 = 换位置，拖到框外松手 = 退回上面；从上面拖进框里可以放到任意位置。
+     移动不到 8 像素就当作点击（点击的逻辑不变）。用指针事件，手指和鼠标都行。 */
+  Game.prototype.enableDrag = function () {
+    var self = this, s = this.st();
+    var slots = document.getElementById('orSlots');
+    if (!slots || s.arranged) return;
+    Array.prototype.forEach.call(this.mount.querySelectorAll('#orSlots [data-slot], #orPool [data-frag]'), function (el) {
+      el.addEventListener('pointerdown', function (ev) { self.dragFrom(ev, el, slots); });
+    });
+  };
+
+  Game.prototype.dragFrom = function (ev, el, slots) {
+    var self = this, s = this.st();
+    if (ev.button > 0 || s.arranged) return;
+    var fromSlot = el.hasAttribute('data-slot') ? parseInt(el.getAttribute('data-slot'), 10) : null;
+    var frag = fromSlot != null ? s.placed[fromSlot] : parseInt(el.getAttribute('data-frag'), 10);
+    var sx = ev.clientX, sy = ev.clientY, drag = null;
+
+    function begin(e) {
+      var r = el.getBoundingClientRect();
+      var ghost = el.cloneNode(true);
+      ghost.classList.add('ig-ghost');
+      ghost.classList.remove('wrong');
+      ghost.style.width = r.width + 'px';
+      document.body.appendChild(ghost);
+      var hole = document.createElement('span');
+      hole.className = 'ig-hole';
+      hole.style.width = r.width + 'px';
+      hole.style.height = r.height + 'px';
+      if (fromSlot != null) el.parentNode.replaceChild(hole, el);       /* 原来的位置先留一个空位 */
+      else el.style.visibility = 'hidden';
+      return { ghost: ghost, hole: hole, dx: sx - r.left, dy: sy - r.top };
+    }
+    function over(e) {
+      var r = slots.getBoundingClientRect(), m = 18;
+      return e.clientX > r.left - m && e.clientX < r.right + m && e.clientY > r.top - m && e.clientY < r.bottom + m;
+    }
+    function place(e) {
+      if (!over(e)) { if (drag.hole.parentNode) drag.hole.parentNode.removeChild(drag.hole); return; }
+      var cards = Array.prototype.slice.call(slots.querySelectorAll('[data-slot]'));
+      var index = cards.filter(function (c) {             /* 指针前面（按阅读顺序）有几张卡片 */
+        var r = c.getBoundingClientRect();
+        return e.clientY > r.bottom || (e.clientY >= r.top && e.clientX > r.left + r.width / 2);
+      }).length;
+      var anchor = cards[index] || null;
+      if (drag.hole.nextSibling !== anchor || drag.hole.parentNode !== slots) slots.insertBefore(drag.hole, anchor);
+    }
+    function move(e) {
+      if (!drag) {
+        if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 8) return;
+        drag = begin(e);
+      }
+      e.preventDefault();
+      drag.ghost.style.transform = 'translate(' + (e.clientX - drag.dx) + 'px,' + (e.clientY - drag.dy) + 'px) rotate(-2deg) scale(1.06)';
+      place(e);
+    }
+    function end() {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', end);
+      document.removeEventListener('pointercancel', end);
+      if (!drag) return;                                   /* 没拖动：交给点击处理 */
+      var index = null;
+      if (drag.hole.parentNode === slots) {
+        index = 0;
+        for (var n = drag.hole.previousElementSibling; n; n = n.previousElementSibling) if (n.hasAttribute('data-slot')) index++;
+      }
+      drag.ghost.remove();
+      s.placed = C.placeAt(s.placed, frag, index, fromSlot);
+      s.badAt = null;
+      self.justDragged = true;                             /* 松手后浏览器还会补一个 click，别让它再放一次 / 退回一次 */
+      setTimeout(function () { self.justDragged = false; }, 0);
+      self.render();
+    }
+    document.addEventListener('pointermove', move, { passive: false });
+    document.addEventListener('pointerup', end);
+    document.addEventListener('pointercancel', end);
   };
 
   Game.prototype.dropTake = function () {

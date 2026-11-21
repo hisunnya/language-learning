@@ -69,5 +69,14 @@ check('排排坐计分：拼接 10、出错扣 2 最少 2；有效朗读 30；�
   eq(C.orderPoints({ arranged: false, recordingValid: true, bonus: 20 }), 0);
 });
 
+check('拖动放片段：框里换位置、拖到框外退回、从上面拖到指定位置', () => {
+  eq(C.placeAt([3, 1, 2], 2, 0, 2), [2, 3, 1], '把最后一个拖到最前面');
+  eq(C.placeAt([3, 1, 2], 3, 2, 0), [1, 2, 3], '把第一个拖到最后');
+  eq(C.placeAt([3, 1, 2], 1, null, 1), [3, 2], '拖到框外 = 退回');
+  eq(C.placeAt([3, 1], 0, 1, null), [3, 0, 1], '从上面拖进来插到中间');
+  eq(C.placeAt([3, 1], 0, 9, null), [3, 1, 0], '位置超出就放到最后');
+  const orig = [3, 1, 2]; C.placeAt(orig, 2, 0, 2); eq(orig, [3, 1, 2], '不改原数组');
+});
+
 if (failures.length) { console.log(failures.join('\n')); process.exit(1); }
 console.log('item-core 全部通过（' + passed + ' 项）');
