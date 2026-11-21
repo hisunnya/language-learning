@@ -1,11 +1,14 @@
 # language-learning · 词境 Lexica
 
-家庭学习工具集。四个项目互相独立，各自都能单独跑起来，另有一个总主页把它们串起来。
+「词境 Lexica」学习网站：一个总主页 + 五个模块。模块互相独立，各自都能单独跑起来；线上整站由一个容器提供（见下文「生产部署」）。
+
+> **接手这个仓库？先读 [`docs/交接说明.md`](docs/交接说明.md)**（架构、目录、怎么测试、怎么部署、私有文件、未完成的事），
+> 再读 [`AGENTS.md`](AGENTS.md)（必须遵守的约定：双语、配色、测试、提交、隐私）。
 
 | 项目 | 内容 | 技术栈 |
 | --- | --- | --- |
 | [`hub/`](hub/) | **词境 Lexica** 网站主页（原「语林」）：五个模块的入口、隐私说明、全站页脚（备案号），中英双语 + 五套配色 | 纯静态 HTML/CSS/JS |
-| [`word-puzzle/`](word-puzzle/) | **词境 Lexica**（网站版）：人教版 PEP 初中 + 高中英语词汇题库、四级层级选题、上传资料、导出单文件离线测试页、成绩入库；另有**带登录的学生版**（学号登录、成绩按人记录、导入名单、按班级导出、**题库按标签开放给学生（题库管理只有老师）**，经 Tailscale Funnel 对外，见 `word-puzzle/deploy/family/`） | Python 标准库 + SQLite + 原生 JS，nginx 部署 |
+| [`word-puzzle/`](word-puzzle/) | **词境 Lexica**：英语词汇游戏。三种玩法——中英配对、单词大比拼（拼写）、排排坐（连词成句 + 朗读录音 + 本地语音识别）；人教版 PEP 初中 + 高中内置词库；老师（多租户）管理学生、题库、标签；成绩、访问记录、积分榜（周榜）、奖状徽章；单文件离线页；`/word-puzzle/` 要登录，`/words/` 是免登录的公开版（只有初中、高中配对） | Python 标准库 + SQLite + 原生 JS（无构建），nginx |
 | [`topic-app/`](topic-app/) | **每日话题 Daily Topics**：适合初中水平的家庭话题讨论，随机抽题 + 参考方向 + 历史记录 | 纯前端，零依赖，localStorage |
 | [`ham-exam/`](ham-exam/) | **无线电执照 Ham Exam**：业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
 | [`chemistry/`](chemistry/) | **化学探秘 Chem Quest**：初中元素配对、高中反应配平、大学溶液推理；选择、数值填空、配对、排序、找错七种题型 | 纯前端，零依赖，localStorage |
@@ -123,23 +126,22 @@ language-learning/
 
 部署说明见 [`hub/deploy/部署说明.md`](hub/deploy/部署说明.md)。
 
-## 生产服务器一键部署整站
+## 生产部署（整站）
 
-在生产服务器上，**先**运行 `sudo bash ./pre-deploy.sh`（备份容器里已安装的代码和数据库、能快照时打快照，并打印出问题时的回滚命令，
-其中宿主机回滚用的就是此刻的提交，所以要在 `git pull` 之前跑；需要 `deploy.local.env` 里有 `LEXICA_CTID`），然后 `git pull`，再从仓库根目录运行：
-
-```bash
-sudo bash ./deploy-all-20261118_180000.sh
-```
-
-脚本部署到你指定的服务器（地址写在不进 git 的 `deploy.local.env` 里，见下），会更新词境后端、语林门户、每日话题、无线电执照和 nginx 统一入口（配置写入 `/etc/nginx/conf.d/lingua-grove.conf`），并检查四个页面及词境 API。缺少 `conf.d` 时会自动创建；词境现有数据库会保留。目标服务器的地址不写在仓库里（仓库是公开的）：把 `deploy.local.env.example` 复制成 `deploy.local.env`（已在 `.gitignore` 里，不会提交）并改成自己的值，
-放在服务器上的仓库检出目录里；同名环境变量优先于文件：
+线上整站（主页、四个静态模块、词境登录版和公开版）都在 PVE 宿主机上的一个 LXC 容器里，宿主机只做转发。
+在宿主机的仓库检出目录里（root），按这个顺序：
 
 ```bash
-cp deploy.local.env.example deploy.local.env     # 然后编辑：LINGUA_SERVER_NAME、LEXICA_UPSTREAM
-sudo bash ./deploy-all-20261118_180000.sh
-# 或临时覆盖：sudo env LINGUA_SERVER_NAME=服务器IP或域名 LEXICA_UPSTREAM=none bash ./deploy-all-20261118_180000.sh
+bash ./pre-deploy.sh                 # 先备份：容器里已安装的代码和数据库，打印回滚命令（要在 git pull 之前）
+git pull
+bash ./deploy-all-<时间戳>.sh         # 仓库根目录下只有一个 deploy-all-*.sh，每次提交都会改名
 ```
+
+deploy-all 把整站打包推进容器、在容器里运行 `word-puzzle/deploy/family/install.sh`（装依赖、同步代码、
+systemd、nginx、健康检查），再更新宿主机的转发；数据库在容器外的目录里，部署不会动它。
+服务器地址、容器编号、对外网址这些私有值不进仓库（仓库是公开的），写在检出目录里不进 git 的
+`deploy.local.env`（从 `deploy.local.env.example` 复制）：`LINGUA_SERVER_NAME`、`LEXICA_UPSTREAM`、
+`LEXICA_CTID`、`LEXICA_PUBLIC_URL`。细节见 `AGENTS.md` §5.2 和 [`docs/交接说明.md`](docs/交接说明.md)。
 
 ---
 
@@ -173,12 +175,14 @@ sudo bash ./deploy-all-20261118_180000.sh
 | 项目 | 规则 |
 | --- | --- |
 | 每关限时 | 60 秒，上一关剩余时间越多下一关时间越长，最多 80 秒 |
-| 每关词数 | 默认 15 个词，生成题库时可改成 4~40；词多的单元自动拆成多关（``Unit 1（1/3）``），不足的关用前面学过的词补齐 |
+| 每关词数 | 默认 9 个词，生成题库时可改成 4~40；词多的单元自动拆成多关（``Unit 1（1/3）``），不足的关用前面学过的词补齐 |
 | 点卡顺序 | 中文先点、英文先点都行；连点同一侧只是换一张选，不算错并有提示 |
-| 配对得分 | 每对 +100 分 |
-| 连击奖励 | 连续配对每多一次 +20 分，最高 +100 分 |
-| 配错惩罚 | 扣 3 秒、扣 20 分，连击清零 |
-| 过关奖励 | 剩余每秒折算 10 分 |
+| 配对得分 | 每对 +50 分（2026-11-21 起减半，历史成绩也按比例减半） |
+| 连击奖励 | 连续配对每多一次 +10 分，最高 +50 分 |
+| 配错惩罚 | 扣 3 秒、扣 10 分，连击清零 |
+| 过关奖励 | 剩余每秒折算 5 分 |
+
+另外两种玩法（单词大比拼、排排坐）的规则和计分见 `AGENTS.md` §9.3。
 
 ## 运算与存储分离
 

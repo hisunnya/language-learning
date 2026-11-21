@@ -328,142 +328,43 @@ titles, headers, README and the hub.
 
 ### 5.2 Deployment layout on the server
 
-**Architecture (one backend, two fronts, one database).** There is a single Lexica backend,
-in the container `lexica` (the *student edition*, 学生版). It has two nginx entrances: the
-public one (Funnel → 127.0.0.1:8081) requires login for everything; the LAN one
-(`WP_LAN_ADDR`, `<container-ip>:8082`, also reached through the host's nginx at
-`http://<host>/word-puzzle/`) lets visitors play without login and records their
-visits and scores by device — the *home edition* (家庭版, formerly "局域网版") — and asks for a
-teacher login only when a management function is used, with the same accounts because it
-is the same database. nginx marks the entrance with `X-Wp-Entry` (cleared on the public
-side); the backend honours it only from a loopback peer with `WP_LAN_GUEST=1`.
-**The container serves the whole site** (2026-11-21): `/` is the homepage (`hub/`), plus `/privacy.html`,
-`/topics/`, `/ham/`, `/chemistry/`, `/physics/` (static, no login) and `/word-puzzle/` (login). The LAN entrance
-shows exactly the same as the public one (`WP_LAN_GUEST` defaults to 0 now; the guest code stays for the coming
-public `/words/` entrance), and the host's port 80 forwards everything to it (`hub/deploy/site-proxy.conf`).
-`deploy-all` packs `word-puzzle hub topic-app/topic-app ham-exam chemistry physics` into the container.
-**Public Lexica `/words/`** (2026-11-21): the same code and backend as `/word-puzzle/`, without login, for the ICP
-check and the public. `tools/build_public_web.py` generates `web-public/` at install time from `web/` (only index,
-play, practice, stats; `/word-puzzle/` → `/words/`; fixed student view). nginx sends `/words/api/…` to the backend's
-`/pub/api/…` (reachable only from loopback, and `/word-puzzle/api/…` cannot produce it); the backend then ignores the
-session cookie, uses `tenancy.PUBLIC` (built-in banks of 初中 / 高中 only) and allows only `Handler.PUBLIC_ROUTES` —
-no login, management, offline pages, leaderboard or uploads. Scores are stored with `mode='public'` against the
-browser's device number and each device sees only its own; audio is synthesised only for words of public banks;
-scores and audio are rate-limited per address, the API as a whole in nginx. The homepage card links to `/words/`.
-**Game types** (2026-11-21): a bank has `game_type` — `match` (the original matching game), `spell` (单词大比拼,
-fill the bracketed word of a phrase) or `order` (排排坐, put English fragments of a sentence in order, then record
-the sentence). Items of the new types live in `bank_items` (JSON, format in `server/items.py`, parsed from the
-teachers' Word files: brackets = answer; one fragment per line, yellow = key phrase kept highlighted, green line =
-reference answer, which the joined fragments must equal). `tools/import_items.py` imports a .docx (teachers'
-upload page comes later). Students pick the game type first on the home page. The pure rules are in
-`web/js/item-core.js` (node test `tests/js/item_core.test.js`); `spell-ui.js` / `order-ui.js` run both on the site
-and in the offline single-file page. Points: spell 10 per item (hint −3, wrong −2, at least 1 when solved);
-order 10 for the arrangement (−2 per wrong check, at least 2) + 30 for a valid recording + up to 20 bonus =
-word accuracy of the recognised text against the reference. The order score is computed by the server
-(`server/recordings.py`), never taken from the page. Recordings are stored as MP3 under the data directory
-(`recordings/`), recognised by a local faster-whisper model in its own venv (`server/asr.py`,
-`tools/asr_worker.py`; no prompt with the answer, VAD on, offline at run time), one at a time in a background
-queue; without recognition a recording ≥ 1 s still earns the 30 points. Students replay their recordings under
-Scores, teachers those of their students. Recording needs https (the plain-http LAN entrance cannot record).
-**Certificates and badges** (`server/awards.py`; rules changed 2026-11-21): being No. 1 on the **weekly** board on 10 / 15 / 30
-days **in total** (not necessarily consecutive, across weeks) earns a bronze / silver / gold certificate and badge,
-separately for the overall board and each game (`/api/leaderboard?game=`). A day's leader is whoever has the most points
-from that week's Monday 00:00 (Beijing time) to the end of that day, so the ranking restarts every Monday and early
-leaders do not dominate; ties all count; points must be > 0. The board is the one the student sees (the overall board if
-configured, otherwise class + responsible teacher). A day is a Beijing calendar day, settled after it ends, lazily
-(`catch_up` when the leaderboard or awards are requested, back to 120 days); each threshold once per board. The rule
-version is stored in `app_settings.awards_rules`: changing `RULES` discards the stored leader records and settling
-progress and recomputes them (issued certificates stay). Students see them on `stats.html` ("My honours") and
-`me.html` (the header name links there); certificates are drawn in the browser (`web/js/awards-ui.js`, canvas
-2400×1697, bilingual, fixed metal colours) and saved as PNG / JPG; in WeChat the image is shown for long-press saving.
-Teachers get a list of their students' certificates with downloads and a sample preview (`/api/admin/awards`).
-**Templates for teachers** (`server/templates.py`, `server/xlsx.py`): `/api/templates/{wordlist,roster}.{xlsx,csv}?lang=`
-(staff only) with exactly the headers the parsers recognise, sample rows and a notes sheet; linked from the
-word-list upload in the workbench and the roster import. Word-list uploads accept .xlsx; an empty unit cell means
-the unit of the row above. Tests read every template back through the upload parsers.
-**Module logos**: each module header uses the same simplified line icon as its homepage card (flask, atom,
-speech bubble, and for the ham exam a handheld radio with signal waves), drawn in `.portal-brand-mark`
-(`hub/shared/module-header.css`); Lexica keeps its image logo. In chemistry and physics a question whose `visual`
-is empty hides the big stage box (`formulaStage.hidden`) — never put a decorative glyph there; only content that
-helps answering (symbol, formula, equation, pH) belongs in it.
-**Every page carries the site footer** `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
-an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
-is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)
-are not linked from the homepage.
-The database lives **outside the container** (a host directory, backups on another disk,
-both bind-mounted; paths in `AGENTS.local.md`); the container stays stateless. The old
-separate home backend on the host is retired. Other subjects plug in through
-`server/modules.py`, `/api/records` and `server/policy.py`; see `docs/路线图.md`.
+**What runs where today (2026-11-21).** The whole site is served by one unprivileged LXC container
+(hostname `lexica`, on the home PVE host, id and addresses in `AGENTS.local.md`). Inside it:
 
-**Teachers as tenants (one database, visibility by relation).** Roles are `admin` (the
-*super administrator*: sees and manages everything, including other teachers' work and
-deleted rows), `teacher` and `student`. All rows live in the same tables; what a person
-sees is decided in one place, `word-puzzle/server/tenancy.py` (`Scope`, `bank_where`,
-`student_where`, `people_where`, `material_where`) — add a new list endpoint through it,
-never with its own ad-hoc filter.
-
-- A teacher sees the students linked to them (`teacher_students`), the banks they own
-  (`banks.owner_id`), banks shared with them (`teacher_banks`) and the built-in banks
-  (`owner_id IS NULL`, usable by every teacher, editable only by the super administrator),
-  their own uploaded materials, and the scores / visits of their students.
-- Tags are **per teacher** (`user_tags.teacher_id`, `bank_tags.teacher_id`): a student sees a
-  bank only when one teacher gave both the same tag. Removing a student or a bank from a
-  teacher also removes that teacher's tags on it.
-- Importing a student number that already belongs to another teacher does **not** link it:
-  `tenancy.claim_student` files a row in `share_requests` (audit `share.request`) and the
-  importer gets no data, no tags and no password reset for it. The teacher responsible for the
-  student (the first one linked, `tenancy.primary_teacher`) or the super administrator approves
-  or rejects on the accounts page (`share.approve` / `share.reject`). Direct links without a
-  request happen only when the super administrator imports, when the student has no teacher
-  at all, or when both teachers have the same `users.teacher_group` (set by the super
-  administrator; audit `student.auto_share` with the reason). Reason: anyone who knows a
-  student number could otherwise take over the account of a student from another school.
-- Reset password, disable and unlock (also via a roster import with "reset existing") are
-  allowed only for the responsible teacher and the super administrator
-  (`tenancy.can_manage_account`, error code `not_primary`); other teachers a student is shared
-  with can read scores and visits and use their own tags.
-- **Deletes are soft** (`deleted_at` / `deleted_by` on users, banks, materials): hidden from
-  teachers and students, restorable by the super administrator on `tenants.html`. A
-  teacher "deleting" something that is only shared with them just unlinks it. The hard
-  `Database.delete_bank` is for internal rebuilds of the built-in banks only.
-- Sharing, moving, deleting, restoring and adding teachers go to `audit_log`.
-- The LAN guest (home edition, not logged in) sees the built-in banks and the super
-  administrator's banks.
-- The leaderboard (`server/leaderboard.py`, `leaderboard.html`) shows names and points only.
-  Without settings a student sees their own class (classmates = same class name AND a shared
-  teacher), a teacher the classes of their own students, the super administrator everyone.
-  The super administrator can set an overall board (`app_settings` key `leaderboard`: the
-  classes and an optional title, edited on `tenants.html`, audit `leaderboard.config`); then
-  every signed-in student and teacher sees those classes' students together, deliberately
-  across teachers, with the class next to each name.
-
-
-| Path | Holds |
+| Inside the container | What |
 |---|---|
-| `/srv/word-puzzle` | 词境 Lexica 的后端代码（`word-puzzle/deploy/install.sh` 装的） |
-| `/var/lib/word-puzzle` | 词境的 SQLite 数据库和离线页 |
-| `/var/www/topic-app` | 每日话题（纯静态） |
-| `/var/www/ham-exam` | 无线电执照（纯静态） |
-| `/var/www/chemistry` | 化学探秘（纯静态） |
-| `/var/www/physics` | 物理探秘（纯静态） |
-| `/var/www/lingua-grove` | 总主页（纯静态） |
+| `word-puzzle-family` (systemd) | the one Lexica backend (`word-puzzle/server`, Python stdlib, SQLite), `127.0.0.1:8766` |
+| nginx `127.0.0.1:8081` | the site entrance (`word-puzzle/deploy/family/nginx/word-puzzle-family.conf`) |
+| `/srv/word-puzzle-family` | backend code and the static trees (`web/`, `web-public/`, `hub/`, `topics/`, `ham/`, `chemistry/`, `physics/`) |
+| `/var/lib/word-puzzle-family` | SQLite database (`app.db`, WAL), offline pages, recordings (`recordings/YYYYMM/*.mp3`), TTS cache — a **bind mount from the host**, so the container itself is stateless |
+| backup directory | daily at 03:00 Beijing time, `lexica-backup.timer` → `backup.py`: consistent database copies (30 kept) and a mirror of the recordings; also a bind mount, on another disk |
+| `/opt/word-puzzle-family/asr-venv` | separate venv with faster-whisper and the `base.en` model for speech recognition (offline at run time) |
 
-`word-puzzle/deploy/install.sh` installs the Lexica backend and systemd service.
-`hub/deploy/install.sh` publishes the hub and its four static project trees
-(topics, ham exam, chemistry, physics) and configures the shared nginx entry. The root
-`deploy-all-<timestamp>.sh` runs both installers from the repo checkout on the
-target host: on production the flow is `git pull`, then run the script, which
-copies the files into the paths above.
+URL map of the one nginx entrance: `/` homepage (`hub/`), `/privacy.html`, `/topics/`, `/ham/`, `/chemistry/`,
+`/physics/` (static, no login), `/word-puzzle/` (Lexica, login required for everything), `/words/` (public Lexica,
+no login, see 9.2). Public access goes Tailscale Funnel → `127.0.0.1:8081`; the host's port 80 forwards everything
+to the container too (`hub/deploy/site-proxy.conf`), so the LAN sees exactly the same site.
 
-The **student edition** (学生版) of Lexica (login required, `WP_AUTH=1`) is a
-separate instance of the same code and is *not* part of `deploy-all`:
-`word-puzzle/deploy/family/install.sh` installs it under `/srv/word-puzzle-family`,
-`/var/lib/word-puzzle-family`, systemd unit `word-puzzle-family`, backend on
-127.0.0.1:8766 and nginx on 127.0.0.1:8081, and never touches the home edition or
-Tailscale. Install it in its own container or VM, not on the PVE host
-(`word-puzzle/deploy/family/部署说明.md`).
-Container: unprivileged LXC, hostname `lexica`, static address on `vmbr0` (the concrete
-id and addresses are in `AGENTS.local.md`; pick a free id with `qm list; pct list`).
+**Deploying** (on the PVE host, as root): `bash pre-deploy.sh` (database and code snapshot into the backup disk,
+the 10 newest kept) → `git pull` → `bash deploy-all-<timestamp>.sh`. With `LEXICA_CTID` and `LEXICA_PUBLIC_URL`
+in `deploy.local.env`, deploy-all packs `word-puzzle hub topic-app/topic-app ham-exam chemistry physics` into a
+tarball, `pct push`es it into the container, unpacks it next to the old checkout, swaps it in and runs
+`word-puzzle/deploy/family/install.sh` there (dependencies, code sync, systemd units, nginx config, health check).
+It then updates the host's forwarding (`hub/deploy/install.sh`). The database is never touched by a deploy; schema
+changes are migrations in `server/db.py` (`PRAGMA user_version`, now 3) that run at backend start.
+
+The older host-level layout (`/srv/word-puzzle`, `/var/www/<module>`, `word-puzzle/deploy/install.sh`) is the retired
+home edition. Its installers still exist and deploy-all still runs them on the host when `LEXICA_CTID` is not set,
+but nothing public is served from there any more.
+
+**Architecture notes.**
+- One backend, one database, two URL prefixes: `/word-puzzle/api/…` (session cookie, roles) and `/pub/api/…`
+  (public, only from loopback; nginx maps `/words/api/…` to it). The backend still has a "LAN guest" mode
+  (`WP_LAN_GUEST`, `X-Wp-Entry`), now off by default; the public `/words/` entrance replaced it.
+- What a person may see is decided in one place, `server/tenancy.py` (9.1).
+- Other subjects can plug in through `server/modules.py`, `/api/records` and `server/policy.py`; see `docs/路线图.md`.
+- A full handover overview (architecture, how to test and deploy, private files, open items) is
+  `docs/交接说明.md`.
 
 ### 5.3 Environments: workstation, development VM, home test, cloud production
 
@@ -532,9 +433,11 @@ fails on private-looking addresses, tailnet host names and e-mail addresses.
   network and from a phone on mobile data. Funnel's bandwidth is limited and its
   reachability from China is not guaranteed.
 
-### 6.2 The production server
+### 6.2 The home server (PVE): today's live site, later the test environment
 
-A PVE (Proxmox VE) host on the home network.
+A PVE (Proxmox VE) host on the home network. Until the cloud server (6.4) takes over after the ICP filing, the
+container `lexica` on this host **is** the live site (reached through Tailscale Funnel, 5.2); after the cutover it
+becomes the test environment with a daily copy of the production data (5.3).
 
 It runs **Debian 13 (trixie)**, not Ubuntu — PVE is built on Debian. Anything
 that names a distribution must use `debian`/`trixie` there: the nginx.org apt
@@ -556,9 +459,9 @@ do not restart those services as a side effect of a deploy.
   units, `apt`, the standard directory layout, `nginx` for static sites.
   Scripts must stay Debian/Ubuntu-neutral (`apt-get`, `www-data`, Python
   `venv` for pip packages — system pip is externally managed).
-- Deploy is `git pull` in the checkout (`/root/language-learning`), then
-  `sudo bash deploy-all-<timestamp>.sh`: the script reads its target from
-  `deploy.local.env`, copies the files into the deployment paths and reloads. The
+- Deploy is `bash pre-deploy.sh`, `git pull` in the checkout (`/root/language-learning`), then
+  `bash deploy-all-<timestamp>.sh` (as root): the script reads its target from
+  `deploy.local.env`, pushes the site into the container and reinstalls it there (5.2). The
   checkout itself is never what nginx serves.
 
 ### 6.2.1 The development VM
@@ -662,3 +565,123 @@ were requesting `/.env`, `/AGENTS.md`, `/CLAUDE.md`, `/config.js` (observed).
   escape it on output, and prefix `= + - @` cells in every CSV export.
 - Client-supplied `Host` / `X-Forwarded-Host` must not decide any link the
   server generates: set `WP_PUBLIC_HOME_URL`, and let nginx overwrite the headers.
+
+---
+
+## 9. Lexica features (where the rules live)
+
+Short reference for the behaviour that is not obvious from the file names. Each paragraph names the module that is
+the single source of truth; change the rule there and in its test, not in a page.
+
+### 9.1 Teachers as tenants (one database, visibility by relation)
+
+Roles are `admin` (the *super administrator*: sees and manages everything, including other teachers' work and
+deleted rows), `teacher` and `student`. All rows live in the same tables; what a person
+sees is decided in one place, `word-puzzle/server/tenancy.py` (`Scope`, `bank_where`,
+`student_where`, `people_where`, `material_where`) — add a new list endpoint through it,
+never with its own ad-hoc filter.
+
+- A teacher sees the students linked to them (`teacher_students`), the banks they own
+  (`banks.owner_id`), banks shared with them (`teacher_banks`) and the built-in banks
+  (`owner_id IS NULL`, usable by every teacher, editable only by the super administrator),
+  their own uploaded materials, and the scores / visits of their students.
+- Tags are **per teacher** (`user_tags.teacher_id`, `bank_tags.teacher_id`): a student sees a
+  bank only when one teacher gave both the same tag. Removing a student or a bank from a
+  teacher also removes that teacher's tags on it.
+- Importing a student number that already belongs to another teacher does **not** link it:
+  `tenancy.claim_student` files a row in `share_requests` (audit `share.request`) and the
+  importer gets no data, no tags and no password reset for it. The teacher responsible for the
+  student (the first one linked, `tenancy.primary_teacher`) or the super administrator approves
+  or rejects on the accounts page (`share.approve` / `share.reject`). Direct links without a
+  request happen only when the super administrator imports, when the student has no teacher
+  at all, or when both teachers have the same `users.teacher_group` (set by the super
+  administrator; audit `student.auto_share` with the reason). Reason: anyone who knows a
+  student number could otherwise take over the account of a student from another school.
+- Reset password, disable and unlock (also via a roster import with "reset existing") are
+  allowed only for the responsible teacher and the super administrator
+  (`tenancy.can_manage_account`, error code `not_primary`); other teachers a student is shared
+  with can read scores and visits and use their own tags.
+- **Deletes are soft** (`deleted_at` / `deleted_by` on users, banks, materials): hidden from
+  teachers and students, restorable by the super administrator on `tenants.html`. A
+  teacher "deleting" something that is only shared with them just unlinks it. The hard
+  `Database.delete_bank` is for internal rebuilds of the built-in banks only.
+- Sharing, moving, deleting, restoring and adding teachers go to `audit_log`.
+- The public visitor (`tenancy.PUBLIC`, `/words/`) sees only the built-in 初中 / 高中 matching banks (9.2).
+- The leaderboard (`server/leaderboard.py`, `leaderboard.html`) shows names and points only.
+  Without settings a student sees their own class (classmates = same class name AND a shared
+  teacher), a teacher the classes of their own students, the super administrator everyone.
+  The super administrator can set an overall board (`app_settings` key `leaderboard`: the
+  classes and an optional title, edited on `tenants.html`, audit `leaderboard.config`); then
+  every signed-in student and teacher sees those classes' students together, deliberately
+  across teachers, with the class next to each name.
+
+### 9.2 Public Lexica `/words/`
+
+The same code and backend as `/word-puzzle/`, without login, for the ICP
+check and the public. `tools/build_public_web.py` generates `web-public/` at install time from `web/` (only index,
+play, practice, stats; `/word-puzzle/` → `/words/`; fixed student view). nginx sends `/words/api/…` to the backend's
+`/pub/api/…` (reachable only from loopback, and `/word-puzzle/api/…` cannot produce it); the backend then ignores the
+session cookie, uses `tenancy.PUBLIC` (built-in banks of 初中 / 高中 only) and allows only `Handler.PUBLIC_ROUTES` —
+no login, management, offline pages, leaderboard or uploads. Scores are stored with `mode='public'` against the
+browser's device number and each device sees only its own; audio is synthesised only for words of public banks;
+scores and audio are rate-limited per address, the API as a whole in nginx. The homepage card links to `/words/`.
+
+### 9.3 Game types, scoring, recordings and speech recognition
+
+A bank has `game_type` — `match` (the original matching game), `spell` (单词大比拼,
+fill the bracketed word of a phrase) or `order` (排排坐, put English fragments of a sentence in order, then record
+the sentence). Items of the new types live in `bank_items` (JSON, format in `server/items.py`, parsed from the
+teachers' Word files: brackets = answer; one fragment per line, yellow = key phrase kept highlighted, green line =
+reference answer, which the joined fragments must equal). `tools/import_items.py` imports a .docx (teachers'
+upload page comes later). Students pick the game type first on the home page. The pure rules are in
+`web/js/item-core.js` (node test `tests/js/item_core.test.js`); `spell-ui.js` / `order-ui.js` run both on the site
+and in the offline single-file page. Level names are built in the page (`WPItemCore.levelName`, i18n keys `ig_level` / `ig_levelPart`) from
+`{unit, part, parts}` that `items.levels` returns. Points: spell 10 per item (hint −3, wrong −2, at least 1 when solved);
+order 10 for the arrangement (−2 per wrong check, at least 2) + 30 for a valid recording + up to 20 bonus =
+word accuracy of the recognised text against the reference. The order score is computed by the server
+(`server/recordings.py`), never taken from the page. Recordings are stored as MP3 under the data directory
+(`recordings/`), recognised by a local faster-whisper model in its own venv (`server/asr.py`,
+`tools/asr_worker.py`; no prompt with the answer, VAD on, offline at run time), one at a time in a background
+queue; without recognition a recording ≥ 1 s still earns the 30 points. Students replay their recordings under
+Scores, teachers those of their students. Recording needs https (the plain-http LAN address cannot record).
+Uploads are limited to 30 per minute per user, 35 s per recording (measured by ffprobe) and a whitelist of container formats for ffmpeg; one recording
+counts for one play and one sentence only.
+
+### 9.4 Certificates and badges
+
+Rules in `server/awards.py` (test `tests/test_awards.py`). Being No. 1 on the **weekly** board on 10 / 15 / 30
+days **in total** (not necessarily consecutive, across weeks) earns a bronze / silver / gold certificate and badge,
+separately for the overall board and each game (`/api/leaderboard?game=`). A day's leader is whoever has the most points
+from that week's Monday 00:00 (Beijing time) to the end of that day, so the ranking restarts every Monday and early
+leaders do not dominate; ties all count; points must be > 0. The board is the one the student sees on the
+leaderboard (the overall board if configured, otherwise their classmates by the same rule as `leaderboard.CLASSMATES`: same class name and a shared
+teacher; deleted and disabled students take no part). A day is a Beijing calendar day, settled after it ends, lazily
+(`catch_up` when the leaderboard or awards are requested, back to 120 days); each threshold once per student and
+game (`all` / `match` / `spell` / `order`), even if the board changes. One day is settled in one transaction; only one request backfills at a time, the others do not wait. The rule
+version is stored in `app_settings.awards_rules`: changing `RULES` discards the stored leader records and settling
+progress and recomputes them (issued certificates stay). Students see them on `stats.html` ("My honours") and
+`me.html` (the header name links there); certificates are drawn in the browser (`web/js/awards-ui.js`, canvas
+2400×1697, bilingual, fixed metal colours) and saved as PNG / JPG; in WeChat the image is shown for long-press saving.
+Teachers get a list of their students' certificates with downloads and a sample preview (`/api/admin/awards`).
+
+### 9.5 Templates for teachers
+
+`server/templates.py` and `server/xlsx.py` serve `/api/templates/{wordlist,roster}.{xlsx,csv}?lang=`
+(staff only) with exactly the headers the parsers recognise, sample rows and a notes sheet; linked from the
+word-list upload in the workbench and the roster import. Word-list uploads accept .xlsx; an empty unit cell means
+the unit of the row above. Tests read every template back through the upload parsers. Roster and word-list Excel
+files are read by `server/roster.py` (first tab by workbook order; row numbers in error messages are the Excel row
+numbers, blank rows included).
+
+### 9.6 Module logos and the site footer
+
+Each module header uses the same simplified line icon as its homepage card (flask, atom,
+speech bubble, and for the ham exam a handheld radio with signal waves), drawn in `.portal-brand-mark`
+(`hub/shared/module-header.css`); Lexica keeps its image logo. In chemistry and physics a question whose `visual`
+is empty hides the big stage box (`formulaStage.hidden`) — never put a decorative glyph there; only content that
+helps answering (symbol, formula, equation, pH) belongs in it.
+
+Every page carries the site footer `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
+an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
+is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)
+are not linked from the homepage.
