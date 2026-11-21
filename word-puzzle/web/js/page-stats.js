@@ -26,7 +26,17 @@
   function keyOf(r) {
     return (r.user_id != null ? 'u' + r.user_id : 'd' + r.device) + '|' + (r.bank_id != null ? 'b' + r.bank_id : 't' + r.bank_title);
   }
+  /* 公开版 /words/：没有账号，只看这台设备的成绩（设备号是玩游戏时浏览器里生成的那个） */
+  function deviceQuery() {
+    if (!AuthUI.info().public) return '';
+    var id = '';
+    try { id = localStorage.getItem('wp_device_id') || ''; } catch (e) { }
+    return 'device=' + encodeURIComponent(id);
+  }
   function playsUrl(r) {
+    if (AuthUI.info().public) {
+      return '/api/scores/plays?' + deviceQuery() + (r.bank_id != null ? '&bank_id=' + r.bank_id : '&bank_title=' + encodeURIComponent(r.bank_title));
+    }
     return '/api/scores/plays?' + (r.user_id != null ? 'user_id=' + r.user_id : 'device=' + encodeURIComponent(r.device)) +
       (r.bank_id != null ? '&bank_id=' + r.bank_id : '&bank_title=' + encodeURIComponent(r.bank_title));
   }
@@ -147,7 +157,7 @@
     if (bank) bank.onchange = function () { filter.bank = bank.value; render(); };
     if (q) q.oninput = function () { filter.q = q.value; render(); };
 
-    AuthUI.ready.then(function () { return API.get('/api/scores/summary'); }).then(function (res) {
+    AuthUI.ready.then(function () { var d = deviceQuery(); return API.get('/api/scores/summary' + (d ? '?' + d : '')); }).then(function (res) {
       data = res;
       fillFilters();
       render();

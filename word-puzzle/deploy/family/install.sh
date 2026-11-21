@@ -75,7 +75,7 @@ say "同步代码到 $INSTALL_DIR"
 install -d "$INSTALL_DIR"
 if command -v rsync >/dev/null 2>&1; then
   rsync -a --delete \
-    --exclude 'var/' --exclude '.*' --exclude '__pycache__/' --exclude 'tests/' --exclude '/site/' --exclude '/shared/' \
+    --exclude 'var/' --exclude '.*' --exclude '__pycache__/' --exclude 'tests/' --exclude '/site/' --exclude '/shared/' --exclude '/web-public/' \
     "$SRC_DIR"/ "$INSTALL_DIR"/
 else
   find "$SRC_DIR" -mindepth 1 -maxdepth 1 ! -name var ! -name '.*' ! -name tests -exec cp -a {} "$INSTALL_DIR"/ \;
@@ -83,6 +83,14 @@ fi
 # 页眉、配色切换、页脚是仓库里 hub/shared 的公共文件，网站里用 /shared/ 访问
 install -d "$INSTALL_DIR/shared"
 cp -a "$REPO_DIR/hub/shared/." "$INSTALL_DIR/shared/"
+
+say "生成词境公开版 /words/（只有初中、高中，不用登录）"
+python3 "$INSTALL_DIR/tools/build_public_web.py" "$INSTALL_DIR/web" "$INSTALL_DIR/web-public.new.$$"
+rm -rf "$INSTALL_DIR/web-public.old"
+[[ ! -d "$INSTALL_DIR/web-public" ]] || mv "$INSTALL_DIR/web-public" "$INSTALL_DIR/web-public.old"
+mv "$INSTALL_DIR/web-public.new.$$" "$INSTALL_DIR/web-public"
+rm -rf "$INSTALL_DIR/web-public.old"
+chmod -R a+rX "$INSTALL_DIR/web-public"
 
 say "同步主页和不用登录的模块到 $INSTALL_DIR/site"
 # 先在旁边拼好一份完整的，再整体换上去：换的那一瞬间之外，网站上永远是一份完整的旧版或新版
@@ -268,6 +276,19 @@ for page in / /privacy.html /topics/ /ham/ /chemistry/ /physics/ /shared/site-fo
 done
 curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/" | grep -q '词境' || die "根路径不是词境主页"
 echo "    OK 主页、隐私说明和四个模块都能打开"
+# 公开版：不登录能拿到题库，而且只有初中、高中；管理页、管理接口、离线页都打不开
+pub="$(curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/words/api/banks")" || die "公开版 /words/api/banks 打不开"
+python3 -c 'import json,sys; b=json.load(sys.stdin)["banks"]; sys.exit(0 if b and all(x["level1"] in ("初中","高中") for x in b) else 1)' <<<"$pub" \
+  || die "公开版的题库不对（应该只有内置的初中、高中，而且不能是空的）"
+for page in /words/ /words/play.html /words/practice.html /words/stats.html; do
+  code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT$page")"
+  [[ "$code" == "200" ]] || die "公开版页面打不开：$page（HTTP $code）"
+done
+for page in /words/admin.html /words/login.html /words/api/admin/users /words/api/leaderboard /words/api/offline; do
+  code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT$page")"
+  [[ "$code" == "404" ]] || die "公开版不该能打开 $page（HTTP $code）—— 不要对外开放！"
+done
+echo "    OK 公开版 /words/：不登录能用，只有初中、高中；管理页、登录、积分榜、离线页都打不开"
 
 cat <<EOF2
 

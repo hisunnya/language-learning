@@ -22,6 +22,7 @@
       tenantsLink: '老师与分配',
       leaderboardLink: '积分榜',
       teacherSignIn: '教师登录',
+      siteHome: '网站主页',
       signingIn: '登录中…',
       signIn: '登录',
       saving: '保存中…',
@@ -119,6 +120,7 @@
       tenantsLink: 'Teachers',
       leaderboardLink: 'Leaderboard',
       teacherSignIn: 'Teacher sign-in',
+      siteHome: 'Website home',
       signingIn: 'Signing in…',
       signIn: 'Sign in',
       saving: 'Saving…',
@@ -248,7 +250,7 @@
     location.replace(BASE + '/' + page + (withNext ? '?next=' + encodeURIComponent(here()) : ''));
   }
 
-  var info = { enabled: false, user: null, guest: false };
+  var info = { enabled: false, user: null, guest: false, public: false };
 
   /* 角色：记在 <html> 的 class 和 sessionStorage 里。换页面时 <head> 里的脚本据此在页面画出来之前就设好，
      不会先闪一下教师版。服务器的答复回来后再校正一次。 */
@@ -385,9 +387,27 @@
     }
   }
 
+  /* 公开版 /words/：谁都能用，没有登录、没有管理入口；导航最前面加一个回网站主页的链接 */
+  function decoratePublic() {
+    var nav = document.querySelector('.portal-nav');
+    if (!nav || document.getElementById('siteHomeLink') || nav.querySelector('a[href="/"]')) return;
+    var link = document.createElement('a');
+    link.id = 'siteHomeLink';
+    link.href = '/';
+    link.setAttribute('data-module-zh', TEXT.zh.siteHome);
+    link.setAttribute('data-module-en', TEXT.en.siteHome);
+    link.textContent = t('siteHome');
+    nav.insertBefore(link, nav.firstChild);
+  }
+
   var ready = API.get('/api/auth/me').then(function (res) {
     var mode = document.body.getAttribute('data-auth') || '';
-    info = { enabled: !!res.auth_enabled, user: res.user || null, guest: !!res.guest_mode };
+    info = { enabled: !!res.auth_enabled, user: res.user || null, guest: !!res.guest_mode, public: !!res.public };
+    if (info.public) {                             /* 公开版：学生视图，不跳登录页 */
+      setRole('student');
+      decoratePublic();
+      return info;
+    }
     if (!info.enabled) {
       setRole('admin');                       /* 家庭版没有账号，等同老师 */
       if (mode === 'admin' || mode === 'visits' || mode === 'super' || mode === 'change') go('', false);

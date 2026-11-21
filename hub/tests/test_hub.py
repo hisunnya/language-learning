@@ -413,7 +413,11 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("location ^~ /word-puzzle/api/", NGINX)
         self.assertIn("proxy_pass http://lexica_api/api/;", NGINX)
         self.assertIn("client_max_body_size 32m;", NGINX)
-        self.assertIn('lexica: "/word-puzzle/"', CONFIG)
+        # 主页上的词境卡片去公开版 /words/；要登录的 /word-puzzle/ 不出现在主页上
+        self.assertIn('lexica: "/words/"', CONFIG)
+        index = (HUB / "index.html").read_text(encoding="utf-8")
+        self.assertIn('data-project-link="lexica" href="/words/"', index)
+        self.assertNotIn('href="/word-puzzle/"', index)
 
     def test_installer_replaces_the_standalone_port_80_site(self):
         self.assertIn("sites-enabled/word-puzzle.conf", INSTALL_SCRIPT)

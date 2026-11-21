@@ -7,6 +7,7 @@
   别人共享过来的 ``teacher_banks``、所有人共用的内置题库 ``owner_id IS NULL``）、自己上传的词表，以及这些学生的成绩和访问记录。
 * **学生**：看得到的题库 = 某位老师给他和这个题库打了同一个标签（标签按老师分开，见 db.py 的 user_tags / bank_tags）。
 * **家庭版访客**（内网入口、不登录）：内置题库 + 超级管理员的题库；成绩只有没登录时按设备记的那些。
+* **公开版访客**（``/words/``，不登录，谁都能访问）：只有内置题库里的初中、高中；成绩按设备记，只看得到自己这台设备的。
 * 没有账号体系的家庭版（``auth is None``）：等同超级管理员，标签记在 teacher_id = 0 下。
 
 删除一律是软删除：打上 ``deleted_at``，老师和学生都看不到，超级管理员能看到并恢复。
@@ -23,6 +24,8 @@ from dataclasses import dataclass
 from .db import Database
 
 ALL, SUPER, TEACHER, STUDENT, GUEST, NOBODY = "all", "super", "teacher", "student", "guest", "nobody"
+PUBLIC = "public"                       # /words/ 公开版：不登录，谁都能访问
+PUBLIC_STAGES = ("初中", "高中")         # 公开版只给这两个学段的内置题库
 
 
 @dataclass(frozen=True)
@@ -43,7 +46,9 @@ class Scope:
         return int(self.user_id) if self.kind in (SUPER, TEACHER) and self.user_id else 0
 
 
-def scope_for(auth_enabled: bool, user: dict | None, guest: bool) -> Scope:
+def scope_for(auth_enabled: bool, user: dict | None, guest: bool, public: bool = False) -> Scope:
+    if public:                          # 公开入口不认登录态：登录着的老师从 /words/ 进来也只是访客
+        return Scope(PUBLIC)
     if not auth_enabled:
         return Scope(ALL)
     if user:
@@ -74,7 +79,17 @@ def bank_where(scope: Scope, include_deleted: bool = False) -> tuple[str, tuple]
                 (scope.user_id,))
     if scope.kind == GUEST:
         return alive + " AND (b.owner_id IS NULL OR b.owner_id IN (SELECT id FROM users WHERE role='admin'))", ()
+    if scope.kind == PUBLIC:
+        return (alive + " AND b.owner_id IS NULL AND b.level1 IN (" + ",".join("?" * len(PUBLIC_STAGES)) + ")",
+                PUBLIC_STAGES)
     return "0", ()
+
+
+def public_word(db: Database, word: str) -> bool:
+    """公开版只给公开题库里的词合成读音：不然任何人都能拿服务器当免费的语音合成器用。"""
+    where, args = bank_where(Scope(PUBLIC))
+    return db.one("SELECT 1 FROM bank_words w JOIN banks b ON b.id=w.bank_id WHERE " + where +
+                  " AND (w.en=? OR lower(w.en)=lower(?)) LIMIT 1", (*args, word, word)) is not None
 
 
 def list_banks(db: Database, scope: Scope, include_deleted: bool = False) -> list[dict]:

@@ -342,6 +342,14 @@ side); the backend honours it only from a loopback peer with `WP_LAN_GUEST=1`.
 shows exactly the same as the public one (`WP_LAN_GUEST` defaults to 0 now; the guest code stays for the coming
 public `/words/` entrance), and the host's port 80 forwards everything to it (`hub/deploy/site-proxy.conf`).
 `deploy-all` packs `word-puzzle hub topic-app/topic-app ham-exam chemistry physics` into the container.
+**Public Lexica `/words/`** (2026-11-21): the same code and backend as `/word-puzzle/`, without login, for the ICP
+check and the public. `tools/build_public_web.py` generates `web-public/` at install time from `web/` (only index,
+play, practice, stats; `/word-puzzle/` → `/words/`; fixed student view). nginx sends `/words/api/…` to the backend's
+`/pub/api/…` (reachable only from loopback, and `/word-puzzle/api/…` cannot produce it); the backend then ignores the
+session cookie, uses `tenancy.PUBLIC` (built-in banks of 初中 / 高中 only) and allows only `Handler.PUBLIC_ROUTES` —
+no login, management, offline pages, leaderboard or uploads. Scores are stored with `mode='public'` against the
+browser's device number and each device sees only its own; audio is synthesised only for words of public banks;
+scores and audio are rate-limited per address, the API as a whole in nginx. The homepage card links to `/words/`.
 **Every page carries the site footer** `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
 an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
 is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)

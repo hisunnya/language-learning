@@ -122,13 +122,14 @@ class TestGameplayCopy(unittest.TestCase):
     def test_online_result_home_button_returns_to_bank_home(self):
         ui = self._ui()
         play = (ROOT / "web" / "js" / "page-play.js").read_text(encoding="utf-8")
-        self.assertIn("backHref: location.origin + '/'", play)
+        self.assertIn("backHref: API.path('/')", play, "回本模块首页（/word-puzzle/ 或 /words/），网站根路径现在是公开主页")
         self.assertEqual(ui.count("location.href = cfg.backHref"), 1)
         self.assertEqual(ui.count("location.href = self.cfg.backHref"), 2)
 
-    def test_online_game_has_site_home_link_and_does_not_mix_audio(self):
+    def test_online_game_has_a_home_link_and_does_not_mix_audio(self):
         play = (ROOT / "web" / "play.html").read_text(encoding="utf-8")
-        self.assertIn('href="/" data-module-zh="返回网站主页"', play)
+        self.assertIn('href="/word-puzzle/" data-module-zh="返回首页"', play)
+        self.assertNotIn('href="/"', play, "要登录的词境不把学生送到公开主页")
         self.assertIn(
             "if (serverAudioBase || AUDIO[key] || AUDIO[legacyKey]) return false;",
             self._ui())

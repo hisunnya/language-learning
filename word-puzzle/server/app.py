@@ -122,7 +122,10 @@ class Handler(BaseHTTPRequestHandler):
     auth: "auth_mod.AuthService | None" = None     # None = 家庭版，不需要登录
     user: dict | None = None
     _body_read = False
+    public = False                 # 这条请求是不是从公开版 /words/ 进来的（见 _dispatch）
     track_throttle = accesslog.Throttle(limit=900, seconds=60)     # 每个来源地址每分钟最多收这么多条上报
+    public_score_throttle = accesslog.Throttle(limit=60, seconds=60)    # 公开版：每个地址每分钟最多交这么多次成绩
+    public_audio_throttle = accesslog.Throttle(limit=240, seconds=60)   # 公开版：每个地址每分钟最多要这么多次读音
     login_throttle = accesslog.Throttle(limit=300, seconds=60)
 
     # ---------------- 基础响应 ----------------
@@ -239,8 +242,16 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if method != "GET" and not self._same_origin():
                 raise HttpError(403, "跨站请求被拒绝")
-            self.user = self._load_user()
-            if path.startswith("/api/"):
+            # 公开版 /words/：nginx 把 /words/api/… 转成 /pub/api/…。后端只监听本机，外面到不了 /pub/；
+            # /word-puzzle/api/… 被 nginx 映射成 /api/…，也拼不出 /pub/。
+            self.public = (path.startswith("/pub/api/") and self.auth is not None
+                           and self._peer() in accesslog.LOOPBACK)
+            if self.public:
+                path = path[len("/pub"):]
+            self.user = None if self.public else self._load_user()     # 公开版不认登录态
+            if self.public:
+                self.handle_public(method, path, query)
+            elif path.startswith("/api/"):
                 self.handle_api(method, path, query)
             else:
                 self.handle_static(path)
@@ -293,7 +304,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _scope(self) -> "tenancy.Scope":
         """这个请求能看到、能管理哪些数据（超管 / 老师 / 学生 / 家庭版访客）。"""
-        return tenancy.scope_for(self.auth is not None, self.user, self._guest_entrance())
+        return tenancy.scope_for(self.auth is not None, self.user, self._guest_entrance(), self.public)
 
     def _need(self, action: str, resource: dict | None = None) -> None:
         """按 server/policy.py 判断当前用户能不能做这件事；局域网版（没有账号体系）等同允许。"""
@@ -330,7 +341,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _gate(self, path: str) -> None:
         """学生版：除了健康检查和登录相关接口，一律要先登录；还没改初始密码就只能去改密码。"""
-        if self.auth is None or self._guest_entrance() or path == "/api/health" or path.startswith("/api/auth/"):
+        if self.auth is None or self.public or self._guest_entrance() or path == "/api/health" or path.startswith("/api/auth/"):
             return
         if not self.user:
             raise HttpError(401, "请先登录", "login_required")
@@ -364,6 +375,42 @@ class Handler(BaseHTTPRequestHandler):
                    {"Cache-Control": "no-cache, must-revalidate"})
 
     # ---------------- API ----------------
+
+    # 公开版只开放这些接口（白名单）；其余一律 404，包括登录、管理、离线页、积分榜、上传。
+    PUBLIC_ROUTES = (
+        ("GET", r"/api/health"), ("GET", r"/api/auth/me"), ("POST", r"/api/track"),
+        ("GET", r"/api/meta"), ("GET", r"/api/banks"), ("GET", r"/api/banks/\d+"),
+        ("GET", r"/api/audio/.+"), ("POST", r"/api/scores"), ("GET", r"/api/scores/summary"),
+        ("GET", r"/api/scores/plays"), ("GET", r"/api/recent"),
+    )
+
+    def handle_public(self, method: str, path: str, query: dict) -> None:
+        if not any(m == method and re.fullmatch(p, path) for m, p in self.PUBLIC_ROUTES):
+            raise HttpError(404, f"未知接口 {path}")
+        if path.startswith("/api/scores/") and method == "GET":
+            self._public_scores(path, query)
+            return
+        self.handle_api(method, path, query)
+
+    @staticmethod
+    def _device_param(query: dict) -> str:
+        """公开版按设备看自己的成绩：设备号是浏览器里随机生成的一串，不合格式的当作没有。"""
+        device = str(query.get("device") or "")
+        return device if re.fullmatch(r"[A-Za-z0-9_-]{8,64}", device) else ""
+
+    def _public_scores(self, path: str, query: dict) -> None:
+        """公开版：只看得到这台设备、没登录时、在公开版里交的成绩。"""
+        device = self._device_param(query)
+        people = ("s.user_id IS NULL AND s.mode='public' AND s.device=?", (device,)) if device else ("0", ())
+        bank_id = int_param(query.get("bank_id"), "bank_id")
+        if path == "/api/scores/summary":
+            self.send_json({"ok": True, **scorebook.summarize(self.db, people=people, class_name="", bank_id=bank_id, q="")})
+            return
+        if not device:
+            raise HttpError(400, "请指明是谁的成绩")
+        self.send_json({"ok": True, "plays": scorebook.plays_of(
+            self.db, user_id=None, device=device, bank_id=bank_id, people=people,
+            bank_title=query.get("bank_title") if bank_id is None and "bank_title" in query else None)})
 
     def handle_api(self, method: str, path: str, query: dict) -> None:
         db = self.db
@@ -573,6 +620,11 @@ class Handler(BaseHTTPRequestHandler):
             word = unquote(path[len("/api/audio/"):])
             if not tts.is_valid_word(word):
                 raise HttpError(400, "单词不合法")
+            if self.public:
+                if not self.public_audio_throttle.allow(accesslog.request_info(self.headers, self._peer())["ip"]):
+                    raise HttpError(429, "请求太频繁，请稍后再试", "rate_limited")
+                if not tenancy.public_word(db, word):
+                    raise HttpError(404, "公开版只能读公开题库里的词")
             data = tts.synth(word)
             if not data:
                 raise HttpError(404, "服务器没有可用的语音合成器")
@@ -603,6 +655,19 @@ class Handler(BaseHTTPRequestHandler):
             if method == "POST":
                 rec = self.read_json()
                 uid = self._uid()
+                if self.public:
+                    # 公开版：只能记在公开题库上，标成 public，按设备记；限速，免得被人刷
+                    if not self.public_score_throttle.allow(accesslog.request_info(self.headers, self._peer())["ip"]):
+                        raise HttpError(429, "提交太频繁，请稍后再试", "rate_limited")
+                    try:
+                        bank_id = int(rec.get("bank_id"))
+                    except (TypeError, ValueError):
+                        raise HttpError(400, "bank_id 不合法") from None
+                    if not self._bank_visible(db.get_bank(bank_id)):
+                        raise HttpError(404, "题库不存在")
+                    if not self._device_param({"device": rec.get("device")}):
+                        raise HttpError(400, "设备号不合法")
+                    rec["mode"], rec["nickname"] = "public", ""
                 if uid is not None and not self._is_admin() and rec.get("bank_id") not in (None, ""):
                     # 成绩只能记在自己能打开的题库上，防止猜题库编号探测
                     try:
@@ -656,7 +721,8 @@ class Handler(BaseHTTPRequestHandler):
     def handle_auth(self, method: str, path: str) -> None:
         if path == "/api/auth/me" and method == "GET":
             self.send_json({"ok": True, "auth_enabled": self.auth is not None,
-                            "guest_mode": self._guest_entrance(),
+                            "guest_mode": self._guest_entrance() and not self.public,
+                            "public": self.public,
                             "user": auth_mod.AuthService.public(self.user)})
             return
         if self.auth is None:

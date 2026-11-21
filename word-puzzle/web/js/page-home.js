@@ -25,7 +25,7 @@
   function groupByCategory(list) {
     var groups = {}, names = [];
     list.forEach(function (b) {
-      var name = b.category || '';
+      var name = b.category || (AuthUI.info().public ? b.level1 : '') || '';     /* 公开版：没分类的按学段（初中 / 高中）分组 */
       if (!groups[name]) { groups[name] = []; names.push(name); }
       groups[name].push(b);
     });

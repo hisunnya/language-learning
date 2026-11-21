@@ -59,7 +59,7 @@
         title: bank.title,
         subtitle: [bank.level1, bank.level2, bank.level3, bank.level4].join(' · '),
         pickUnit: bank.unit_mode === 'per-unit',
-        backHref: location.origin + '/',
+        backHref: API.path('/'),          /* 回到本模块的首页（/word-puzzle/ 或公开版 /words/），不是网站主页 */
         wordTotal: bank.word_count,
         /* 在线版使用服务端固定语音引擎；失败时提示，不切换本地声线。 */
         audioBase: API.path('/api/audio/'),

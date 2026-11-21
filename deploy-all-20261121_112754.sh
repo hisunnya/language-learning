@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261121_110652.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261121_112754.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -65,6 +65,7 @@ for path in \
   word-puzzle/web/js/tracker.js \
   word-puzzle/web/visits.html \
   word-puzzle/web/js/page-visits.js \
+  word-puzzle/tools/build_public_web.py \
   hub/deploy/install.sh \
   hub/deploy/lingua-grove.conf \
   hub/deploy/site-proxy.conf \
@@ -166,6 +167,8 @@ check_path /physics/
 check_path /physics/data/physics.json
 check_path /physics/js/physics-core.js
 check_path /physics/js/physics.js
+check_path /words/
+check_path /words/api/banks
 check_path /word-puzzle/
 check_path /word-puzzle/css/app.css
 check_path /word-puzzle/img/icon.svg
@@ -184,11 +187,12 @@ cat <<EOF
 整站部署完成：
   词境主页：http://$SERVER_NAME/
   隐私说明：http://$SERVER_NAME/privacy.html
+  词境公开版：http://$SERVER_NAME/words/   （不用登录，只有初中、高中）
   每日话题：http://$SERVER_NAME/topics/
   无线电执照：http://$SERVER_NAME/ham/
   化学探秘：http://$SERVER_NAME/chemistry/
   物理探秘：http://$SERVER_NAME/physics/
-  词境 Lexica：http://$SERVER_NAME/word-puzzle/
+  词境学生版：http://$SERVER_NAME/word-puzzle/   （要登录，不放在主页上）
 
 词境服务：systemctl status word-puzzle
 $([[ -n "$LEXICA_CTID" ]] && echo "学生版容器 $LEXICA_CTID 也已更新（pct exec $LEXICA_CTID -- systemctl status word-puzzle-family）；浏览器 Ctrl+Shift+R 强刷。" || echo "没有写 LEXICA_CTID：学生版容器没有更新，要另外推送。")

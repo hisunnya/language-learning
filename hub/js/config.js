@@ -17,8 +17,8 @@
       把 href 改成完整地址，例如 http://lexica.lan/
    ============================================================= */
 window.LINGUA_PROJECTS = {
-   // 词境静态资源和 API 都通过 nginx 的同域子路径提供。
-   lexica: "/word-puzzle/",
+   // 主页上的词境是不用登录的公开版（只有初中、高中）；要登录的 /word-puzzle/ 不放在主页上。
+   lexica: "/words/",
 
   // 每日话题 Daily Topics —— 纯前端
   topics: "/topics/",
