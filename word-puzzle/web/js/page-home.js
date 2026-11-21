@@ -70,9 +70,12 @@
       '  <div class="ops">' + ops + '</div></div>';
   }
 
-  /* 先选玩法：只有一种玩法有题库时不用选；选过的记在地址的 #type= 里，从游戏返回时还是这一种 */
+  /* 先选玩法：登录的学生三种玩法都看得到（没开放题库的也显示，点进去提示「暂未开放」，先让他们知道有这些玩法）；
+     公开版 /words/ 只有中英配对，就不显示选择。选过的记在地址的 #type= 里，从游戏返回时还是这一种 */
+  function countOf(type) { return banks.filter(function (b) { return typeOf(b) === type; }).length; }
   function availableTypes() {
-    return TYPES.filter(function (type) { return banks.some(function (b) { return typeOf(b) === type; }); });
+    if (AuthUI.info().public) return TYPES.filter(function (type) { return countOf(type) > 0; });
+    return TYPES;
   }
   function renderTypes() {
     var box = document.getElementById('typeCards');
@@ -81,10 +84,12 @@
     if (types.indexOf(chosen) < 0) chosen = '';
     box.hidden = false;
     box.innerHTML = types.map(function (type) {
-      var n = banks.filter(function (b) { return typeOf(b) === type; }).length;
-      return '<button type="button" class="type-card' + (type === chosen ? ' on' : '') + '" data-type="' + type + '" aria-pressed="' + (type === chosen) + '">' +
+      var n = countOf(type);
+      return '<button type="button" class="type-card t-' + type + (type === chosen ? ' on' : '') + (n ? '' : ' empty') + '" data-type="' + type +
+        '" aria-pressed="' + (type === chosen) + '">' +
         '<b>' + esc(t('type_' + type)) + '</b><small>' + esc(t('type_' + type + 'Desc')) + '</small>' +
-        '<span class="pill gray">' + esc(t('type_count', { n: n })) + '</span></button>';
+        '<span class="tc-foot"><span class="pill gray">' + esc(n ? t('type_count', { n: n }) : t('type_soon')) + '</span>' +
+        '<span class="tc-go">' + esc(t('type_go')) + '</span></span></button>';
     }).join('');
   }
 
@@ -92,13 +97,14 @@
   function renderBanks() {
     var box = document.getElementById('bankList');
     var student = isStudentView();
-    if (!banks.length) {
-      box.innerHTML = '<div class="empty">' + esc(t(student ? 'home_emptyStudent' : 'home_emptyTeacher')) + '</div>';
-      return;
-    }
     renderTypes();
     if (!chosen) { box.innerHTML = '<div class="empty">' + esc(t('type_pick')) + '</div>'; return; }
     var shown = banks.filter(function (b) { return typeOf(b) === chosen; });
+    if (!shown.length) {
+      var many = !document.getElementById('typeCards').hidden;
+      box.innerHTML = '<div class="empty">' + esc(t(many ? 'type_none' : (student ? 'home_emptyStudent' : 'home_emptyTeacher'))) + '</div>';
+      return;
+    }
     box.innerHTML = groupByCategory(shown).map(function (g) {
       return '<section class="bank-group' + (g.name ? '' : ' other') + '">' +
         '<div class="bank-group-head"><b>' + esc(g.name || t(student ? 'home_catOther' : 'home_catNone')) + '</b>' +

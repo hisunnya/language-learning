@@ -339,7 +339,21 @@ class TestPages(unittest.TestCase):
         home = (self.WEB / "js" / "page-home.js").read_text(encoding="utf-8")
         self.assertIn("renderTypes()", home)
         self.assertIn("'#type=' + chosen", home)
-        self.assertIn('id="typeCards"', (self.WEB / "index.html").read_text(encoding="utf-8"))
+        self.assertIn("if (AuthUI.info().public) return TYPES.filter", home, "登录的学生三种玩法都看得到，公开版只显示有题库的")
+        self.assertIn("type_none", home, "没开放题库的玩法也能点，提示暂未开放")
+        index = (self.WEB / "index.html").read_text(encoding="utf-8")
+        self.assertIn('id="typeCards"', index)
+        self.assertLess(index.index('id="bankList"'), index.index('id="recentCard"'), "最近玩过放在最下面")
+        self.assertNotIn("练习英语词汇，听美式发音并完成中英配对", index)
+        css = (self.WEB / "css" / "items.css").read_text(encoding="utf-8")
+        for needle in (".type-card.t-spell { --tc: var(--orange); }", ".type-card.t-order { --tc: var(--green); }", ".tc-go"):
+            self.assertIn(needle, css)
+
+    def test_the_notice_follows_the_palette(self):
+        js = (ROOT.parent / "hub" / "shared" / "site-footer.js").read_text(encoding="utf-8")
+        for theme in ("indigo", "ink", "amber", "lotus", "obsidian"):
+            self.assertIn("['%s', " % theme, js)
+        self.assertIn("html[data-theme=", js)
 
 
 if __name__ == "__main__":

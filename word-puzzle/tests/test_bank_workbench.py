@@ -146,7 +146,7 @@ class TestHomeGroupsAndRecent(unittest.TestCase):
         block = css[css.index(".bank-group {"):css.index(".recent-card .list")]
         self.assertNotRegex(block, r"#[0-9a-fA-F]{3,6}\b", "色块用配色变量，不写死颜色")
 
-    def test_playing_a_bank_records_it_and_home_shows_it_on_top(self):
+    def test_playing_a_bank_records_it_and_home_shows_it(self):
         play = self.read("js/page-play.js")
         self.assertIn("API.post('/api/recent', { bank_id: bank.id })", play)           # 登录的记在服务器上，换设备也看得到
         self.assertIn("WPRecent.add(localStorage, WPRecent.userKey(AuthUI.info()), bank.id, Date.now())", play)    # 访客记在这台设备上
@@ -154,7 +154,7 @@ class TestHomeGroupsAndRecent(unittest.TestCase):
         self.assertLess(html.index("js/recent.js"), html.index("js/page-play.js"))
         index = self.read("index.html")
         self.assertIn('id="recentCard"', index)
-        self.assertLess(index.index('id="recentCard"'), index.index('id="bankList"'), "最近玩过在题库列表上面")
+        self.assertLess(index.index('id="bankList"'), index.index('id="recentCard"'), "最近玩过放在题库列表下面（2026-11-21 改）")
         self.assertLess(index.index("js/recent.js"), index.index("js/page-home.js"))
         home = self.read("js/page-home.js")
         self.assertIn("API.get('/api/recent?limit=4')", home)

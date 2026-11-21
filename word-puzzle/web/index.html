@@ -10,7 +10,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=fd6a4039">
-<link rel="stylesheet" href="/word-puzzle/css/items.css?v=0f91dfcd">
+<link rel="stylesheet" href="/word-puzzle/css/items.css?v=caf20323">
 <link rel="stylesheet" href="/word-puzzle/css/auth.css?v=740072a7">
 <link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
 </head>
@@ -32,7 +32,6 @@
 
   <h1 class="page" data-module-zh="选个题库，开始闯关" data-module-en="Pick a word bank and start playing">选个题库，开始闯关</h1>
   <p class="lead">
-    <span data-module-zh="练习英语词汇，听美式发音并完成中英配对。" data-module-en="Practise English vocabulary: listen to the American pronunciation and match each word with its Chinese meaning.">练习英语词汇，听美式发音并完成中英配对。</span>
     <span class="admin-only"><span data-module-zh="课程词库包含" data-module-en="The curriculum word bank has">课程词库包含</span>
     <span id="curTotal">—</span> <span data-module-zh="个词条、" data-module-en="words in">个词条、</span>
     <span id="curUnits">—</span> <span data-module-zh="个单元；也可以在题库工作台上传自己的词表做成题库。" data-module-en="units; you can also upload your own word list in the word bank workbench.">个单元；也可以在题库工作台上传自己的词表做成题库。</span></span>
@@ -48,13 +47,6 @@
     </div>
   </div>
 
-  <!-- 最近玩过（这台设备上的记录；没有记录就不显示） -->
-  <div class="card recent-card" id="recentCard" hidden>
-    <h2 data-module-zh="最近玩过" data-module-en="Recently played">最近玩过</h2>
-    <p class="sub" data-module-zh="点一下接着玩" data-module-en="Tap to continue">点一下接着玩</p>
-    <div class="list" id="recentList"></div>
-  </div>
-
   <!-- 题库列表 -->
   <div class="card">
     <h2 class="admin-only" data-module-zh="题库" data-module-en="Word banks">题库</h2>
@@ -65,6 +57,13 @@
     <div class="list" id="bankList"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
   </div>
 
+  <!-- 最近玩过（这台设备上的记录；没有记录就不显示） -->
+  <div class="card recent-card" id="recentCard" hidden>
+    <h2 data-module-zh="最近玩过" data-module-en="Recently played">最近玩过</h2>
+    <p class="sub" data-module-zh="点一下接着玩" data-module-en="Tap to continue">点一下接着玩</p>
+    <div class="list" id="recentList"></div>
+  </div>
+
   <footer class="foot">
     <span data-module-zh="玩法：点英文卡片听发音，再点中文卡片配对；也可以先选中文（不播放语音） · 配对 +100 分，连击额外加分，答错扣 3 秒。" data-module-en="How to play: tap an English card to hear it, then tap its Chinese card to match; you can also pick the Chinese card first (no audio) · +100 per match, bonus for combos, a wrong match costs 3 seconds.">玩法：点英文卡片听发音，再点中文卡片配对；也可以先选中文（不播放语音） · 配对 +100 分，连击额外加分，答错扣 3 秒。</span><br>
   </footer>
@@ -72,13 +71,13 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=2fe864c4"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=3cecb28c"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=7421c5d1"></script>
 <script src="/word-puzzle/js/api.js?v=e44053c6"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=376b1200"></script>
 <script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
 <script src="/word-puzzle/js/recent.js?v=868a2d31"></script>
-<script src="/word-puzzle/js/page-home.js?v=a112b3ba"></script>
+<script src="/word-puzzle/js/page-home.js?v=a622ab3e"></script>
 <script src="/shared/module-header.js?v=0b00f0ec"></script>
-<script src="/shared/site-footer.js?v=bd5de707"></script>
+<script src="/shared/site-footer.js?v=9d9c1f36"></script>
 </body>
 </html>

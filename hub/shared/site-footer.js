@@ -32,6 +32,15 @@
     'stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>';
   var POLICE_ICON = SHIELD;
 
+  /* [配色, 底色, 文字, 边框, 按钮底, 按钮字]：五套配色和网站一致；没有配色的页面用上面的默认深灰 */
+  var NOTICE_THEMES = [
+    ['indigo', '#1e1b4b', '#eef2ff', '#312e81', '#4f46e5', '#ffffff'],
+    ['ink', '#142019', '#e8f4ee', '#34d399', '#34d399', '#062317'],
+    ['amber', '#3d2a00', '#fbf6ec', '#92400e', '#d97706', '#ffffff'],
+    ['lotus', '#4a1f33', '#fdf4f6', '#9d174d', '#db2777', '#ffffff'],
+    ['obsidian', '#16161a', '#f3f0e5', '#d4af37', '#d4af37', '#15120a']
+  ];
+
   var CSS = [
     '.lx-foot{margin:36px auto 18px;padding:14px 16px 4px;max-width:1100px;text-align:center;font-size:12.5px;line-height:1.9;',
     '  border-top:1px solid color-mix(in srgb,currentColor 14%,transparent);opacity:.78}',
@@ -49,7 +58,11 @@
     '.lx-notice a{color:inherit;text-decoration:underline}',
     '.lx-notice span{flex:1}',
     '.lx-notice button{flex:none;border:0;border-radius:8px;padding:6px 14px;font:inherit;font-weight:700;cursor:pointer;background:#f2f4f8;color:#1f2430}'
-  ].join('\n');
+  ].concat(NOTICE_THEMES.map(function (th) {
+    /* 每套配色：用它自己的深色当底、主色当按钮，换配色时跟着变，同时保持够醒目 */
+    return 'html[data-theme="' + th[0] + '"] .lx-notice{background:' + th[1] + ';color:' + th[2] + ';border:1px solid ' + th[3] + '}' +
+      'html[data-theme="' + th[0] + '"] .lx-notice button{background:' + th[4] + ';color:' + th[5] + '}';
+  })).join('\n');
 
   function footerHtml(t) {
     var parts = ['<a class="lx-badge" href="' + SITE.icpUrl + '" target="_blank" rel="noopener">' + SHIELD + '<span>' + esc(SITE.icp) + '</span></a>'];
