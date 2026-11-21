@@ -105,8 +105,9 @@ class TestDictionary(unittest.TestCase):
             used |= set(pattern.findall(text(name)))
         dynamic = {k for k in defined if k.startswith("sel_mode_")}    # selector.js 用 MODE_KEYS 间接引用，上面已经扫到
         dynamic |= {k for k in defined if re.fullmatch(r"type_(match|spell|order)(Desc)?", k)}
-        dynamic |= {k for k in defined if re.fullmatch(r"me_tier_(gold|silver|bronze)", k)}        # 「我的」用 'me_tier_' + 档次   # 首页用 'type_' + 类型 拼出来
-        used -= {"play_token", "bank_id", "item_ord", "duration_ms", "me_tier_"}     # 后一个是拼词条名的前缀   # 这些是接口的字段名，不是词条
+        dynamic |= {k for k in defined if re.fullmatch(r"me_tier_(gold|silver|bronze)", k)}
+        dynamic |= {k for k in defined if re.fullmatch(r"lb_what_(all|match|spell|order)", k)}       # 积分榜说明按所选的榜拼        # 「我的」用 'me_tier_' + 档次   # 首页用 'type_' + 类型 拼出来
+        used -= {"play_token", "bank_id", "item_ord", "duration_ms", "me_tier_", "lb_what_"}     # 后两个是拼词条名的前缀   # 这些是接口的字段名，不是词条
         for key in used:
             self.assertIn(key, defined, "脚本用了没有定义的词条：%s" % key)
         unused = sorted(defined - used - dynamic)

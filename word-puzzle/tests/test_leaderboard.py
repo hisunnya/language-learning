@@ -280,6 +280,11 @@ class TestLeaderboardPage(unittest.TestCase):
         self.assertIn('id="lbTitle"', html)
         self.assertEqual(html.count('data-period="'), 2, "总榜 / 本周")
         self.assertEqual(html.count('data-game="'), 4, "总分 / 中英配对 / 单词大比拼 / 排排坐")
+        self.assertNotRegex(html, r'id="lbGames"[^>]*hidden', "学生也能切换看各个游戏的榜")
+        js = (WEB / "js" / "page-leaderboard.js").read_text(encoding="utf-8")
+        self.assertIn("'&game=' + state.game", js)
+        self.assertIn("localStorage.setItem(GAME_KEY", js, "记住上次看的榜")
+        self.assertIn("t('lb_what_' + (d.game || 'all'))", js, "说明跟着所选的榜")
 
     def test_medals_are_gold_silver_and_bronze_and_the_podium_is_silver_gold_bronze(self):
         js = read("js/page-leaderboard.js")

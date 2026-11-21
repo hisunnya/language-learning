@@ -11,7 +11,9 @@
   function t(key, params) { return WPI18N.t(key, params); }
   function $(id) { return document.getElementById(id); }
 
-  var state = { period: 'all', cls: '', game: 'all', data: null, picked: false };
+  var GAME_KEY = 'wp_lb_game';      /* 记住上次看的是哪个榜（总分 / 某一种玩法） */
+  function savedGame() { try { var g = localStorage.getItem(GAME_KEY); return /^(all|match|spell|order)$/.test(g || '') ? g : 'all'; } catch (e) { return 'all'; } }
+  var state = { period: 'all', cls: '', game: savedGame(), data: null, picked: false };
 
   /* 奖牌：金 / 银 / 铜，拉丝金属质感（写死颜色，不跟配色走）：双圈圆盘 + 深色丝带 + 衬线数字。 */
   var MEDAL = {
@@ -68,7 +70,8 @@
     if (!d) return;
     showClass = d.scope !== 'class' && !d.class_name;
     $('lbTitle').textContent = title(d);
-    $('lbSub').textContent = d.scope === 'overall' ? t('lb_subOverall', { n: d.class_count }) : t('lb_sub');
+    var what = t('lb_what_' + (d.game || 'all'));          /* 说明跟着所选的榜：总分，或者某一种玩法 */
+    $('lbSub').textContent = d.scope === 'overall' ? t('lb_subOverall', { n: d.class_count, what: what }) : t('lb_sub', { what: what });
     $('lbSettings').hidden = !d.can_configure;
     document.title = title(d) + ' · ' + t('lb_site');
     var entries = d.entries || [];
@@ -159,6 +162,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('#lbGames [data-game]'), function (b) {
       b.addEventListener('click', function () {
         state.game = b.getAttribute('data-game');
+        try { localStorage.setItem(GAME_KEY, state.game); } catch (e) { }
         load();
       });
     });
