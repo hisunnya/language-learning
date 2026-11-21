@@ -5,8 +5,8 @@
 * **JSON** —— 本项目导出的结构，或任意含 ``en``/``english``/``word`` 与
   ``cn``/``chinese``/``meaning``/``translation`` 字段的对象数组；
   也接受 ``{"units": [{"unit": "...", "words": [...]}]}`` 这种带单元的写法。
-* **CSV / TSV** —— 表头自动识别 ``unit / en / cn / ipa / pos``；
-  没有表头时按「英文,中文」两列猜。
+* **CSV / TSV / Excel（.xlsx）** —— 表头自动识别 ``unit / en / cn / ipa / pos``（中文表头「单元 / 英文 / 中文 / 音标 / 词性」也认，
+  就是下载的模板那样）；「单元」空着 = 和上一行同一个单元。CSV 没有表头时按「英文,中文」两列猜。
 * **TXT** —— 每行一个词，英文与中文之间用制表符、``-``、``|``、``：`` 或连续空格分隔；
   单独一行且形如 ``Unit 3`` 的会当作单元标题。
 
@@ -122,6 +122,41 @@ def _looks_like_unit(text: str) -> bool:
                          r"[单元课章]\s*[0-9一二三四五六七八九十]+)$", s))
 
 
+def _rows_with_header(rows: list[list]) -> list[dict]:
+    """有表头的表格（CSV、Excel）：按表头取列；「单元」空着就沿用上一行的单元（模板里允许只在每组第一行写）。"""
+    header = [str(c).strip().lower() for c in rows[0]]
+    out, unit = [], ""
+    for row in rows[1:]:
+        item = {key: (row[i] if i < len(row) else "") for i, key in enumerate(header) if key}
+        here = _pick(item, UNIT_KEYS)
+        if here:
+            unit = here
+        elif unit:
+            for key in UNIT_KEYS:
+                if key in item:
+                    item[key] = unit
+                    break
+            else:
+                item["unit"] = unit
+        out.extend(_norm_words([item]))
+    return out
+
+
+def parse_xlsx(raw: bytes) -> list[dict]:
+    """Excel：读第一个工作表（模板里第一个就是词表，第二个是填写说明），第一行必须是表头。"""
+    from . import roster
+    try:
+        rows = [r for r in roster._read_xlsx(raw) if any(str(c).strip() for c in r)]
+    except roster.RosterError as exc:
+        raise ParseError(str(exc)) from exc
+    if not rows:
+        raise ParseError("Excel 里第一个工作表是空的")
+    header = [str(c).strip().lower() for c in rows[0]]
+    if not (any(k in header for k in EN_KEYS) and any(k in header for k in CN_KEYS)):
+        raise ParseError("Excel 的第一行要是表头，至少有「英文」「中文」两列（可以下载模板照着填）")
+    return _rows_with_header(rows)
+
+
 def parse_csv(text: str, ext: str = "csv") -> list[dict]:
     sample = text[:4096]
     delimiter = _sniff_dialect(sample, ext)
@@ -135,14 +170,7 @@ def parse_csv(text: str, ext: str = "csv") -> list[dict]:
     has_cn = any(k in header for k in CN_KEYS)
 
     if has_en or has_cn:
-        # 有表头：按表头取列
-        out = []
-        for row in rows[1:]:
-            item = {}
-            for i, key in enumerate(header):
-                item[key] = row[i] if i < len(row) else ""
-            out.extend(_norm_words([item]))
-        return out
+        return _rows_with_header(rows)
 
     # 无表头
     width = max(len(r) for r in rows)
@@ -186,7 +214,7 @@ def parse_txt(text: str) -> list[dict]:
 def parse_material(filename: str, raw: bytes) -> tuple[str, list[dict]]:
     """返回 ``(格式, 词条列表)``。
 
-    支持 ``.txt`` / ``.csv`` / ``.tsv`` / ``.json`` / ``.md`` / ``.docx`` / ``.pdf``。
+    支持 ``.txt`` / ``.csv`` / ``.tsv`` / ``.json`` / ``.md`` / ``.xlsx`` / ``.docx`` / ``.pdf``。
     """
     name = (filename or "").lower()
     ext = name.rsplit(".", 1)[-1] if "." in name else ""
@@ -201,6 +229,13 @@ def parse_material(filename: str, raw: bytes) -> tuple[str, list[dict]]:
             raise ParseError(str(exc)) from exc
     if ext == "pdf":
         return "pdf", parse_pdf(raw)
+    if ext == "xlsx":
+        words = parse_xlsx(raw)
+        if not words:
+            raise ParseError("Excel 里没有找到词条：每行要有英文和中文")
+        return "xlsx", words
+    if ext == "xls":
+        raise ParseError("老式 .xls 请在 Excel 里另存为 .xlsx 再上传")
 
     # ---- 文本类 ----
     try:

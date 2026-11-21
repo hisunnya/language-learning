@@ -194,3 +194,8 @@ table.grid .filter-row select { background-image: none; padding-right: 4px; }
 .summary-bar .chip.on b { color: inherit; }
 table.tbl tfoot td { padding: 10px 8px; font-weight: 700; color: var(--heading); border-top: 2px solid var(--line); border-bottom: none; background: var(--chip-bg); }
 .sumline { margin: 4px 0 10px; font-weight: 600; color: var(--ink2); }
+
+/* 模板下载：题库工作台的上传词表、账号管理的导入名单 */
+.tpl-box { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--gold) 12%, var(--card)); border: 1px dashed color-mix(in srgb, var(--gold) 55%, var(--line)); }
+.tpl-box b { font-size: 13.5px; color: var(--heading); margin-right: 4px; }

@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=fd6a4039">
 <link rel="stylesheet" href="/word-puzzle/css/items.css?v=beba02fb">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=740072a7">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=95df7e0b">
 <link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
 </head>
 <body data-auth="admin" data-wx-download="1">
@@ -69,7 +69,7 @@
           <label class="choice"><input type="radio" name="source" value="seed" checked> <b data-module-zh="内置人教版课程词库" data-module-en="Built-in curriculum list">内置人教版课程词库</b>
             <small data-module-zh="初中 / 高中全部教材，按下面的层级选范围" data-module-en="All middle- and high-school textbooks; choose the range with the levels below">初中 / 高中全部教材，按下面的层级选范围</small></label>
           <label class="choice"><input type="radio" name="source" value="upload"> <b data-module-zh="上传新词表" data-module-en="Upload a new list">上传新词表</b>
-            <small data-module-zh="Word、PDF、TXT、CSV、JSON；每行「英文 + 中文释义」，可以按单元分组" data-module-en="Word, PDF, TXT, CSV, JSON; one “English + Chinese meaning” per line, optionally grouped by unit">Word、PDF、TXT、CSV、JSON；每行「英文 + 中文释义」，可以按单元分组</small></label>
+            <small data-module-zh="Excel、Word、PDF、TXT、CSV、JSON；每行「英文 + 中文释义」，可以按单元分组（有模板）" data-module-en="Excel, Word, PDF, TXT, CSV, JSON; one “English + Chinese meaning” per line, optionally grouped by unit (templates available)">Excel、Word、PDF、TXT、CSV、JSON；每行「英文 + 中文释义」，可以按单元分组（有模板）</small></label>
           <label class="choice"><input type="radio" name="source" value="material"> <b data-module-zh="选用以前上传的词表" data-module-en="Use a list uploaded earlier">选用以前上传的词表</b>
             <small data-module-zh="从已经上传过的文件里选一份" data-module-en="Pick one of the files already uploaded">从已经上传过的文件里选一份</small></label>
         </div>
@@ -79,8 +79,13 @@
             <button type="button" class="btn gold" id="btnPick" data-module-zh="选择文件…" data-module-en="Choose a file…">选择文件…</button>
             <button type="button" class="btn ghost" id="btnQuick" data-module-zh="快速上传并生成" data-module-en="Quick upload and generate">快速上传并生成</button>
           </div>
-          <input type="file" id="fileInput" accept=".txt,.csv,.tsv,.json,.md,.docx,.docm,.pdf" hidden>
-          <p class="hint" data-module-zh="「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。" data-module-en="“Choose a file”: upload, check what was recognised, then define the word bank below. “Quick upload and generate”: upload and generate straight away with defaults (the recognised units, 9 words per level, not released yet), then you are reminded to set tags. Supports Word (.docx), PDF (scans go through OCR), TXT, CSV, JSON; save an old .doc as .docx first.">「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。</p>
+          <input type="file" id="fileInput" accept=".xlsx,.txt,.csv,.tsv,.json,.md,.docx,.docm,.pdf" hidden>
+          <div class="tpl-box">
+            <b data-module-zh="怕识别出错？下载模板，填好再上传：" data-module-en="Worried about recognition errors? Download a template, fill it in and upload it:">怕识别出错？下载模板，填好再上传：</b>
+            <a class="btn sm" data-template="wordlist.xlsx" href="#" data-module-zh="Excel 模板（推荐）" data-module-en="Excel template (recommended)">Excel 模板（推荐）</a>
+            <a class="btn sm ghost" data-template="wordlist.csv" href="#" data-module-zh="CSV 模板" data-module-en="CSV template">CSV 模板</a>
+          </div>
+          <p class="hint" data-module-zh="「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Excel(.xlsx，用模板最稳)、Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。" data-module-en="“Choose a file”: upload, check what was recognised, then define the word bank below. “Quick upload and generate”: upload and generate straight away with defaults (the recognised units, 9 words per level, not released yet), then you are reminded to set tags. Supports Word (.docx), PDF (scans go through OCR), TXT, CSV, JSON; save an old .doc as .docx first.">「选择文件」：上传后先看识别结果，再往下定义题库。「快速上传并生成」：上传后按默认设置直接生成（识别出的单元、每关 9 词、先不开放），完成后提示你去设标签。支持 Excel(.xlsx，用模板最稳)、Word(.docx)、PDF（扫描件会走 OCR）、TXT、CSV、JSON；老式 .doc 请先另存为 .docx。</p>
           <div class="msg" id="upMsg" role="status"></div>
         </div>
 
@@ -181,13 +186,13 @@
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=2fe864c4"></script>
 <script src="/word-puzzle/js/i18n-lexica.js?v=6ead4fdb"></script>
-<script src="/word-puzzle/js/api.js?v=e44053c6"></script>
+<script src="/word-puzzle/js/api.js?v=dc50c220"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=6f45b08e"></script>
 <script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
 <script src="/word-puzzle/js/selector.js?v=fecb162a"></script>
 <script src="/word-puzzle/js/release-presets.js?v=0573d144"></script>
 <script src="/word-puzzle/js/bank-panels.js?v=3fe39a82"></script>
-<script src="/word-puzzle/js/page-bank.js?v=97507727"></script>
+<script src="/word-puzzle/js/page-bank.js?v=7e20800c"></script>
 <script src="/shared/module-header.js?v=0b00f0ec"></script>
 <script src="/shared/site-footer.js?v=9d9c1f36"></script>
 </body>

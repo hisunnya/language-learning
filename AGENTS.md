@@ -374,6 +374,10 @@ once per streak. Students see them on `me.html` (the header name links there; pa
 certificates are drawn in the browser (`web/js/awards-ui.js`, canvas 2400×1697, bilingual, fixed metal colours) and
 saved as PNG / JPG; in WeChat the image is shown for long-press saving. Teachers can read a student's awards with
 `/api/awards?user_id=`.
+**Templates for teachers** (`server/templates.py`, `server/xlsx.py`): `/api/templates/{wordlist,roster}.{xlsx,csv}?lang=`
+(staff only) with exactly the headers the parsers recognise, sample rows and a notes sheet; linked from the
+word-list upload in the workbench and the roster import. Word-list uploads accept .xlsx; an empty unit cell means
+the unit of the row above. Tests read every template back through the upload parsers.
 **Every page carries the site footer** `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
 an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
 is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)

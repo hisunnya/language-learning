@@ -109,6 +109,17 @@
     post: function (p, body) { return request('POST', p, body); },
     del: function (p) { return request('DELETE', p); },
     upload: function (p, formData) { return request('POST', p, formData, true); },
+    /* 模板下载链接（data-template="wordlist.xlsx"）：按当前语言下载中文或英文表头的模板；切换语言时重新设 */
+    templateLinks: function () {
+      function apply() {
+        var lang = document.documentElement.lang.indexOf('en') === 0 ? 'en' : 'zh';
+        Array.prototype.forEach.call(document.querySelectorAll('[data-template]'), function (a) {
+          a.href = url('/api/templates/' + a.getAttribute('data-template') + '?lang=' + lang);
+        });
+      }
+      apply();
+      global.addEventListener('portal-lang-change', apply);
+    },
     toast: toast,
     msg: showMsg,
     esc: esc,

@@ -335,6 +335,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
+    API.templateLinks();                       /* 模板下载链接 */
     el('btnImport').onclick = doImport;
     el('btnBulkAdd').onclick = function () { bulkTags('add'); };
     el('btnBulkRemove').onclick = function () { bulkTags('remove'); };

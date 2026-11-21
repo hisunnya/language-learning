@@ -36,6 +36,7 @@ from server import auth as auth_mod            # noqa: E402
 from server import items as items_mod  # noqa: E402
 from server import asr, recordings as rec_mod  # noqa: E402
 from server import awards as awards_mod  # noqa: E402
+from server import templates as templates_mod  # noqa: E402
 from server import accesslog, hierarchy, leaderboard, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
@@ -442,6 +443,16 @@ class Handler(BaseHTTPRequestHandler):
             if self.auth is None:
                 raise HttpError(404, "家庭版没有账号管理")
             self.handle_admin(method, path, query)
+            return
+
+        # ---- 模板下载：词表（题库工作台上传用）、学生名单（账号管理导入用）；只给老师 ----
+        m = re.fullmatch(r"/api/templates/(wordlist|roster)\.(xlsx|csv)", path)
+        if m and method == "GET":
+            self._need_staff()
+            name, data, ctype = templates_mod.build(m.group(1), m.group(2), query.get("lang", "zh"))
+            self._send(200, data, ctype, {"Content-Disposition": "attachment; filename=\"%s\"; filename*=UTF-8''%s"
+                                          % ("lexica-%s-template.%s" % (m.group(1), m.group(2)), urllib_quote(name)),
+                                          "Cache-Control": "no-cache"})
             return
 
         # ---- 层级元数据 ----

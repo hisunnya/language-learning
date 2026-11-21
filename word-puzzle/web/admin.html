@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=fd6a4039">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=740072a7">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=95df7e0b">
 <link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
 </head>
 <body data-auth="admin" data-wx-download="1" data-wide>
@@ -45,6 +45,11 @@
       <input type="checkbox" id="resetExisting">
       <span data-module-zh="名单里已有的学号也重新生成初始密码（会让他们退出登录）" data-module-en="Also issue new initial passwords to students who already exist (signs them out)">名单里已有的学号也重新生成初始密码（会让他们退出登录）</span>
     </label>
+    <div class="tpl-box">
+      <b data-module-zh="下载名单模板，照着填就不会识别出错：" data-module-en="Download a roster template and fill it in to avoid recognition errors:">下载名单模板，照着填就不会识别出错：</b>
+      <a class="btn sm" data-template="roster.xlsx" href="#" data-module-zh="Excel 模板（推荐）" data-module-en="Excel template (recommended)">Excel 模板（推荐）</a>
+      <a class="btn sm ghost" data-template="roster.csv" href="#" data-module-zh="CSV 模板" data-module-en="CSV template">CSV 模板</a>
+    </div>
     <div class="actions"><button class="btn gold" id="btnImport" data-module-zh="导入名单" data-module-en="Import roster">导入名单</button></div>
     <div class="import-report" id="importReport" aria-live="polite"></div>
   </div>
@@ -106,10 +111,10 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<script src="/word-puzzle/js/api.js?v=e44053c6"></script>
+<script src="/word-puzzle/js/api.js?v=dc50c220"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=6f45b08e"></script>
 <script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
-<script src="/word-puzzle/js/page-admin.js?v=b0828b87"></script>
+<script src="/word-puzzle/js/page-admin.js?v=ffabca07"></script>
 <script src="/shared/module-header.js?v=0b00f0ec"></script>
 <script src="/shared/site-footer.js?v=9d9c1f36"></script>
 </body>

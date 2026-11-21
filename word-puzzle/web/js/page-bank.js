@@ -479,6 +479,7 @@
   /* ---------------- 启动 ---------------- */
 
   document.addEventListener('DOMContentLoaded', function () {
+    API.templateLinks();                       /* 模板下载链接 */
     TABS.forEach(function (n) {
       $('tab' + SUFFIX[n]).addEventListener('click', function () { showTab(n); });
     });
