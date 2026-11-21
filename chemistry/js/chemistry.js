@@ -201,7 +201,7 @@
       var right = chemical[Math.floor(Math.random() * chemical.length)];
       var options = shuffle([right].concat(shuffle(physical).slice(0, 3)));
       return {
-        kicker: text('mode').reactions, visual: '↔',
+        kicker: text('mode').reactions, visual: '',
         prompt: text('chooseChemicalChange'),
         choices: options.map(function (item) { return elementName(item); }),
         answer: elementName(right)
@@ -210,7 +210,7 @@
     if (state.stage === 'high') {
       var reaction = data.balancedReactions[Math.floor(Math.random() * data.balancedReactions.length)];
       return {
-        kicker: text('mode').reactions, visual: '⚖',
+        kicker: text('mode').reactions, visual: '',
         prompt: text('balance', { reaction: reaction.prompt }),
         choices: shuffle(reaction.choices), answer: reaction.answer
       };
@@ -238,6 +238,7 @@
     $('questionKicker').textContent = question.kicker;
     $('questionTitle').textContent = question.prompt;
     $('formulaStage').textContent = question.visual;
+    $('formulaStage').hidden = !question.visual;           /* 没有要展示的内容（化学式、符号、方程式）就不留一个空框 */
     $('formulaStage').classList.toggle('empty', question.visual.length < 3);
     $('answerFeedback').textContent = '';
     $('answerFeedback').className = 'answer-feedback';
@@ -280,6 +281,7 @@
     $('questionKicker').textContent = q.kicker[lang];
     $('questionTitle').textContent = q[lang];
     $('formulaStage').textContent = q.visual;
+    $('formulaStage').hidden = !q.visual;
     $('formulaStage').classList.toggle('steps', !!q.steps);
     $('formulaStage').classList.toggle('empty', !q.steps && q.visual.length < 3);
     $('answerFeedback').textContent = '';

@@ -378,6 +378,11 @@ saved as PNG / JPG; in WeChat the image is shown for long-press saving. Teachers
 (staff only) with exactly the headers the parsers recognise, sample rows and a notes sheet; linked from the
 word-list upload in the workbench and the roster import. Word-list uploads accept .xlsx; an empty unit cell means
 the unit of the row above. Tests read every template back through the upload parsers.
+**Module logos**: each module header uses the same simplified line icon as its homepage card (flask, atom,
+speech bubble, and for the ham exam a handheld radio with signal waves), drawn in `.portal-brand-mark`
+(`hub/shared/module-header.css`); Lexica keeps its image logo. In chemistry and physics a question whose `visual`
+is empty hides the big stage box (`formulaStage.hidden`) — never put a decorative glyph there; only content that
+helps answering (symbol, formula, equation, pH) belongs in it.
 **Every page carries the site footer** `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
 an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
 is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)

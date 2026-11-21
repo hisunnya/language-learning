@@ -59,6 +59,7 @@
   font-size: 19px;
   font-weight: 800;
 }
+.portal-brand-mark svg { width: 24px; height: 24px; display: block; }      /* 各模块的图标（和主页卡片上的同一个） */
 /* 用图片 logo 代替文字块（词境）：圆角和阴影保留，渐变底色去掉 */
 .portal-brand-mark--logo { background: none; overflow: hidden; }
 .portal-brand-mark--logo img { display: block; width: 100%; height: 100%; object-fit: cover; }

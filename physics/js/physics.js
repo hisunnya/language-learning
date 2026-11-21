@@ -70,6 +70,7 @@
     $('questionKicker').textContent = q.kicker[lang];
     $('questionTitle').textContent = q[lang];
     $('formulaStage').textContent = q.visual;
+    $('formulaStage').hidden = !q.visual;                  /* 没有要展示的内容（公式、符号、单位）就不留一个空框 */
     $('formulaStage').classList.toggle('steps', !!q.steps);
     $('formulaStage').classList.toggle('empty', !q.steps && q.visual.length < 3);
     $('answerFeedback').textContent = '';

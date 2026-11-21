@@ -286,7 +286,7 @@
         chosen.push({ key: l.zh, left: l, right: r });
       }
     });
-    return { id: 'match', type: 'match', kicker: spec.kicker, visual: '⇄', zh: spec.zh, en: spec.en,
+    return { id: 'match', type: 'match', kicker: spec.kicker, visual: '', zh: spec.zh, en: spec.en,
       pairs: chosen, explain: chosen.map(function (p) { return p.left.zh + ' ↔ ' + p.right.zh; }).join('；') };
   }
 
@@ -323,7 +323,7 @@
     var four = spreadFour(cat.items, rng);
     if (!ascending) four.reverse();
     return {
-      id: 'order', type: 'order', kicker: { zh: '量级排序', en: 'Order of magnitude' }, visual: '↕',
+      id: 'order', type: 'order', kicker: { zh: '量级排序', en: 'Order of magnitude' }, visual: '',
       zh: '把下列' + cat.zh + '按' + (ascending ? '由小到大' : '由大到小') + '排序',
       en: 'Sort these ' + cat.en + ' values from ' + (ascending ? 'smallest to largest' : 'largest to smallest'),
       items: four.map(function (it) { return { key: it.zh, zh: it.zh, en: it.en, value: it.value }; }),
@@ -338,7 +338,7 @@
     var all = [{ key: item.answerZh, zh: item.answerZh, en: item.answerEn }];
     item.wrongZh.forEach(function (zh, i) { all.push({ key: zh, zh: zh, en: item.wrongEn[i] }); });
     return {
-      id: 'concept', kicker: { zh: '现象与概念', en: 'Concepts' }, visual: '?',
+      id: 'concept', kicker: { zh: '现象与概念', en: 'Concepts' }, visual: '',
       zh: item.zh, en: item.en, explainZh: item.whyZh, explainEn: item.whyEn,
       answer: item.answerZh, choices: shuffle(all, rng)
     };

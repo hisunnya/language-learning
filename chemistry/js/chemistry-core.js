@@ -165,7 +165,7 @@
         chosen.push({ key: left.zh, left: left, right: right });
       }
     });
-    return { id: 'match', type: 'match', kicker: spec.kicker, visual: '⇄', zh: spec.zh, en: spec.en, pairs: chosen,
+    return { id: 'match', type: 'match', kicker: spec.kicker, visual: '', zh: spec.zh, en: spec.en, pairs: chosen,
       explain: chosen.map(function (p) { return p.left.zh + ' ↔ ' + p.right.zh; }).join('；') };
   }
 
@@ -211,7 +211,7 @@
       en = 'Sort these by molar mass, ' + (asc ? 'smallest to largest' : 'largest to smallest');
     }
     if (!asc) four.reverse();
-    return { id: 'order', type: 'order', kicker: kicker, visual: '↕', zh: zh, en: en,
+    return { id: 'order', type: 'order', kicker: kicker, visual: '', zh: zh, en: en,
       items: four.map(label), explain: four.map(valueText).join(asc ? ' ＜ ' : ' ＞ ') };
   }
 
@@ -267,7 +267,7 @@
     var good = shuffle(valid, rng).slice(0, 3).map(function (f) { return same(sub(f.formula)); });
     var wrong = same(sub(entry.wrong));
     return {
-      id: 'wrong-formula', kicker: { zh: '找错', en: 'Spot the mistake' }, visual: '？',
+      id: 'wrong-formula', kicker: { zh: '找错', en: 'Spot the mistake' }, visual: '',
       zh: '下面四个化学式中，哪一个写错了？', en: 'Which of these four formulas is written wrongly?',
       explain: entry.zh + '：' + entry.whyZh + '（' + sub(entry.wrong) + ' ✗ → ' + sub(entry.right) + ' ✓）',
       explainEn: entry.en + ': ' + entry.whyEn,
