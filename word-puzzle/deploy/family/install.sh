@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 词境 学生版（带登录）一键部署：Debian / Ubuntu，nginx + systemd + Python 标准库。
+# 词境整站一键部署（主页 + 模块 + 词境学生版 + 公开版）：Debian / Ubuntu，nginx + systemd + Python 标准库。
 #
 #   sudo env WP_PUBLIC_URL=https://lexica.tailXXXX.ts.net bash word-puzzle/deploy/family/install.sh
 #
@@ -9,7 +9,8 @@
 # 做的事：
 #   1. 建系统用户 wpfamily，代码放 /srv/word-puzzle-family，数据库放 /var/lib/word-puzzle-family
 #   2. 装 systemd 服务（WP_AUTH=1，后端只监听 127.0.0.1）
-#   3. 装 nginx 配置（只监听 127.0.0.1:8081，由 Tailscale Funnel 转进来）
+#   3. 装 nginx 配置：整站（主页、四个模块、公开版 /words/、要登录的 /word-puzzle/），只监听 127.0.0.1:8081，
+#      由 Tailscale Funnel 或云服务器的公网 nginx 转进来；可选再开一个内网入口（WP_LAN_ADDR）
 #   4. 装管理命令 wp-family-admin（创建管理员、导入名单、重置密码）
 #   5. 自检：未登录访问接口必须被拒绝
 #
@@ -32,8 +33,8 @@ ASR_MODEL="${WP_ASR_MODEL:-base.en}"
 PUBLIC_URL="${WP_PUBLIC_URL:-}"
 PROXY_INC=/etc/nginx/word-puzzle-family-proxy.inc
 # 内网入口（可选）：WP_LAN_ADDR=容器的内网地址（例如 <容器IP>），端口默认 8082。
-# 同一个后端、同一个数据库、同一套账号，只是多一个只监听内网地址的入口（家庭版）：
-# 不登录就能做题并留下记录，点到管理功能才要老师登录。Funnel 只指向 127.0.0.1:$NGINX_PORT，到不了这里，公网仍然全部要登录。
+# 同一个后端、同一个数据库、同一份网站，只是多一个只监听内网地址的明文 http 入口（宿主机 80 端口转发到这里）。
+# 内容和公网入口完全一样（/word-puzzle/ 要登录）；以前的「内网不登录也能做题」只有设 WP_LAN_GUEST=1 才会打开。
 # WP_TRUSTED_PROXIES=我们自己的前置代理地址（逗号分隔，例如 PVE 宿主机 的 <服务器IP>），访问记录里会跳过它们。
 LAN_ADDR="${WP_LAN_ADDR:-}"
 LAN_PORT="${WP_LAN_PORT:-8082}"
@@ -73,6 +74,63 @@ bash "$SRC_DIR/deploy/check-deps.sh"
 say "创建系统用户 $RUN_USER"
 if ! id "$RUN_USER" >/dev/null 2>&1; then
   useradd --system --home-dir "$INSTALL_DIR" --shell /usr/sbin/nologin "$RUN_USER"
+fi
+
+# 依赖先装好（ffmpeg、朗读识别、自然语音）：pip 安装和模型下载可能要好几分钟，放在换代码之前，
+# 换上新代码之后紧接着就重启服务，不会出现「新网页 + 旧后端」混着跑好几分钟的情况。
+say "安装 ffmpeg（排排坐的录音统一转成 MP3、交给识别）"
+if ! command -v ffmpeg >/dev/null 2>&1; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg \
+    || warn "ffmpeg 安装失败：录音照收（原样保存），但识别和统一格式要等装好 ffmpeg"
+else
+  echo "    已安装，跳过"
+fi
+
+say "安装朗读识别（faster-whisper，模型 $ASR_MODEL；失败时录音照收，只是没有奖励分）"
+install -d "$(dirname "$ASR_VENV")" "$ASR_MODELS"
+if [[ ! -x "$ASR_VENV/bin/python" ]] || ! "$ASR_VENV/bin/python" -c 'import faster_whisper' >/dev/null 2>&1; then
+  if python3 -m venv "$ASR_VENV" \
+      && PIP_DISABLE_PIP_VERSION_CHECK=1 timeout 900 "$ASR_VENV/bin/python" -m pip install --upgrade 'faster-whisper>=1.1,<2'; then
+    echo "    faster-whisper 已安装"
+  else
+    warn "faster-whisper 安装失败；排排坐的录音照收、照给「提交朗读」的分，没有奖励分"
+  fi
+else
+  echo "    已安装，跳过"
+fi
+if [[ -x "$ASR_VENV/bin/python" ]] && "$ASR_VENV/bin/python" -c 'import faster_whisper' >/dev/null 2>&1; then
+  # 模型只在安装时下载一次（国内服务器连不上下载站时，可以设 WP_ASR_HF_ENDPOINT 用镜像，或者把这个目录从别处整个拷过来）；
+  # 服务运行时只读本地文件，不联网。
+  # 家里实测（2026-11-21）：huggingface.co 的域名解析被干扰（解析到无关地址，连接 20 秒超时），镜像 hf-mirror.com 两秒就通。
+  # 所以先用 WP_ASR_HF_ENDPOINT（设了的话）或官方地址，失败了自动换镜像再试一次。
+  fetch_model() {
+    env ${1:+HF_ENDPOINT="$1"} HF_HUB_DISABLE_TELEMETRY=1 timeout 900 "$ASR_VENV/bin/python" -c \
+      "from faster_whisper import WhisperModel; WhisperModel('$ASR_MODEL', device='cpu', compute_type='int8', download_root='$ASR_MODELS')" \
+      >/tmp/lexica-asr-model.log 2>&1
+  }
+  if HF_HUB_OFFLINE=1 timeout 300 "$ASR_VENV/bin/python" -c \
+      "from faster_whisper import WhisperModel; WhisperModel('$ASR_MODEL', device='cpu', compute_type='int8', download_root='$ASR_MODELS', local_files_only=True)" \
+      >/dev/null 2>&1; then
+    echo "    模型 $ASR_MODEL 已在本地，跳过下载"
+  elif fetch_model "${WP_ASR_HF_ENDPOINT:-}" || { [[ -z "${WP_ASR_HF_ENDPOINT:-}" ]] && echo "    官方下载站不通（$(tail -1 /tmp/lexica-asr-model.log | cut -c1-120)），换镜像 hf-mirror.com" && fetch_model https://hf-mirror.com; }; then
+    echo "    模型 $ASR_MODEL 已就绪（$ASR_MODELS）"
+  else
+    warn "模型 $ASR_MODEL 下载失败（$ASR_MODELS）：$(tail -1 /tmp/lexica-asr-model.log | cut -c1-200)；没有模型时不做识别"
+  fi
+fi
+chmod -R a+rX "$ASR_MODELS" 2>/dev/null || true
+
+say "安装 Edge Neural 自然语音（失败时保留 eSpeak 兜底）"
+install -d "$(dirname "$TTS_VENV")"
+if [[ ! -x "$TTS_VENV/bin/edge-tts" ]]; then
+  if python3 -m venv "$TTS_VENV" \
+      && PIP_DISABLE_PIP_VERSION_CHECK=1 "$TTS_VENV/bin/python" -m pip install --upgrade 'edge-tts>=7,<8'; then
+    echo "    Edge Neural TTS 已安装"
+  else
+    warn "Edge Neural TTS 安装失败；将使用本地 eSpeak 美式女声"
+  fi
+else
+  echo "    已安装，跳过"
 fi
 
 say "同步代码到 $INSTALL_DIR"
@@ -127,57 +185,6 @@ else
   echo "    已存在，跳过"
 fi
 
-say "安装 ffmpeg（排排坐的录音统一转成 MP3、交给识别）"
-if ! command -v ffmpeg >/dev/null 2>&1; then
-  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg \
-    || warn "ffmpeg 安装失败：录音照收（原样保存），但识别和统一格式要等装好 ffmpeg"
-else
-  echo "    已安装，跳过"
-fi
-
-say "安装朗读识别（faster-whisper，模型 $ASR_MODEL；失败时录音照收，只是没有奖励分）"
-install -d "$(dirname "$ASR_VENV")" "$ASR_MODELS"
-if [[ ! -x "$ASR_VENV/bin/python" ]] || ! "$ASR_VENV/bin/python" -c 'import faster_whisper' >/dev/null 2>&1; then
-  if python3 -m venv "$ASR_VENV" \
-      && PIP_DISABLE_PIP_VERSION_CHECK=1 timeout 900 "$ASR_VENV/bin/python" -m pip install --upgrade 'faster-whisper>=1.1,<2'; then
-    echo "    faster-whisper 已安装"
-  else
-    warn "faster-whisper 安装失败；排排坐的录音照收、照给「提交朗读」的分，没有奖励分"
-  fi
-else
-  echo "    已安装，跳过"
-fi
-if [[ -x "$ASR_VENV/bin/python" ]] && "$ASR_VENV/bin/python" -c 'import faster_whisper' >/dev/null 2>&1; then
-  # 模型只在安装时下载一次（国内服务器连不上下载站时，可以设 WP_ASR_HF_ENDPOINT 用镜像，或者把这个目录从别处整个拷过来）；
-  # 服务运行时只读本地文件，不联网。
-  # 家里实测（2026-11-21）：huggingface.co 的域名解析被干扰（解析到无关地址，连接 20 秒超时），镜像 hf-mirror.com 两秒就通。
-  # 所以先用 WP_ASR_HF_ENDPOINT（设了的话）或官方地址，失败了自动换镜像再试一次。
-  fetch_model() {
-    env ${1:+HF_ENDPOINT="$1"} HF_HUB_DISABLE_TELEMETRY=1 timeout 900 "$ASR_VENV/bin/python" -c \
-      "from faster_whisper import WhisperModel; WhisperModel('$ASR_MODEL', device='cpu', compute_type='int8', download_root='$ASR_MODELS')" \
-      >/tmp/lexica-asr-model.log 2>&1
-  }
-  if fetch_model "${WP_ASR_HF_ENDPOINT:-}" || { [[ -z "${WP_ASR_HF_ENDPOINT:-}" ]] && echo "    官方下载站不通（$(tail -1 /tmp/lexica-asr-model.log | cut -c1-120)），换镜像 hf-mirror.com" && fetch_model https://hf-mirror.com; }; then
-    echo "    模型 $ASR_MODEL 已就绪（$ASR_MODELS）"
-  else
-    warn "模型 $ASR_MODEL 下载失败（$ASR_MODELS）：$(tail -1 /tmp/lexica-asr-model.log | cut -c1-200)；没有模型时不做识别"
-  fi
-fi
-chmod -R a+rX "$ASR_MODELS" 2>/dev/null || true
-
-say "安装 Edge Neural 自然语音（失败时保留 eSpeak 兜底）"
-install -d "$(dirname "$TTS_VENV")"
-if [[ ! -x "$TTS_VENV/bin/edge-tts" ]]; then
-  if python3 -m venv "$TTS_VENV" \
-      && PIP_DISABLE_PIP_VERSION_CHECK=1 "$TTS_VENV/bin/python" -m pip install --upgrade 'edge-tts>=7,<8'; then
-    echo "    Edge Neural TTS 已安装"
-  else
-    warn "Edge Neural TTS 安装失败；将使用本地 eSpeak 美式女声"
-  fi
-else
-  echo "    已安装，跳过"
-fi
-
 # 数据目录标记：后端的服务单元要先看到它才肯启动（数据盘没挂上时，挂进来的是空目录，没有这个文件，就不会悄悄建一个空数据库）。
 # 只在「已经有数据库」或「第一次安装」时放；数据盘没挂上时重装，不会把标记放到空目录里。
 if [[ -f "$DATA_DIR/app.db" || ! -e "/etc/systemd/system/$SITE_NAME.service" ]]; then
@@ -214,7 +221,8 @@ systemctl enable --now lexica-watchdog.timer >/dev/null
 
 if [[ -n "$BACKUP_DIR" ]]; then
   say "安装每日备份定时器（$BACKUP_DIR，保留 30 份）"
-  install -d -o "$RUN_USER" -g "$RUN_USER" -m 0750 "$BACKUP_DIR"
+  install -d -o "$RUN_USER" -g "$RUN_USER" -m 0750 "$BACKUP_DIR" \
+    || warn "建不了或改不了备份目录 $BACKUP_DIR 的属主（非特权容器的挂载点常见）；请在宿主机上把它的属主设成服务账号"
   for unit in lexica-backup.service lexica-backup.timer; do
     sed -e "s|@RUN_USER@|$RUN_USER|g" -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@DATA_DIR@|$DATA_DIR|g" \
         -e "s|@BACKUP_DIR@|$BACKUP_DIR|g" "$INSTALL_DIR/deploy/family/systemd/$unit" > "/etc/systemd/system/$unit"
@@ -275,7 +283,7 @@ else
   rm -f "$LAN_CONF_FILE" "$LAN_PROXY_INC"
   if [[ -e "$NGINX_DROPIN" ]]; then rm -f "$NGINX_DROPIN"; systemctl daemon-reload; fi
 fi
-systemctl reload nginx
+systemctl reload-or-restart nginx
 
 say "安装管理命令 wp-family-admin"
 cat > /usr/local/sbin/wp-family-admin <<ADMIN

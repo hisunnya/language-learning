@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261121_213934.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261121_231941.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -13,7 +13,9 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ -f "$REPO_DIR/deploy.local.env" ]]; then
   # 只认 KEY=VALUE 行，已经在环境里设过的变量不被覆盖
-  while IFS='=' read -r key value; do
+  # 最后一行没有换行符也要读到（|| [[ -n $key ]]）；Windows 换行（\r）去掉
+  while IFS='=' read -r key value || [[ -n "$key" ]]; do
+    value="${value%$'\r'}"
     [[ "$key" =~ ^(LINGUA_SERVER_NAME|LEXICA_UPSTREAM|LEXICA_CTID|LEXICA_PUBLIC_URL)$ ]] || continue
     [[ -n "${!key:-}" ]] || export "$key=${value//\"/}"
   done < "$REPO_DIR/deploy.local.env"
@@ -104,8 +106,8 @@ retry() {
   die "$what"
 }
 
-# 学生版容器（家庭版和学生版共用的那个后端）：宿主机的 install.sh 碰不到它，所以在这里一并推进去。
-# 数据库在容器外的目录里，family/install.sh 不会覆盖它。
+# 容器：整站（主页、四个模块、词境学生版和公开版）都在容器里，宿主机只做转发。宿主机的 install.sh 碰不到容器，
+# 所以在这里把代码推进去，再在容器里跑 family/install.sh。数据库在容器外的目录里，不会被覆盖。
 if [[ -n "$LEXICA_CTID" ]]; then
   say "更新学生版容器 $LEXICA_CTID 里的词境（代码来自当前仓库）"
   SRC_TGZ="$(mktemp /tmp/lexica-src.XXXXXX.tgz)"
@@ -116,10 +118,19 @@ if [[ -n "$LEXICA_CTID" ]]; then
     --exclude='ham-exam/raw-files' --exclude='ham-exam/tools' \
     word-puzzle hub topic-app/topic-app ham-exam chemistry physics)
   pct push "$LEXICA_CTID" "$SRC_TGZ" /root/lexica-src.tgz
-  pct exec "$LEXICA_CTID" -- bash -lc "mkdir -p /root/language-learning && tar xzf /root/lexica-src.tgz -C /root/language-learning && rm -f /root/lexica-src.tgz"
+  # 解到一个新目录再整个换上去：仓库里删掉的文件，容器里也跟着没有（直接解到旧目录上会把它们留下来）
+  pct exec "$LEXICA_CTID" -- bash -lc "rm -rf /root/language-learning.new && mkdir -p /root/language-learning.new \
+    && tar xzf /root/lexica-src.tgz -C /root/language-learning.new && rm -rf /root/language-learning \
+    && mv /root/language-learning.new /root/language-learning && rm -f /root/lexica-src.tgz"
+  # 访问记录里要跳过的前置代理 = 宿主机：WP_TRUSTED_PROXIES 只收 IP，LINGUA_SERVER_NAME 是域名时先解析成 IPv4
+  TRUSTED_PROXY="$SERVER_NAME"
+  if [[ ! "$TRUSTED_PROXY" =~ ^[0-9.]+$ ]]; then
+    TRUSTED_PROXY="$(getent ahostsv4 "$SERVER_NAME" | awk 'NR==1{print $1}')"
+    [[ -n "$TRUSTED_PROXY" ]] || die "解析不了 $SERVER_NAME 的 IPv4 地址（访问记录要用它跳过宿主机这一层代理）"
+  fi
   pct exec "$LEXICA_CTID" -- env DEBIAN_FRONTEND=noninteractive \
     WP_PUBLIC_URL="$LEXICA_PUBLIC_URL" WP_LAN_ADDR="${LEXICA_UPSTREAM%%:*}" \
-    WP_TRUSTED_PROXIES="$SERVER_NAME" WP_BACKUP_DIR=/backup \
+    WP_TRUSTED_PROXIES="$TRUSTED_PROXY" WP_BACKUP_DIR=/backup \
     bash -lc "cd /root/language-learning && bash word-puzzle/deploy/family/install.sh"
   # 核对：容器真正提供出去的页面要和仓库里的一字不差，否则就是没更新上
   want="$(sha256sum "$REPO_DIR/word-puzzle/web/visits.html" | cut -d' ' -f1)"
@@ -212,6 +223,5 @@ cat <<EOF
   物理探秘：http://$SERVER_NAME/physics/
   词境学生版：http://$SERVER_NAME/word-puzzle/   （要登录，不放在主页上）
 
-词境服务：systemctl status word-puzzle
-$([[ -n "$LEXICA_CTID" ]] && echo "学生版容器 $LEXICA_CTID 也已更新（pct exec $LEXICA_CTID -- systemctl status word-puzzle-family）；浏览器 Ctrl+Shift+R 强刷。" || echo "没有写 LEXICA_CTID：学生版容器没有更新，要另外推送。")
+$([[ -n "$LEXICA_CTID" ]] && echo "整站在容器 $LEXICA_CTID 里，已经更新（服务：pct exec $LEXICA_CTID -- systemctl status word-puzzle-family）；浏览器 Ctrl+Shift+R 强刷。" || echo "没有写 LEXICA_CTID：只更新了这台机器（词境服务：systemctl status word-puzzle），容器没有更新。")
 EOF

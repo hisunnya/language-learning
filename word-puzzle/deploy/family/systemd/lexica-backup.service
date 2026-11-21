@@ -1,14 +1,14 @@
 [Unit]
-Description=词境 数据库每日备份
+Description=词境 每日备份（数据库 + 朗读录音）
 After=word-puzzle-family.service
 
 [Service]
 Type=oneshot
 User=@RUN_USER@
 ExecStart=/usr/bin/python3 @INSTALL_DIR@/deploy/family/backup.py @DATA_DIR@/app.db @BACKUP_DIR@ 30
-# 只允许写备份目录
+# 只写备份目录；数据目录也要可写：数据库是 WAL 模式，后端没在运行时，只读打开也得新建 -shm 旁路文件，否则打不开
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=@BACKUP_DIR@
+ReadWritePaths=@BACKUP_DIR@ @DATA_DIR@
 PrivateTmp=true
 ProtectHome=true

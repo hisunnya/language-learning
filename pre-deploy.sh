@@ -14,7 +14,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$REPO_DIR/deploy.local.env"
 [[ -f "$ENV_FILE" ]] || { echo "没有 $ENV_FILE" >&2; exit 1; }
 CTID=""
-while IFS='=' read -r key value; do
+while IFS='=' read -r key value || [[ -n "$key" ]]; do      # 最后一行没有换行符也要读到
+  value="${value%$'\r'}"
   [[ "$key" == "LEXICA_CTID" ]] && CTID="${value//\"/}"
 done < "$ENV_FILE"
 [[ "$CTID" =~ ^[0-9]+$ ]] || { echo "deploy.local.env 里要有 LEXICA_CTID=容器编号" >&2; exit 1; }
@@ -49,6 +50,9 @@ dst.close(); src.close()
 if ok != "ok":
     sys.exit("备份没通过完整性检查")
 PY
+
+echo "==> 清理：部署前备份只留最近 10 次（每日备份 app-*.db 由 backup.py 自己管）"
+pct exec "$CTID" -- bash -c 'cd /backup && ls -1t pre_deploy_*-code.tgz 2>/dev/null | tail -n +11 | xargs -r rm -f; ls -1t pre_deploy_*.db 2>/dev/null | tail -n +11 | xargs -r rm -f' || true
 
 echo "==> 3/3 记录"
 cat > "$NOTE" <<NOTE_EOF

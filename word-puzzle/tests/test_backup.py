@@ -87,10 +87,24 @@ class TestUnits(unittest.TestCase):
                 self.assertIn("@%s@" % ph, self.INSTALL, "%s: 安装脚本没有替换 @%s@" % (name, ph))
         self.assertEqual(subprocess.run(["bash", "-n", str(FAMILY / "install.sh")]).returncode, 0)
 
-    def test_the_service_can_only_write_the_backup_directory(self):
+    def test_the_service_writes_only_the_backup_and_data_directories(self):
         unit = (FAMILY / "systemd" / "lexica-backup.service").read_text(encoding="utf-8")
         self.assertIn("ProtectSystem=strict", unit)
-        self.assertIn("ReadWritePaths=@BACKUP_DIR@", unit)
+        self.assertIn("ReadWritePaths=@BACKUP_DIR@ @DATA_DIR@", unit, "数据目录可写：WAL 库在后端没运行时只读打开也要建 -shm")
+
+    def test_recordings_are_mirrored_and_only_new_files_are_copied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            data, out = Path(tmp) / "data", Path(tmp) / "backup"
+            (data / "recordings" / "202611").mkdir(parents=True)
+            (data / "recordings" / "202611" / "a.mp3").write_bytes(b"ID3" + b"a" * 100)
+            (data / "recordings" / "202611" / ".hidden").write_bytes(b"x")
+            self.assertEqual(backup.mirror_recordings(data, out), 1)
+            self.assertEqual((out / "recordings" / "202611" / "a.mp3").read_bytes()[:3], b"ID3")
+            self.assertFalse((out / "recordings" / "202611" / ".hidden").exists())
+            self.assertEqual(backup.mirror_recordings(data, out), 0, "已经有的不再拷")
+            (data / "recordings" / "202611" / "b.mp3").write_bytes(b"ID3b")
+            self.assertEqual(backup.mirror_recordings(data, out), 1)
+            self.assertEqual(backup.mirror_recordings(Path(tmp) / "nothing", out), 0, "没有录音目录也不出错")
 
     def test_the_timer_runs_in_beijing_time_not_container_utc(self):
         timer = (FAMILY / "systemd" / "lexica-backup.timer").read_text(encoding="utf-8")

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""数据库每日备份：用 SQLite 在线备份接口（不锁库、不会拷出半截的文件），备份完做完整性检查，只保留最近 N 份。
+"""每日备份：数据库 + 排排坐的朗读录音。
+
+* 数据库：用 SQLite 在线备份接口（不锁库、不会拷出半截的文件），备份完做完整性检查，只保留最近 N 份（app-日期.db）。
+* 录音：数据库旁边的 recordings/ 目录，镜像到备份目录的 recordings/ 下。录音文件写好后不再改，所以只拷新的（备份里已有
+  同名同大小的就跳过）；录音不按天轮换，也不删（数据库里的记录一直指着它们）。
 
     python3 backup.py <数据库文件> <备份目录> [保留份数，默认 30]
 
@@ -8,6 +12,7 @@
 """
 from __future__ import annotations
 
+import shutil
 import sqlite3
 import sys
 import time
@@ -56,6 +61,26 @@ def prune(out_dir: Path, keep: int) -> list[Path]:
     return doomed
 
 
+def mirror_recordings(data_dir: Path, out_dir: Path) -> int:
+    """把 data_dir/recordings 下的录音拷到 out_dir/recordings（只拷新的），返回这次拷了几个文件。"""
+    src = data_dir / "recordings"
+    if not src.is_dir():
+        return 0
+    copied = 0
+    for path in sorted(src.rglob("*")):
+        if not path.is_file() or path.name.startswith("."):
+            continue
+        target = out_dir / "recordings" / path.relative_to(src)
+        if target.exists() and target.stat().st_size == path.stat().st_size:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        partial = target.with_name(target.name + ".partial")
+        shutil.copyfile(path, partial)
+        partial.replace(target)
+        copied += 1
+    return copied
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 3:
         print(__doc__)
@@ -63,6 +88,8 @@ def main(argv: list[str]) -> int:
     keep = int(argv[3]) if len(argv) > 3 else 30
     target = backup(Path(argv[1]), Path(argv[2]), keep)
     print("备份完成：%s（%d 字节）" % (target, target.stat().st_size))
+    copied = mirror_recordings(Path(argv[1]).parent, Path(argv[2]))
+    print("录音：新拷了 %d 个文件" % copied)
     return 0
 
 

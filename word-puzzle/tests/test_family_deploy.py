@@ -456,6 +456,48 @@ class TestUrlStabilityGuide(unittest.TestCase):
         self.assertEqual(numbers, ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一"])
 
 
+
+def _location_blocks(conf: str) -> list[tuple[str, str]]:
+    """[(location 那一行, 它自己这一层的内容（不含嵌套的 location）)]。"""
+    out = []
+    for m in re.finditer(r"location\s+[^{;]*\{", conf):
+        depth, j, own = 1, m.end(), []
+        while depth and j < len(conf):
+            ch = conf[j]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+            elif depth == 1:
+                own.append(ch)
+            j += 1
+        out.append((m.group(0), "".join(own)))
+    return out
+
+
+class TestNginxEveryLocation(unittest.TestCase):
+    """nginx 的 add_header 不继承：一个 location 里只要写了一条 add_header，外层的安全头就全丢了。"""
+
+    def test_every_location_with_its_own_headers_repeats_the_security_headers(self):
+        checked = 0
+        for head, own in _location_blocks(CONF):
+            if "add_header" not in own:
+                continue
+            checked += 1
+            self.assertIn("X-Frame-Options", own, head)
+            self.assertIn("Referrer-Policy", own, head)
+        self.assertGreaterEqual(checked, 10)
+
+    def test_every_static_directory_hides_dotfiles_and_data_files(self):
+        """^~ 前缀会让外层的正则 location 失效：每个用 alias / root 发静态文件的前缀 location 里要再挡一遍。"""
+        for m in re.finditer(r"location \^~ (\S+) \{", CONF):
+            body = CONF[m.end():CONF.index("\n    }", m.end())]
+            if "alias " not in body and "root " not in body:
+                continue
+            self.assertIn("location ~ /\\. { return 404; }", body, m.group(1))
+            self.assertIn("db-wal", body, m.group(1))
+
+
 if __name__ == "__main__":
     unittest.main()
 
