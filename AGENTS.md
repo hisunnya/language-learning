@@ -495,6 +495,10 @@ fails on private-looking addresses, tailnet host names and e-mail addresses.
 - **Both domestic and foreign sites are reachable directly from the servers.** There is
   no corporate proxy and no whitelist to work around — do not set `HTTP_PROXY`,
   `HTTPS_PROXY` or `NO_PROXY` there, and do not try to reach things "through" a gateway.
+- Exception, measured on 2026-11-21: **huggingface.co does not work from home** — its name resolves to
+  unrelated addresses (an IPv4 that times out after 20 s, an IPv6 of another company), so model downloads fail
+  with "Network is unreachable". `hf-mirror.com` answers in about 2 s; the Lexica installer falls back to it
+  automatically for the speech-recognition model.
 - A script that downloads from the internet therefore just works. Bind an
   explicit timeout to every outbound call anyway, and make big downloads
   resumable so a dropped connection does not cost the whole file.
