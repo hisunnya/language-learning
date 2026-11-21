@@ -11,7 +11,7 @@
   function t(key, params) { return WPI18N.t(key, params); }
   function $(id) { return document.getElementById(id); }
 
-  var state = { period: 'all', cls: '', data: null, picked: false };
+  var state = { period: 'all', cls: '', game: 'all', data: null, picked: false };
 
   /* 奖牌：金 / 银 / 铜，拉丝金属质感（写死颜色，不跟配色走）：双圈圆盘 + 深色丝带 + 衬线数字。 */
   var MEDAL = {
@@ -36,6 +36,11 @@
 
   function points(n) { return '<b>' + esc(n) + '</b><small>' + esc(t('lb_unit')) + '</small>'; }
   function meTag(e) { return e && e.me ? '<span class="lb-tag">' + esc(t('lb_me')) + '</span>' : ''; }
+  /* 名字旁边的小徽章：在这个榜（总分或这一种玩法）上得过的最高一档 */
+  function medals(e) {
+    if (!e || !window.WPAwards) return '';
+    return (e.badges || []).filter(function (b) { return b.game === state.game; }).map(function (b) { return WPAwards.mini(b); }).join('');
+  }
 
   var showClass = false;        /* 老师看「全部学生」时才在名字旁边标班级；单个班的榜不用重复 */
 
@@ -47,7 +52,7 @@
       return '<div class="' + cls + '" data-rank="' + rank + '">' + medal(rank) + '<div class="lb-name">' + esc(t('lb_vacant')) + '</div></div>';
     }
     return '<div class="' + cls + '" data-rank="' + esc(e.rank) + '" aria-label="' + esc(t('lb_rankN', { n: e.rank })) + '">' + medal(e.rank) +
-      '<div class="lb-name">' + esc(e.name) + meTag(e) + '</div>' +
+      '<div class="lb-name">' + esc(e.name) + medals(e) + meTag(e) + '</div>' +
       '<div class="lb-pts">' + points(e.points) + '</div>' +
       (showClass && e.class_name ? '<div class="lb-cls">' + esc(e.class_name) + '</div>' : '') + '</div>';
   }
@@ -81,7 +86,7 @@
       var width = Math.max(4, Math.round(100 * e.points / (top || 1)));
       return '<li class="lb-row' + (e.me ? ' is-me' : '') + '"><span class="lb-bar" style="width:' + width + '%"></span>' +
         '<span class="lb-rank">' + esc(e.rank) + '</span>' +
-        '<span class="lb-who">' + esc(e.name) + meTag(e) + (showClass && e.class_name ? '<i>' + esc(e.class_name) + '</i>' : '') + '</span>' +
+        '<span class="lb-who">' + esc(e.name) + medals(e) + meTag(e) + (showClass && e.class_name ? '<i>' + esc(e.class_name) + '</i>' : '') + '</span>' +
         '<span class="lb-score">' + points(e.points) + '</span></li>';
     }).join('');
     /* 我不在前十名：单独告诉我排第几 */
@@ -98,6 +103,11 @@
       box.hidden = true;
     }
     renderClasses(d);
+    Array.prototype.forEach.call(document.querySelectorAll('#lbGames [data-game]'), function (b) {
+      var on = b.getAttribute('data-game') === state.game;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
     ['lbAll', 'lbWeek'].forEach(function (id) {
       var on = $(id).getAttribute('data-period') === state.period;
       $(id).classList.toggle('active', on);
@@ -118,7 +128,7 @@
   }
 
   function load() {
-    var url = '/api/leaderboard?period=' + state.period + (state.cls ? '&class_name=' + encodeURIComponent(state.cls) : '');
+    var url = '/api/leaderboard?period=' + state.period + '&game=' + state.game + (state.cls ? '&class_name=' + encodeURIComponent(state.cls) : '');
     return API.get(url).then(function (res) {
       /* 老师第一次进来：默认选第一个班（一个班一个榜），而不是把所有班混在一起 */
       if (res.scope === 'staff' && !res.configured && !state.picked && !state.cls && res.classes && res.classes.length) {
@@ -140,9 +150,15 @@
   WPI18N.onChange(render);
 
   document.addEventListener('DOMContentLoaded', function () {
-    Array.prototype.forEach.call(document.querySelectorAll('.lb-seg-btn'), function (b) {
+    Array.prototype.forEach.call(document.querySelectorAll('.lb-seg-btn[data-period]'), function (b) {
       b.addEventListener('click', function () {
         state.period = b.getAttribute('data-period');
+        load();
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#lbGames [data-game]'), function (b) {
+      b.addEventListener('click', function () {
+        state.game = b.getAttribute('data-game');
         load();
       });
     });

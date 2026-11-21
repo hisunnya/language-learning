@@ -86,7 +86,7 @@
       chosen = types[0] || 'match';
       box.parentNode.insertBefore(list, box.nextSibling);     /* 只有一种玩法：题库列表回到原来的位置 */
       list.style.order = '';
-      list.classList.remove('in-types');
+      list.classList.remove('in-types', 't-match', 't-spell', 't-order');
       list.hidden = false;
       return;
     }
@@ -104,6 +104,7 @@
     }).join('');
     box.appendChild(list);
     list.classList.add('in-types');
+    TYPES.forEach(function (type) { list.classList.toggle('t-' + type, type === chosen); });     /* 和选中的卡片同一个颜色 */
     list.style.setProperty('--after', String(types.indexOf(chosen) * 2 + 1));
     list.hidden = !chosen;
   }
@@ -155,12 +156,29 @@
       banks = res.banks || [];
       loaded = true;
       renderBanks();
+      loadNews();
       return loadRecent().then(renderRecent);
     }).catch(function (e) { API.toast(e.message); });
   }
 
+  /* 有新奖状：首页最上面提示一下，点「去看看」到「我的」 */
+  var news = null;
+  function renderNews() {
+    var box = document.getElementById('awNews');
+    if (!news || !news.unseen) { box.hidden = true; return; }
+    var latest = news.awards.filter(function (a) { return !a.seen; })[0];
+    box.hidden = false;
+    document.getElementById('awNewsTitle').textContent = t('me_newsTitle', { n: news.unseen });
+    document.getElementById('awNewsBadge').innerHTML = latest && window.WPAwards ? WPAwards.badge(latest, 52) : '';
+  }
+  function loadNews() {
+    var info = AuthUI.info();
+    if (!info.user || info.user.role !== 'student') return;
+    API.get('/api/awards').then(function (res) { news = res; renderNews(); }).catch(function () { });
+  }
+
   /* 切换语言：列表是脚本画的，要重画（静态文字由页眉换） */
-  WPI18N.onChange(function () { if (loaded) { renderBanks(); renderRecent(); } });
+  WPI18N.onChange(function () { if (loaded) { renderBanks(); renderRecent(); } renderNews(); });
 
   document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('typeCards').addEventListener('click', function (ev) {

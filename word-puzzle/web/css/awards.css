@@ -1,0 +1,41 @@
+/* 奖状和徽章：「我的」页面、积分榜。页面部分跟着配色；徽章、奖状本身是固定的金属色。 */
+
+.me-card { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.me-avatar { width: 64px; height: 64px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 800;
+  color: var(--on-primary); background: linear-gradient(140deg, var(--blue), var(--blue-d)); box-shadow: 0 6px 16px color-mix(in srgb, var(--blue) 30%, transparent); }
+.me-who { flex: 1 1 200px; min-width: 0; }
+.me-name { margin: 0; font-size: 24px; color: var(--heading); }
+.me-who .sub { margin: 2px 0 0; }
+
+.aw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.aw-grid > .empty { grid-column: 1 / -1; }
+.aw-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px 12px; border-radius: 14px; text-align: center;
+  background: var(--chip-bg); border: 1px solid var(--soft-line); }
+.aw-cell b { color: var(--heading); font-size: 14px; }
+.aw-cell small { color: var(--ink2); font-size: 12px; line-height: 1.4; }
+.aw-badge { display: block; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .18)); }
+
+.aw-row { align-items: center; }
+.aw-row-badge { flex: none; }
+.aw-row.is-new { background: color-mix(in srgb, var(--gold) 12%, var(--card)); }
+
+/* 积分榜名字旁边的小徽章：一枚小金属圆章，中间是天数 */
+.aw-mini { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-left: 4px; border-radius: 50%; vertical-align: -4px;
+  font: 700 10px/1 Georgia, serif; color: var(--ink); background: linear-gradient(140deg, var(--a), var(--b) 55%, var(--c));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .3), inset 0 0 0 1.5px rgba(255, 255, 255, .45); }
+
+.aw-modal { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 16px; background: rgba(5, 10, 25, .72); }
+.aw-modal[hidden] { display: none; }
+.aw-modal-box { width: min(960px, 100%); max-height: 100%; overflow: auto; padding: 14px; border-radius: 16px; background: var(--card); text-align: center; }
+.aw-modal-box img { display: block; width: 100%; height: auto; border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); min-height: 120px; background: var(--chip-bg); }
+.aw-modal-box .actions { justify-content: center; }
+
+/* 首页：有新奖状时的提示 */
+.aw-news { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border: 1.5px solid color-mix(in srgb, var(--gold) 60%, var(--line));
+  background: color-mix(in srgb, var(--gold) 14%, var(--card)); }
+.aw-news[hidden] { display: none; }
+.aw-news .main { flex: 1 1 220px; }
+.aw-news b { color: var(--heading); font-size: 16px; }
+
+/* 积分榜：按玩法切换 */
+.lb-games { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 0 12px; }

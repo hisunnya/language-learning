@@ -35,6 +35,7 @@ from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
 from server import items as items_mod  # noqa: E402
 from server import asr, recordings as rec_mod  # noqa: E402
+from server import awards as awards_mod  # noqa: E402
 from server import accesslog, hierarchy, leaderboard, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
@@ -665,8 +666,39 @@ class Handler(BaseHTTPRequestHandler):
             scope = self._scope()
             if scope.kind in (tenancy.GUEST, tenancy.NOBODY):
                 raise HttpError(403, "积分榜要登录后才能看", "login_required")
+            try:
+                awards_mod.catch_up(db)              # 顺便把还没结算的日子补上（已经补过就立刻返回）
+            except Exception:                        # pragma: no cover - 奖状出错不影响看积分榜
+                traceback.print_exc()
             self.send_json({"ok": True, **leaderboard.board(db, scope, self.user, query.get("class_name", "").strip()[:60],
-                                                           query.get("period", "all"))})
+                                                           query.get("period", "all"), game=query.get("game", "all"))})
+            return
+
+        # ---- 奖状：自己的；老师看自己名下学生的（user_id=） ----
+        if path == "/api/awards" and method == "GET":
+            scope = self._scope()
+            if scope.kind in (tenancy.GUEST, tenancy.NOBODY, tenancy.PUBLIC) or self.user is None:
+                raise HttpError(403, "奖状要登录后才能看", "login_required")
+            uid = self._uid()
+            wanted = int_param(query.get("user_id"), "user_id")
+            if wanted is not None and wanted != uid:
+                target = self.auth.get_by_id(wanted) if self.auth else None
+                if not scope.staff or not tenancy.can_manage_user(db, scope, target):
+                    raise HttpError(404, "没有这个学生")
+                uid = wanted
+            try:
+                awards_mod.catch_up(db)
+            except Exception:                        # pragma: no cover
+                traceback.print_exc()
+            found = awards_mod.of_user(db, uid)
+            self.send_json({"ok": True, "awards": found, "unseen": sum(1 for a in found if not a["seen"])})
+            return
+        if path == "/api/awards/seen" and method == "POST":
+            self.read_body()
+            if self._uid() is None:
+                raise HttpError(403, "请先登录", "login_required")
+            awards_mod.mark_seen(db, self._uid())
+            self.send_json({"ok": True})
             return
 
         # ---- 成绩 ----
@@ -1526,6 +1558,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000,
         traceback.print_exc()
         default_id = None
     Handler.rec_worker = rec_mod.Worker(db)          # 排排坐录音：后台一条一条识别
+    awards_mod.ensure(db)
     httpd = ThreadingHTTPServer((host, port), Handler)
     httpd.daemon_threads = True
     httpd.default_bank_id = default_id  # type: ignore[attr-defined]

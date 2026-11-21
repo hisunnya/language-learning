@@ -54,7 +54,7 @@ class TestWhoSeesWhat(LeaderboardCase):
         self.assertEqual(res["scope"], "class")
         self.assertEqual(res["classes"], [], "学生拿不到班级清单")
         for e in res["entries"]:
-            self.assertEqual(set(e) - {"rank", "name", "points", "me", "class_name"}, set(), "不带学号等多余字段")
+            self.assertEqual(set(e) - {"rank", "name", "points", "me", "class_name", "badges"}, set(), "不带学号等多余字段（徽章只是档次和玩法）")
         self.assertTrue([e for e in res["entries"] if e["me"]][0]["name"] == "小明")
 
     def test_the_class_parameter_is_ignored_for_students(self):
@@ -278,7 +278,8 @@ class TestLeaderboardPage(unittest.TestCase):
         self.assertIn("data-module-zh=", html)
         self.assertIn('id="portalHeaderControls"', html)
         self.assertIn('id="lbTitle"', html)
-        self.assertEqual(html.count('class="lb-seg-btn'), 2, "总榜 / 本周")
+        self.assertEqual(html.count('data-period="'), 2, "总榜 / 本周")
+        self.assertEqual(html.count('data-game="'), 4, "总分 / 中英配对 / 单词大比拼 / 排排坐")
 
     def test_medals_are_gold_silver_and_bronze_and_the_podium_is_silver_gold_bronze(self):
         js = read("js/page-leaderboard.js")

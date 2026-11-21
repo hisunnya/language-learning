@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
+<title data-module-zh="我的 · 词境 Lexica" data-module-en="Me · Lexica">我的 · 词境 Lexica</title>
+<link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
+<link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=fd6a4039">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=740072a7">
+<link rel="stylesheet" href="/word-puzzle/css/awards.css?v=b5069327">
+<link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/word-puzzle/" aria-label="词境 Lexica">
+      <span class="portal-brand-mark portal-brand-mark--logo" aria-hidden="true"><img src="/word-puzzle/img/icon.svg" alt="" width="40" height="40"></span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="词汇练习" data-module-en="Vocabulary practice">词汇练习</small></span>
+    </a>
+    <nav class="portal-nav">
+      <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
+      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Word banks">题库工作台</a>
+      <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+  <div class="card me-card">
+    <div class="me-avatar" id="meAvatar" aria-hidden="true"></div>
+    <div class="me-who"><h1 class="me-name" id="meName"></h1><p class="sub" id="meMeta"></p></div>
+    <a class="btn ghost sm" id="mePassword" href="/word-puzzle/change-password.html" data-module-zh="修改密码" data-module-en="Change password">修改密码</a>
+  </div>
+
+  <div class="card">
+    <h2 data-module-zh="我的徽章" data-module-en="My badges">我的徽章</h2>
+    <p class="sub" data-module-zh="在积分榜（总分，或者某一种玩法）上连续 5 天、15 天、30 天第一，分别得到铜、银、金徽章和一张奖状。每天结束后结算。" data-module-en="Be No. 1 on a leaderboard (overall, or one of the games) for 5, 15 or 30 days in a row to earn a bronze, silver or gold badge and a certificate. Each day is settled after it ends.">在积分榜（总分，或者某一种玩法）上连续 5 天、15 天、30 天第一，分别得到铜、银、金徽章和一张奖状。每天结束后结算。</p>
+    <div class="aw-grid" id="meBadges"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div>
+  </div>
+
+  <div class="card">
+    <h2 data-module-zh="我的奖状" data-module-en="My certificates">我的奖状</h2>
+    <p class="sub" data-module-zh="可以查看，也可以下载成图片（PNG 清晰，JPG 小一些）保存、转发。" data-module-en="View them, or download them as images (PNG is sharper, JPG smaller) to keep and share.">可以查看，也可以下载成图片（PNG 清晰，JPG 小一些）保存、转发。</p>
+    <div class="list" id="meCerts"></div>
+  </div>
+</div>
+
+<div class="aw-modal" id="meModal" hidden role="dialog" aria-modal="true">
+  <div class="aw-modal-box">
+    <img id="meModalImg" alt="">
+    <p class="hint" id="meModalMsg"></p>
+    <div class="actions">
+      <button type="button" class="btn" id="meModalPng" data-module-zh="下载 PNG" data-module-en="Download PNG">下载 PNG</button>
+      <button type="button" class="btn ghost" id="meModalJpg" data-module-zh="下载 JPG" data-module-en="Download JPG">下载 JPG</button>
+      <button type="button" class="btn ghost" id="meModalClose" data-module-zh="关闭" data-module-en="Close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/i18n.js?v=2fe864c4"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=531c0653"></script>
+<script src="/word-puzzle/js/api.js?v=e44053c6"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=6f45b08e"></script>
+<script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
+<script src="/word-puzzle/js/awards-ui.js?v=a7473265"></script>
+<script src="/word-puzzle/js/page-me.js?v=da1b3e7a"></script>
+<script src="/shared/module-header.js?v=0b00f0ec"></script>
+<script src="/shared/site-footer.js?v=9d9c1f36"></script>
+</body>
+</html>

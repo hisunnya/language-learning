@@ -68,7 +68,21 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 /* 首页：先选游戏类型。每种玩法一个色块（颜色取自当前配色，换配色跟着变），右下角一个「进入」按钮 */
 .type-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
 /* 选中玩法的题库列表：在网格里占满一整行；电脑上排在三张卡片后面，手机上（一列）紧跟在选中的那张后面 */
-.type-cards > .in-types { grid-column: 1 / -1; order: 99; margin-top: 2px; }
+.type-cards > .in-types { --tc: var(--blue); grid-column: 1 / -1; order: 99; padding: 4px 12px 12px;
+  background: color-mix(in srgb, var(--tc) 9%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, var(--line));
+  border-left: 6px solid var(--tc); border-top: 2px dashed color-mix(in srgb, var(--tc) 55%, var(--line)); border-radius: 0 0 14px 14px; }
+.type-cards > .in-types.t-spell { --tc: var(--orange); }
+.type-cards > .in-types.t-order { --tc: var(--green); }
+/* 选中的卡片往下伸，盖住和列表之间的空隙，像文件夹的标签：卡片和它的题库是一体的，中间一条虚线 */
+.type-card.on { border-bottom: 0; border-radius: 14px 14px 0 0; margin-bottom: -12px; padding-bottom: 26px; box-shadow: none; position: relative; z-index: 1; }
+.type-card.on:hover { transform: none; }
+/* 列表里的分组和题库行也用这个玩法的颜色 */
+.in-types .bank-group { border-color: color-mix(in srgb, var(--tc) 30%, var(--line)); }
+.in-types .bank-group-head, .in-types .bank-group.other .bank-group-head { background: color-mix(in srgb, var(--tc) 16%, var(--card));
+  border-left-color: var(--tc); color: var(--heading); }
+.in-types .bank-group .item:hover { background: color-mix(in srgb, var(--tc) 8%, var(--card)); }
+.in-types .btn:not(.ghost) { background: var(--tc); box-shadow: 0 3px 0 color-mix(in srgb, var(--tc) 70%, #000); color: var(--on-primary); }
+.in-types > .empty { padding: 18px 6px; }
 .type-cards > .in-types[hidden] { display: none; }
 @media (max-width: 720px) {
   .type-cards { grid-template-columns: 1fr; }
@@ -86,7 +100,6 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 .type-card .tc-arrow { display: inline-block; margin-left: 2px; animation: tc-bob 1.2s ease-in-out infinite; }
 @keyframes tc-bob { 50% { transform: translateY(2px); } }
 .type-card .tc-go { padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 13px; background: var(--tc); color: var(--on-primary); }
-.type-card.on { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 45%, transparent); }
 .type-card.empty { border-left-color: color-mix(in srgb, var(--tc) 45%, var(--line)); }
 .type-card.empty .tc-go { background: color-mix(in srgb, var(--tc) 45%, var(--ink3)); }
 .pill.type { background: var(--blue-l); color: var(--blue-d); }

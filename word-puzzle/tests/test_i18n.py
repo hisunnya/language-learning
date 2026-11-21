@@ -22,7 +22,7 @@ CJK = re.compile(r"[一-鿿]")
 PAGES = ("index.html", "bank.html", "stats.html", "play.html")
 # 带用户可见文字、必须走 t() 的脚本
 SCRIPTS = ("page-home.js", "page-bank.js", "bank-panels.js", "recent.js", "practice-ui.js", "page-practice.js", "page-tenants.js", "page-stats.js", "page-leaderboard.js", "page-visits.js", "page-play.js", "game-ui.js", "selector.js", "api.js",
-           "spell-ui.js", "order-ui.js", "page-items.js")
+           "spell-ui.js", "order-ui.js", "page-items.js", "page-me.js")
 
 # 中文字符串字面量里，这些不是给人看的：和后端 / 教材数据约定好的值，翻译了反而会坏
 DATA_LITERALS = {"自定义", "整学年", "初中", "九年级", "上册", "我的词表", "全部", "全部单元"}
@@ -99,13 +99,14 @@ class TestDictionary(unittest.TestCase):
 
     def test_every_key_the_scripts_use_exists_and_every_key_is_used(self):
         defined = set(entries("zh"))
-        pattern = re.compile(r"""['"]((?:home|rel|field|sel|bank|stats|visits|prac|ten|lb|play|g|api|ig|sp|or|type)_[A-Za-z0-9_]+)['"]""")
+        pattern = re.compile(r"""['"]((?:home|rel|field|sel|bank|stats|visits|prac|ten|lb|play|g|api|ig|sp|or|type|me)_[A-Za-z0-9_]+)['"]""")
         used = set()
         for name in SCRIPTS:
             used |= set(pattern.findall(text(name)))
         dynamic = {k for k in defined if k.startswith("sel_mode_")}    # selector.js 用 MODE_KEYS 间接引用，上面已经扫到
-        dynamic |= {k for k in defined if re.fullmatch(r"type_(match|spell|order)(Desc)?", k)}   # 首页用 'type_' + 类型 拼出来
-        used -= {"play_token", "bank_id", "item_ord", "duration_ms"}   # 这些是接口的字段名，不是词条
+        dynamic |= {k for k in defined if re.fullmatch(r"type_(match|spell|order)(Desc)?", k)}
+        dynamic |= {k for k in defined if re.fullmatch(r"me_tier_(gold|silver|bronze)", k)}        # 「我的」用 'me_tier_' + 档次   # 首页用 'type_' + 类型 拼出来
+        used -= {"play_token", "bank_id", "item_ord", "duration_ms", "me_tier_"}     # 后一个是拼词条名的前缀   # 这些是接口的字段名，不是词条
         for key in used:
             self.assertIn(key, defined, "脚本用了没有定义的词条：%s" % key)
         unused = sorted(defined - used - dynamic)

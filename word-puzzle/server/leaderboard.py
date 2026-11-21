@@ -91,9 +91,14 @@ def classes_of(db: Database, scope: tenancy.Scope) -> list[str]:
     return [r["class_name"] for r in rows]
 
 
+GAMES = ("all", "match", "spell", "order")
+
+
 def board(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str = "", period: str = "all",
-          now: float | None = None) -> dict:
+          now: float | None = None, game: str = "all") -> dict:
+    """game：all = 总分；match / spell / order = 只算这一种玩法的积分（奖状也按这四个榜分别算）。"""
     period = "week" if period == "week" else "all"
+    game = game if game in GAMES else "all"
     cfg = get_config(db)
     overall = bool(cfg["classes"]) and not (scope.staff and class_name)       # 老师选了某个班，就看那个班
     if overall:
@@ -105,6 +110,9 @@ def board(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str
     if period == "week":
         join += " AND s.created_at>=?"
         args = [week_start(now)] + args
+    if game != "all":
+        join += " AND s.game_type=?"
+        args = args[:1] + [game] + args[1:] if period == "week" else [game] + args
     rows = db.query("SELECT u.id, u.name, u.class_name, SUM(s.score) AS points, COUNT(s.id) AS games "
                     "FROM users u %s WHERE %s AND u.disabled=0 GROUP BY u.id HAVING SUM(s.score)>0 "
                     "ORDER BY points DESC, games ASC, u.name" % (join, where), args)
@@ -113,11 +121,16 @@ def board(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str
         if r["points"] != last:
             rank, last = i, r["points"]
         ranked.append({"rank": rank, "name": r["name"], "points": r["points"], "class_name": r["class_name"],
-                       "me": bool(user and r["id"] == user["id"])})
+                       "me": bool(user and r["id"] == user["id"]), "id": r["id"]})
     staff = scope.staff
     keep_class = staff or overall          # 总榜里每个人旁边标班级（学生也看得到别班同学是哪个班的）
+    from . import awards                     # 名字旁边的小徽章（每个榜最好的那一档）
+    medals = awards.badges(db, [e["id"] for e in ranked[:TOP]] + ([e["id"] for e in ranked if e["me"]][:1]))
+    for e in ranked:
+        e["badges"] = medals.get(e.pop("id"), [])
     out = {
         "period": period,
+        "game": game,
         "scope": "overall" if overall else ("staff" if staff else "class"),
         "class_name": "" if overall else (class_name if staff else ((user or {}).get("class_name") or "")),
         "title": cfg["title"] if overall else "",

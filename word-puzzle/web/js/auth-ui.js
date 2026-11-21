@@ -17,6 +17,7 @@
     zh: {
       signOut: '退出',
       changePassword: '修改密码',
+      myPage: '我的主页：徽章、奖状、修改密码',
       adminLink: '账号管理',
       visitsLink: '访问记录',
       tenantsLink: '老师与分配',
@@ -115,6 +116,7 @@
     en: {
       signOut: 'Sign out',
       changePassword: 'Change password',
+      myPage: 'My page: badges, certificates, password',
       adminLink: 'Accounts',
       visitsLink: 'Visits',
       tenantsLink: 'Teachers',
@@ -284,9 +286,9 @@
       chip.id = 'userChip';
       var name = document.createElement('a');
       name.className = 'user-name';
-      name.href = BASE + '/change-password.html?next=' + encodeURIComponent(here());
+      name.href = BASE + '/me.html';                  /* 「我的」：徽章、奖状，那里也能改密码 */
       name.textContent = user.name;
-      name.title = user.student_no + ' · ' + t('changePassword');
+      name.title = user.student_no + ' · ' + t('myPage');
       var out = document.createElement('button');
       out.type = 'button';
       out.className = 'user-out';

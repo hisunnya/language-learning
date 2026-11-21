@@ -365,6 +365,15 @@ word accuracy of the recognised text against the reference. The order score is c
 `tools/asr_worker.py`; no prompt with the answer, VAD on, offline at run time), one at a time in a background
 queue; without recognition a recording ≥ 1 s still earns the 30 points. Students replay their recordings under
 Scores, teachers those of their students. Recording needs https (the plain-http LAN entrance cannot record).
+**Certificates and badges** (2026-11-21, `server/awards.py`): No. 1 on a leaderboard for 5 / 15 / 30 consecutive
+days earns a bronze / silver / gold certificate and badge, separately for the overall board and each game
+(`/api/leaderboard?game=`). The board is the one the student sees (the overall board if configured, otherwise
+class + responsible teacher), ranked by accumulated points; a day is a Beijing calendar day, settled after it ends,
+lazily (`catch_up` when the leaderboard or awards are requested, back to 120 days); ties all count; each threshold
+once per streak. Students see them on `me.html` (the header name links there; password change is there too);
+certificates are drawn in the browser (`web/js/awards-ui.js`, canvas 2400×1697, bilingual, fixed metal colours) and
+saved as PNG / JPG; in WeChat the image is shown for long-press saving. Teachers can read a student's awards with
+`/api/awards?user_id=`.
 **Every page carries the site footer** `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
 an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
 is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)
