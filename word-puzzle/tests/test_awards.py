@@ -158,17 +158,39 @@ class TestAwardsOverHttp(HttpCase):
         self.assertNotIn("id", first, "不把账号编号发给页面")
 
 
+class TestTeachersSeeAndDownloadTheirStudentsCertificates(TestAwardsOverHttp):
+    def test_admin_award_list_is_for_staff_only_and_follows_the_class_filter(self):
+        teacher = self.login("T001", "Teach3r!pw")
+        status, body = teacher.json("GET", "/api/admin/awards")
+        self.assertEqual(status, 200, body)
+        self.assertEqual({(a["name"], a["game"]) for a in body["awards"]}, {("安安", "all"), ("安安", "match"), ("贝贝", "spell")})
+        self.assertEqual(body["classes"], ["一班"])
+        self.assertTrue(all(a["teacher"] == "孙老师" and a["serial"].startswith("LX-") for a in body["awards"]))
+        self.assertEqual(teacher.json("GET", "/api/admin/awards?class_name=二班")[1]["awards"], [])
+        student = self.login("S001", "Ready2026x")
+        self.assertEqual(student.json("GET", "/api/admin/awards")[0], 403)
+
+
 class TestPages(unittest.TestCase):
     WEB = ROOT / "web"
 
     def test_profile_page_and_certificate_drawing(self):
         me = (self.WEB / "me.html").read_text(encoding="utf-8")
-        for needle in ("awards-ui.js", "page-me.js", 'id="meBadges"', 'id="meCerts"', 'id="meModal"', "site-footer.js", 'id="portalHeaderControls"'):
+        for needle in ("awards-ui.js", "page-me.js", 'id="meBadges"', 'id="meCerts"', "site-footer.js", 'id="portalHeaderControls"'):
             self.assertIn(needle, me)
         ui = (self.WEB / "js" / "awards-ui.js").read_text(encoding="utf-8")
-        for needle in ("CERTIFICATE OF EXCELLENCE", "荣誉证书", "toBlob(", "'image/' + type", "gold:", "silver:", "bronze:"):
+        for needle in ("CERTIFICATE OF EXCELLENCE", "荣誉证书", "toBlob(", "'image/' + type", "gold:", "silver:", "bronze:", "aw-modal"):
             self.assertIn(needle, ui)
         self.assertIn("/me.html", (self.WEB / "js" / "auth-ui.js").read_text(encoding="utf-8"), "页眉里点自己的名字进「我的」")
+
+    def test_scores_page_has_my_honours_and_the_teachers_list_with_samples(self):
+        html = (self.WEB / "stats.html").read_text(encoding="utf-8")
+        for needle in ('id="honorsCard"', 'id="staffAwardsCard"', 'id="awSampleBtn"', 'id="awClass"', "awards-ui.js", "page-honors.js"):
+            self.assertIn(needle, html)
+        js = (self.WEB / "js" / "page-honors.js").read_text(encoding="utf-8")
+        self.assertIn("if (info.public || !info.user) return;", js, "公开版没有账号，不显示荣誉")
+        self.assertIn("/api/admin/awards", js)
+        self.assertIn("WPAwards.samples(", js)
 
 
 if __name__ == "__main__":

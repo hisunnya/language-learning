@@ -22,7 +22,8 @@ CJK = re.compile(r"[一-鿿]")
 PAGES = ("index.html", "bank.html", "stats.html", "play.html")
 # 带用户可见文字、必须走 t() 的脚本
 SCRIPTS = ("page-home.js", "page-bank.js", "bank-panels.js", "recent.js", "practice-ui.js", "page-practice.js", "page-tenants.js", "page-stats.js", "page-leaderboard.js", "page-visits.js", "page-play.js", "game-ui.js", "selector.js", "api.js",
-           "spell-ui.js", "order-ui.js", "page-items.js", "page-me.js")
+           "spell-ui.js", "order-ui.js", "page-items.js", "page-me.js",
+           "page-honors.js", "awards-ui.js")
 
 # 中文字符串字面量里，这些不是给人看的：和后端 / 教材数据约定好的值，翻译了反而会坏
 DATA_LITERALS = {"自定义", "整学年", "初中", "九年级", "上册", "我的词表", "全部", "全部单元"}
@@ -125,6 +126,8 @@ class TestDictionary(unittest.TestCase):
 class TestNoChineseLeftInTheScripts(unittest.TestCase):
     def test_visible_strings_all_go_through_the_dictionary(self):
         for name in SCRIPTS:
+            if name == "awards-ui.js":
+                continue            # 奖状、徽章上的字故意中英两种同时印（不随网站语言切换），页面上的文字照样走词条
             for literal in string_literals(text(name)):
                 if not CJK.search(literal) or literal in DATA_LITERALS:
                     continue

@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=fd6a4039">
 <link rel="stylesheet" href="/word-puzzle/css/items.css?v=beba02fb">
 <link rel="stylesheet" href="/word-puzzle/css/auth.css?v=740072a7">
+<link rel="stylesheet" href="/word-puzzle/css/awards.css?v=64c0d733">
 <link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
 </head>
 <body data-wide>
@@ -29,6 +30,30 @@
     </nav>
     <div class="portal-topbar-right" id="portalHeaderControls"></div>
   </header>
+
+  <!-- 学生：我的荣誉（徽章和奖状）；公开版 /words/ 没有账号，不显示 -->
+  <div class="card honors-card" id="honorsCard" hidden>
+    <h2 data-module-zh="我的荣誉" data-module-en="My honours">我的荣誉</h2>
+    <p class="sub" data-module-zh="在积分榜（总分，或者某一种玩法）上连续 5 天、15 天、30 天第一，分别得到铜、银、金徽章和一张奖状，可以下载成图片保存、转发。" data-module-en="Be No. 1 on a leaderboard (overall, or one of the games) for 5, 15 or 30 days in a row to earn a bronze, silver or gold badge and a certificate you can download as an image to keep and share.">在积分榜（总分，或者某一种玩法）上连续 5 天、15 天、30 天第一，分别得到铜、银、金徽章和一张奖状，可以下载成图片保存、转发。</p>
+    <div class="aw-grid" id="honorBadges"></div>
+    <div class="list" id="honorCerts"></div>
+  </div>
+
+  <!-- 老师：名下学生的奖状（查看、下载）和样张预览 -->
+  <div class="card honors-card" id="staffAwardsCard" hidden>
+    <h2 data-module-zh="学生奖状" data-module-en="Students' certificates">学生奖状</h2>
+    <p class="sub" data-module-zh="名下学生在积分榜上连续 5 / 15 / 30 天第一得到的奖状，每张都可以查看、下载（PNG 清晰，JPG 小一些）。「样张预览」用示例姓名看三个档次的样子。" data-module-en="Certificates your students earned for 5 / 15 / 30 days at No. 1; each can be viewed and downloaded (PNG sharper, JPG smaller). “Sample preview” shows the three tiers with a sample name.">名下学生在积分榜上连续 5 / 15 / 30 天第一得到的奖状，每张都可以查看、下载（PNG 清晰，JPG 小一些）。「样张预览」用示例姓名看三个档次的样子。</p>
+    <div class="admin-filters">
+      <div class="field"><label for="awClass" data-module-zh="班级" data-module-en="Class">班级</label><select id="awClass"></select></div>
+      <button type="button" class="btn ghost" id="awSampleBtn" data-module-zh="样张预览" data-module-en="Sample preview">样张预览</button>
+    </div>
+    <div id="awSamples" hidden>
+      <div class="aw-grid" id="awSampleBadges"></div>
+      <div class="list" id="awSampleCerts"></div>
+    </div>
+    <p class="hint" id="awCount"></p>
+    <div class="list" id="staffAwards"></div>
+  </div>
 
   <div class="stats" id="statCards">
     <div class="stat"><div class="k" data-module-zh="总场次" data-module-en="Games played">总场次</div><div class="v blue" id="sCount">—</div></div>
@@ -69,10 +94,12 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/i18n.js?v=2fe864c4"></script>
-<script src="/word-puzzle/js/i18n-lexica.js?v=f1df740c"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=6ead4fdb"></script>
 <script src="/word-puzzle/js/api.js?v=e44053c6"></script>
 <script src="/word-puzzle/js/auth-ui.js?v=6f45b08e"></script>
 <script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
+<script src="/word-puzzle/js/awards-ui.js?v=fec096f0"></script>
+<script src="/word-puzzle/js/page-honors.js?v=60bfec55"></script>
 <script src="/word-puzzle/js/page-stats.js?v=3bceda20"></script>
 <script src="/shared/module-header.js?v=0b00f0ec"></script>
 <script src="/shared/site-footer.js?v=9d9c1f36"></script>

@@ -1078,6 +1078,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def handle_admin(self, method: str, path: str, query: dict) -> None:
         auth = self.auth
+        db = self.db
         scope = self._scope()
         if self.handle_super(method, path, query):
             return
@@ -1089,6 +1090,16 @@ class Handler(BaseHTTPRequestHandler):
                                         q=query.get("q", "").strip(), scope=scope,
                                         role=query.get("role", "") if scope.everything else "")
                 self.send_json({"ok": True, "users": users, "super": scope.everything})
+                return
+
+            if path == "/api/admin/awards" and method == "GET":
+                # 自己名下学生的所有奖状（超管：所有学生），可以按班级筛；老师在「成绩记录」里查看、下载
+                try:
+                    awards_mod.catch_up(db)
+                except Exception:                    # pragma: no cover
+                    traceback.print_exc()
+                found = awards_mod.of_scope(db, scope, query.get("class_name", "").strip()[:60])
+                self.send_json({"ok": True, "awards": found, "classes": leaderboard.classes_of(db, scope)})
                 return
 
             if path == "/api/admin/import" and method == "POST":

@@ -353,5 +353,103 @@
     });
   }
 
-  global.WPAwards = { badge: badge, mini: mini, label: label, draw: draw, render: render, save: save, gameName: gameName, METAL: METAL, filename: filename };
+  /* ---------------- 列表、徽章墙、查看窗口（「我的」和「成绩记录」共用） ---------------- */
+
+  function t(key, params) { return global.WPI18N ? global.WPI18N.t(key, params) : key; }
+  function tierName(tier) { return t('me_tier_' + tier); }
+  function title(a) { return t('me_certTitle', { tier: tierName(a.tier), game: gameName(a.game, lang()), n: a.days }); }
+
+  function wall(awards) {
+    if (!awards.length) return '<div class="empty">' + esc(t('me_noBadges')) + '</div>';
+    var seen = {}, list = [];
+    awards.forEach(function (a) {
+      var k = a.game + '|' + a.days;
+      if (!seen[k]) { seen[k] = { award: a, n: 0 }; list.push(seen[k]); }
+      seen[k].n++;
+    });
+    list.sort(function (x, y) { return y.award.days - x.award.days; });
+    return list.map(function (x) {
+      return '<div class="aw-cell">' + badge(x.award, 88) + '<b>' + esc(tierName(x.award.tier)) + (x.n > 1 ? ' ×' + x.n : '') + '</b>' +
+        '<small>' + esc(gameName(x.award.game, lang()) + ' · ' + t('me_daysTop', { n: x.award.days })) + '</small></div>';
+    }).join('');
+  }
+
+  /* 奖状列表：opts.who = 每行前面写上学生姓名、班级（老师看）；opts.empty = 没有奖状时的提示词条 */
+  function rows(awards, opts) {
+    opts = opts || {};
+    if (!awards.length) return '<div class="empty">' + esc(t(opts.empty || 'me_noCerts')) + '</div>';
+    return awards.map(function (a, i) {
+      var who = opts.who ? '<span class="aw-who">' + esc(a.name) + (a.class_name ? ' · ' + esc(a.class_name) : '') + '</span>' : '';
+      return '<div class="item aw-row' + (a.seen === false && !opts.who ? ' is-new' : '') + '"><div class="aw-row-badge">' + badge(a, 46) + '</div>' +
+        '<div class="main">' + who + '<b>' + esc(title(a)) + '</b>' +
+        (a.seen === false && !opts.who ? ' <span class="pill good">' + esc(t('me_new')) + '</span>' : '') +
+        '<small>' + esc((a.board_label ? a.board_label + ' · ' : '') + a.start_day + ' — ' + a.end_day + (a.serial ? ' · ' + a.serial : '')) + '</small></div>' +
+        '<div class="ops"><button type="button" class="btn sm" data-aw-view="' + i + '">' + esc(t('me_view')) + '</button>' +
+        '<button type="button" class="btn sm ghost" data-aw-save="' + i + '" data-type="png">PNG</button>' +
+        '<button type="button" class="btn sm ghost" data-aw-save="' + i + '" data-type="jpeg">JPG</button></div></div>';
+    }).join('');
+  }
+
+  /* 列表里的「查看 / PNG / JPG」：getAwards() 返回这个列表当前对应的奖状数组 */
+  function bind(box, getAwards) {
+    box.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (!b) return;
+      var list = getAwards();
+      if (b.hasAttribute('data-aw-view')) view(list[+b.getAttribute('data-aw-view')]);
+      if (b.hasAttribute('data-aw-save')) {
+        b.disabled = true;
+        save(list[+b.getAttribute('data-aw-save')], b.getAttribute('data-type')).then(function () { b.disabled = false; });
+      }
+    });
+  }
+
+  var modal = null;
+  function view(a) {
+    if (!a) return;
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'aw-modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.innerHTML = '<div class="aw-modal-box"><img alt=""><p class="hint"></p><div class="actions">' +
+        '<button type="button" class="btn" data-k="png"></button><button type="button" class="btn ghost" data-k="jpeg"></button>' +
+        '<button type="button" class="btn ghost" data-k="close"></button></div></div>';
+      document.body.appendChild(modal);
+      modal.addEventListener('click', function (ev) {
+        if (ev.target === modal || (ev.target.getAttribute && ev.target.getAttribute('data-k') === 'close')) modal.hidden = true;
+      });
+    }
+    var img = modal.querySelector('img'), msg = modal.querySelector('.hint');
+    modal.querySelector('[data-k="png"]').textContent = t('me_dlPng');
+    modal.querySelector('[data-k="jpeg"]').textContent = t('me_dlJpg');
+    modal.querySelector('[data-k="close"]').textContent = t('me_close');
+    modal.querySelector('[data-k="png"]').onclick = function () { save(a, 'png'); };
+    modal.querySelector('[data-k="jpeg"]').onclick = function () { save(a, 'jpeg'); };
+    modal.hidden = false;
+    img.removeAttribute('src');
+    msg.textContent = t('me_drawing');
+    render(a).then(function (canvas) {
+      img.src = canvas.toDataURL('image/png');
+      img.alt = title(a);
+      msg.textContent = t('me_longPress');
+    });
+  }
+
+  /* 样张：示例学生的金、银、铜三张（老师预览用，也能下载） */
+  function samples(teacher) {
+    var today = new Date(), out = [];
+    function day(offset) {
+      var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset);
+      return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    }
+    [[30, 'gold', 'all'], [15, 'silver', 'spell'], [5, 'bronze', 'order']].forEach(function (x, i) {
+      out.push({ id: 0, days: x[0], tier: x[1], game: x[2], board: 'sample', board_label: t('me_sampleClass'),
+                 name: t('me_sampleName'), class_name: t('me_sampleClass'), teacher: teacher || '', start_day: day(x[0]), end_day: day(1),
+                 created_at: Math.floor(Date.now() / 1000), serial: 'LX-SAMPLE-' + (i + 1), seen: true });
+    });
+    return out;
+  }
+
+  global.WPAwards = { badge: badge, mini: mini, label: label, wall: wall, rows: rows, bind: bind, view: view, samples: samples, title: title, draw: draw, render: render, save: save, gameName: gameName, METAL: METAL, filename: filename };
 })(window);

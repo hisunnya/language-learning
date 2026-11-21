@@ -164,6 +164,25 @@ def of_user(db: Database, user_id: int) -> list[dict]:
     return out
 
 
+def of_scope(db: Database, scope: "tenancy.Scope", class_name: str = "") -> list[dict]:
+    """老师看得到的学生（自己名下的；超管所有人）得过的所有奖状，新的在前。奖状上的学生姓名、班级、负责老师都带上。"""
+    ensure(db)
+    cond, args = tenancy.student_where(scope)
+    where, args = [cond, "u.role='student'"], list(args)
+    if class_name:
+        where.append("u.class_name=?")
+        args.append(class_name)
+    primary = tenancy.primary_map(db)
+    out = []
+    for r in db.query("SELECT a.*, u.name, u.class_name FROM awards a JOIN users u ON u.id=a.user_id WHERE " + " AND ".join(where) +
+                      " ORDER BY a.end_day DESC, u.class_name, u.name, a.days DESC", args):
+        d = dict(r)
+        d.update(tier=TIERS[d["days"]], serial="LX-%s-%06d" % (d["end_day"][:4], d["id"]),
+                 teacher=(primary.get(d["user_id"]) or (0, ""))[1], seen=bool(d["seen"]))
+        out.append(d)
+    return out
+
+
 def mark_seen(db: Database, user_id: int) -> None:
     ensure(db)
     db.execute("UPDATE awards SET seen=1 WHERE user_id=? AND seen=0", (user_id,))
