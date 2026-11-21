@@ -11,7 +11,7 @@
 <link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
 <link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
 <link rel="stylesheet" href="/word-puzzle/css/app.css?v=56f3c20c">
-<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=9c566b76">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=740072a7">
 <link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
 </head>
 <body data-auth="admin" data-wx-download="1" data-wide>
@@ -59,11 +59,14 @@
   <div class="card">
     <h2 data-module-zh="学生账号" data-module-en="Student accounts">学生账号</h2>
     <p class="sub" id="usersCount"></p>
+    <div class="summary-bar" id="userSummary" role="group" aria-label="状态统计"></div>
+    <p class="hint" id="userSummaryHint"></p>
     <div class="admin-filters">
       <div class="field"><label for="fClass" data-module-zh="班级" data-module-en="Class">班级</label><select id="fClass"></select></div>
       <div class="field"><label for="fCollege" data-module-zh="学院" data-module-en="College">学院</label><select id="fCollege"></select></div>
       <div class="field"><label for="fDept" data-module-zh="院系" data-module-en="Department">院系</label><select id="fDept"></select></div>
       <div class="field"><label for="fSearch" data-module-zh="搜索学号或姓名" data-module-en="Search number or name">搜索学号或姓名</label><input type="text" id="fSearch" maxlength="40"></div>
+      <div class="field"><label for="fStatus" data-module-zh="注册状态" data-module-en="Sign-up status">注册状态</label><select id="fStatus"></select></div>
       <a class="btn ghost" id="btnExport" href="#" data-module-zh="导出成绩 CSV" data-module-en="Export scores CSV">导出成绩 CSV</a>
     </div>
     <div class="admin-filters">
@@ -96,6 +99,7 @@
         <th data-module-zh="操作" data-module-en="Actions">操作</th>
       </tr></thead>
       <tbody></tbody>
+      <tfoot><tr><td colspan="12" id="userFoot"></td></tr></tfoot>
     </table></div>
   </div>
 
@@ -103,9 +107,9 @@
 
 <div class="toast" id="toast"></div>
 <script src="/word-puzzle/js/api.js?v=e44053c6"></script>
-<script src="/word-puzzle/js/auth-ui.js?v=ec37383f"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=9bfc44da"></script>
 <script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
-<script src="/word-puzzle/js/page-admin.js?v=d149d76b"></script>
+<script src="/word-puzzle/js/page-admin.js?v=b0828b87"></script>
 <script src="/shared/module-header.js?v=0b00f0ec"></script>
 </body>
 </html>

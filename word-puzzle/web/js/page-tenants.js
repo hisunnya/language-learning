@@ -47,6 +47,8 @@
 
   function renderTeachers() {
     var body = document.querySelector('#teacherTable tbody');
+    var staff = teachers.filter(function (u) { return u.role === 'teacher'; });
+    $('teacherCount').textContent = t('ten_countTeachers', { n: staff.length, off: staff.filter(function (u) { return u.disabled; }).length });
     if (!teachers.length) { body.innerHTML = '<tr><td colspan="10" class="empty">' + esc(t('ten_noTeachers')) + '</td></tr>'; return; }
     body.innerHTML = teachers.map(function (u) {
       var role = u.role === 'admin' ? '<span class="pill good">' + esc(t('ten_roleSuper')) + '</span>'
@@ -210,6 +212,9 @@
 
   function loadDeleted() {
     return API.get('/api/admin/deleted').then(function (res) {
+      $('delUsersCount').textContent = t('ten_countDeleted', { n: (res.users || []).length });
+      $('delBanksCount').textContent = t('ten_countDeleted', { n: (res.banks || []).length });
+      $('delMaterialsCount').textContent = t('ten_countDeleted', { n: (res.materials || []).length });
       var empty = '<div class="empty">' + esc(t('ten_noneDeleted')) + '</div>';
       $('delUsers').innerHTML = (res.users || []).map(function (u) {
         return delRow('user', u.id, u.name + ' · ' + u.student_no, [u.class_name, by(u)].filter(Boolean).join(' · '));
@@ -282,6 +287,7 @@
     return API.get('/api/admin/audit?limit=300').then(function (res) {
       var rows = res.audit || [];
       var body = document.querySelector('#auditTable tbody');
+      $('auditCount').textContent = t('ten_countAudit', { n: rows.length });
       body.innerHTML = rows.length ? rows.map(function (r) {
         var d = r.detail || {};
         var detail = [d.title, d.student_no, d.name, d.teacher, d.group, d.classes ? d.classes.join('、') : ''].filter(Boolean).join(' · ');

@@ -185,3 +185,12 @@ table.grid .filter-row select { background-image: none; padding-right: 4px; }
 .col-grip { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 2; touch-action: none; }
 .col-grip::after { content: ""; position: absolute; left: 3px; top: 25%; height: 50%; width: 1px; background: var(--line); }
 .col-grip:hover::after, .col-grip.on::after { width: 3px; left: 2px; background: var(--ink3); }
+
+/* 小计条：像 Excel 的分类汇总，数字随筛选变化；点一个就只看这一类 */
+.summary-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.summary-bar .chip { padding: 6px 14px; font-size: 13px; }
+.summary-bar .chip b { margin-left: 4px; font-variant-numeric: tabular-nums; color: var(--heading); }
+.summary-bar .chip.on { background: var(--ink3); color: var(--card); border-color: var(--ink3); }
+.summary-bar .chip.on b { color: inherit; }
+table.tbl tfoot td { padding: 10px 8px; font-weight: 700; color: var(--heading); border-top: 2px solid var(--line); border-bottom: none; background: var(--chip-bg); }
+.sumline { margin: 4px 0 10px; font-weight: 600; color: var(--ink2); }

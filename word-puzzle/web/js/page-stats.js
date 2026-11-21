@@ -70,7 +70,11 @@
     renderCards(rows);
     var body = document.querySelector('#sumTable tbody');
     var mine = !AuthUI.isAdmin();
-    document.getElementById('sumCount').textContent = rows.length ? t('stats_count', { n: rows.length }) : '';
+    var who = {}, banks = {};
+    rows.forEach(function (r) { who[r.user_id != null ? 'u' + r.user_id : 'd' + r.device] = 1; banks[r.bank_id != null ? 'b' + r.bank_id : 't' + r.bank_title] = 1; });
+    document.getElementById('sumCount').textContent = rows.length
+      ? [t('stats_count', { n: rows.length })].concat(mine ? [] : [t('stats_sumStudents', { n: Object.keys(who).length })], [t('stats_sumBanks', { n: Object.keys(banks).length })]).join(' · ')
+      : '';
     if (!rows.length) {
       body.innerHTML = '<tr><td colspan="12" class="empty">' + esc(t(mine ? 'stats_noRowsMine' : 'stats_noRows')) + '</td></tr>';
       updateExport();

@@ -16,7 +16,7 @@
 
   var PAGE = 100;
   var tab = 'visits';
-  var state = { visits: { rows: [], total: 0 }, pages: { rows: [], total: 0 }, logins: { rows: [], total: 0 } };
+  var state = { visits: { rows: [], total: 0, summary: null }, pages: { rows: [], total: 0, summary: null }, logins: { rows: [], total: 0, summary: null } };
   var opts = { pages: [], banks: [], os: [], apps: [] };      /* 筛选下拉框的选项（/api/admin/visits/options） */
   var ENDPOINT = { visits: '/api/admin/visits?', pages: '/api/admin/pageviews?', logins: '/api/admin/logins?' };
   var F = { who: '', class_name: '', page: '', bank: '', device: '', app: '', os: '', stay: '', failed: '' };   /* 表头下面一行的筛选值，三个标签共用 */
@@ -81,6 +81,7 @@
       var rows = { visits: res.sessions, pages: res.pageviews, logins: res.logins }[tab];
       s.rows = more ? s.rows.concat(rows) : rows;
       s.total = res.total;
+      s.summary = res.summary || null;
       render();
     }).catch(function () { $('countHint').textContent = t('visits_fail'); });
   }
@@ -159,6 +160,17 @@
     }).join('');
   }
 
+  /* 小计：整个筛选结果（不只是已显示的 100 条）的人数、IP 数、停留合计 */
+  function summaryText(s) {
+    var m = s.summary;
+    if (!m) return '';
+    if (tab === 'logins') return [t('visits_sumLogins', { ok: m.ok, failed: m.failed }), t('visits_sumLoginPeople', { n: m.people }), t('visits_sumIps', { n: m.ips })].join(' · ');
+    var parts = [t('visits_sumViews', { views: m.views }), t('visits_sumPeople', { n: m.people })];
+    if (m.anonymous) parts.push(t('visits_sumAnon', { n: m.anonymous }));
+    parts.push(t('visits_sumIps', { n: m.ips }), t('visits_sumTime', { t: dur(m.seconds) }));
+    return parts.join(' · ');
+  }
+
   function render() {
     var s = state[tab];
     $('visitTable').hidden = tab !== 'visits';
@@ -166,6 +178,7 @@
     $('loginTable').hidden = tab !== 'logins';
     $('btnMore').hidden = s.rows.length >= s.total;
     $('countHint').textContent = t('visits_count', { n: s.total, shown: s.rows.length });
+    $('sumLine').textContent = summaryText(s);
     var local = s.rows.length > 0 && s.rows.slice(0, 20).every(function (r) { return r.ip === '127.0.0.1' || r.ip === '::1'; });
     $('ipWarn').hidden = !local;
     $('ipWarn').textContent = local ? t('visits_proxyOnly') : '';

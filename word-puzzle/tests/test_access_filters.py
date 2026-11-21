@@ -111,6 +111,27 @@ class TestFilters(FilterCase):
         self.assertEqual(self.titles(os="Windows"), ["成绩"])
         self.assertEqual(self.titles(device="bogus"), sorted(["成绩", "游戏", "积分榜", "读音练习", "首页"]), "不认识的值忽略，不会查出空")
 
+    def test_the_summary_counts_the_whole_filtered_result(self):
+        """小计：整个筛选结果的浏览数、人数、IP 数、停留合计；不受 limit 影响，随筛选变化。"""
+        body = self.admin_client.json("GET", "/api/admin/pageviews?limit=1&class_name=" + self.cls)[1]
+        self.assertEqual(len(body["pageviews"]), 1)
+        m = body["summary"]
+        self.assertEqual((m["views"], m["people"], m["seconds"]), (5, 1, 45))
+        self.assertEqual(m["ips"], 1)
+        only = self.pv(self.admin_client, class_name=self.cls, page="practice.html")["summary"]
+        self.assertEqual((only["views"], only["seconds"]), (1, 40))
+        none = self.pv(self.admin_client, class_name=self.cls, bank="不存在的词")["summary"]
+        self.assertEqual((none["views"], none["people"], none["seconds"], none["ips"]), (0, 0, 0, 0))
+        sess = self.admin_client.json("GET", "/api/admin/visits?class_name=" + self.cls)[1]["summary"]
+        self.assertEqual((sess["views"], sess["people"]), (5, 1))
+
+    def test_the_login_summary_splits_success_and_failure(self):
+        status, body = self.admin_client.json("GET", "/api/admin/logins?limit=1")
+        self.assertEqual(status, 200)
+        m = body["summary"]
+        self.assertEqual(set(m), {"ok", "failed", "people", "ips"})
+        self.assertEqual(m["ok"] + m["failed"], body["total"])
+
     def test_minimum_stay(self):
         self.assertEqual(self.titles(min_seconds=30), ["读音练习"])
         self.assertEqual(len(self.titles(min_seconds="abc")), 5)
@@ -259,3 +280,32 @@ class TestLoginPageAndButtonSize(unittest.TestCase):
         css = (web / "css" / "app.css").read_text(encoding="utf-8")
         self.assertNotIn(".btn.lg", css)
         self.assertIn(".actions .btn { flex: 0 0 auto; }", css)
+
+
+class TestSummariesInThePages(unittest.TestCase):
+    """每个有列表的管理页都带小计，并且跟着筛选变。"""
+
+    def setUp(self):
+        from pathlib import Path
+        self.web = Path(__file__).resolve().parent.parent / "web"
+
+    def read(self, rel):
+        return (self.web / rel).read_text(encoding="utf-8")
+
+    def test_accounts_page_has_a_status_filter_and_counts_per_status(self):
+        html, js = self.read("admin.html"), self.read("js/page-admin.js")
+        for needle in ('id="fStatus"', 'id="userSummary"', 'id="userFoot"'):
+            self.assertIn(needle, html)
+        for key in ("'active'", "'pending'", "'never'", "'disabled'", "'locked'"):
+            self.assertIn(key, js)
+        self.assertIn("filteredExceptStatus", js, "每个数字按其他筛选条件算")
+        self.assertIn("data-status", js)
+        self.assertIn("'fStatus'].forEach", js, "改了状态筛选要重新渲染")
+
+    def test_other_pages_show_counts(self):
+        self.assertIn("sumLine", self.read("visits.html"))
+        self.assertIn("summaryText", self.read("js/page-visits.js"))
+        self.assertIn("stats_sumStudents", self.read("js/page-stats.js"))
+        tenants = self.read("js/page-tenants.js")
+        for key in ("ten_countTeachers", "ten_countDeleted", "ten_countAudit"):
+            self.assertIn(key, tenants)

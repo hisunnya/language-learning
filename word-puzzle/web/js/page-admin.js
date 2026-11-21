@@ -97,7 +97,18 @@
     if (keep && distinct(field).indexOf(keep) >= 0) select.value = keep;
   }
 
-  function filtered() {
+  /* 注册状态：已激活 = 改过初始密码且没被停用 / 锁定；未激活 = 还在用初始密码；从未登录 = 没有登录记录（是未激活的一部分） */
+  var STATUS = [
+    ['', 'sumAll', function () { return true; }],
+    ['active', 'sumActive', function (u) { return !u.disabled && !u.locked && !u.must_change; }],
+    ['pending', 'sumPending', function (u) { return !!u.must_change; }],
+    ['never', 'sumNever', function (u) { return !u.last_login_at; }],
+    ['disabled', 'sumDisabled', function (u) { return !!u.disabled; }],
+    ['locked', 'sumLocked', function (u) { return !!u.locked; }]
+  ];
+
+  /* 除「注册状态」以外的筛选条件；统计条上每个数字都按它算，所以会跟着其他筛选一起变 */
+  function filteredExceptStatus() {
     var cls = el('fClass').value, college = el('fCollege').value, dept = el('fDept').value;
     var q = el('fSearch').value.trim().toLowerCase();
     return users.filter(function (u) {
@@ -105,6 +116,32 @@
         (!dept || u.department === dept) &&
         (!q || u.student_no.toLowerCase().indexOf(q) >= 0 || u.name.toLowerCase().indexOf(q) >= 0);
     });
+  }
+
+  function filtered() {
+    var pick = STATUS.filter(function (x) { return x[0] === el('fStatus').value; })[0] || STATUS[0];
+    return filteredExceptStatus().filter(pick[2]);
+  }
+
+  function fillStatus() {
+    var select = el('fStatus'), keep = select.value;
+    select.innerHTML = STATUS.map(function (x) {
+      return '<option value="' + x[0] + '">' + esc(t(x[1])) + '</option>';
+    }).join('');
+    select.value = keep;
+  }
+
+  function renderSummary(base, rows) {
+    var current = el('fStatus').value;
+    el('userSummary').innerHTML = STATUS.map(function (x) {
+      var n = base.filter(x[2]).length;
+      return '<button type="button" class="chip' + (x[0] === current ? ' on' : '') + '" data-status="' + x[0] + '" aria-pressed="' + (x[0] === current) + '">' +
+        esc(t(x[1])) + ' <b>' + n + '</b></button>';
+    }).join('');
+    el('userSummaryHint').textContent = t('sumHint');
+    var games = 0, best = 0;
+    rows.forEach(function (u) { games += u.games; if (u.best > best) best = u.best; });
+    el('userFoot').textContent = t('sumFoot', { n: rows.length, games: games, best: best });
   }
 
   function isStaff(u) { return u.role === 'admin' || u.role === 'teacher'; }
@@ -130,7 +167,9 @@
   }
 
   function render() {
+    var base = filteredExceptStatus();
     var rows = filtered();
+    renderSummary(base, rows);
     el('usersCount').textContent = t('usersCount', { n: rows.length });
     var body = document.querySelector('#userTable tbody');
     if (!rows.length) {
@@ -175,6 +214,7 @@
       fillSelect('fClass', 'class_name');
       fillSelect('fCollege', 'college');
       fillSelect('fDept', 'department');
+      fillStatus();
       render();
     }).catch(function (err) {
       API.toast(AuthUI.errorText(err));
@@ -299,8 +339,14 @@
     el('btnBulkAdd').onclick = function () { bulkTags('add'); };
     el('btnBulkRemove').onclick = function () { bulkTags('remove'); };
     el('btnBulkDelete').onclick = bulkDelete;
-    ['fClass', 'fCollege', 'fDept'].forEach(function (id) { el(id).onchange = render; });
+    ['fClass', 'fCollege', 'fDept', 'fStatus'].forEach(function (id) { el(id).onchange = render; });
     el('fSearch').oninput = render;
+    el('userSummary').addEventListener('click', function (event) {
+      var chip = event.target.closest('button[data-status]');
+      if (!chip) return;
+      el('fStatus').value = chip.getAttribute('data-status');
+      render();
+    });
     document.querySelector('#userTable tbody').addEventListener('click', function (event) {
       var button = event.target.closest('button[data-act]');
       if (button) act(button);
@@ -309,7 +355,7 @@
       var button = event.target.closest('button[data-req]');
       if (button) decide(button);
     });
-    window.addEventListener('portal-lang-change', function () { renderRequests(); render(); });
+    window.addEventListener('portal-lang-change', function () { fillStatus(); renderRequests(); render(); });
     AuthUI.ready.then(function (info) {
       if (info.user && (info.user.role === 'admin' || info.user.role === 'teacher')) { loadUsers(); loadRequests(); }
     });

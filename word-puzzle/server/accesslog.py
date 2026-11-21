@@ -361,6 +361,16 @@ def _filters(role: str, class_name: str, q: str, since, until, table: str, peopl
     return (" WHERE " + " AND ".join(where)) if where else "", args
 
 
+def _view_summary(db: Database, cond: str, args) -> dict:
+    """符合当前筛选条件的页面浏览汇总（像 Excel 的小计）：浏览数、登录过的人数、不同 IP 数、停留总秒数。
+    不受「加载更多」影响：算的是整个筛选结果，不是已显示的那几行。"""
+    row = db.one("SELECT COUNT(*) AS views, COUNT(DISTINCT user_id) AS people, COUNT(DISTINCT NULLIF(ip, '')) AS ips, "
+                 "COALESCE(SUM(active_seconds), 0) AS seconds, "
+                 "COUNT(DISTINCT CASE WHEN user_id IS NULL THEN sid END) AS anonymous "
+                 "FROM page_views" + cond, args)
+    return {k: row[k] for k in ("views", "people", "ips", "seconds", "anonymous")}
+
+
 def sessions(db: Database, *, role: str = "", class_name: str = "", q: str = "", since=None, until=None,
              limit: int = 100, offset: int = 0, people: tuple[str, tuple] | None = None, extra: dict | None = None) -> dict:
     """一次访问 = 同一个浏览器标签页（sid）里同一个账号先后打开的页面。最近的在最前面。"""
@@ -386,7 +396,7 @@ def sessions(db: Database, *, role: str = "", class_name: str = "", q: str = "",
             "pages_seen": list(dict.fromkeys(page_file(r["path"]) for r in rows)),
             "banks": list(dict.fromkeys(r["bank_title"] or ("#%s" % r["bank_id"]) for r in rows if r["bank_id"])),
         })
-    return {"sessions": out, "total": total}
+    return {"sessions": out, "total": total, "summary": _view_summary(db, cond, args)}
 
 
 def pageviews(db: Database, *, role: str = "", class_name: str = "", q: str = "", since=None, until=None,
@@ -398,7 +408,8 @@ def pageviews(db: Database, *, role: str = "", class_name: str = "", q: str = ""
                     "device_type, device_model, in_app, path, title, query, bank_id, bank_title, referrer, started_at, active_seconds "
                     "FROM page_views" + cond + " ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?",
                     (*args, max(1, min(limit, 500)), max(0, offset)))
-    return {"pageviews": [dict(r, page=page_file(r["path"])) for r in rows], "total": total}
+    return {"pageviews": [dict(r, page=page_file(r["path"])) for r in rows], "total": total,
+            "summary": _view_summary(db, cond, args)}
 
 
 def options(db: Database, people: tuple[str, tuple] | None = None) -> dict:
@@ -447,7 +458,10 @@ def logins(db: Database, *, role: str = "", class_name: str = "", q: str = "", o
     total = db.one("SELECT COUNT(*) AS n FROM login_events" + cond, args)["n"]
     rows = db.query("SELECT * FROM login_events" + cond + " ORDER BY ts DESC, id DESC LIMIT ? OFFSET ?",
                     (*args, max(1, min(limit, 500)), max(0, offset)))
-    return {"logins": [dict(r) for r in rows], "total": total}
+    summary = db.one("SELECT COALESCE(SUM(success), 0) AS ok, COALESCE(SUM(1 - success), 0) AS failed, "
+                     "COUNT(DISTINCT NULLIF(student_no, '')) AS people, COUNT(DISTINCT NULLIF(ip, '')) AS ips "
+                     "FROM login_events" + cond, args)
+    return {"logins": [dict(r) for r in rows], "total": total, "summary": dict(summary)}
 
 
 def all_rows(db: Database, table: str, *, class_name: str = "", q: str = "", since=None, until=None,
