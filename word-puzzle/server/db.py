@@ -286,6 +286,39 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS ix_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS ix_scores_bank ON scores(bank_id);
+
+-- 新题型的题目（单词大比拼 spell、排排坐 order）：一行一道题，data 是 JSON，格式见 server/items.py
+CREATE TABLE IF NOT EXISTS bank_items (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    bank_id  INTEGER NOT NULL,
+    ord      INTEGER NOT NULL,
+    data     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_items_bank ON bank_items(bank_id, ord);
+
+-- 排排坐的朗读录音：文件在数据目录的 recordings/ 下（统一转成 MP3），这里记谁、哪道题、识别结果和得分
+CREATE TABLE IF NOT EXISTS recordings (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER,
+    device      TEXT NOT NULL DEFAULT '',
+    bank_id     INTEGER NOT NULL,
+    item_ord    INTEGER NOT NULL,
+    play_token  TEXT NOT NULL DEFAULT '',      -- 同一局游戏的编号（页面生成），交成绩时据此把录音和成绩连起来
+    file        TEXT NOT NULL DEFAULT '',      -- recordings/ 下的文件名
+    bytes       INTEGER NOT NULL DEFAULT 0,
+    duration_ms INTEGER NOT NULL DEFAULT 0,
+    status      TEXT NOT NULL DEFAULT 'pending', -- pending 等识别 / done 已评分 / noasr 服务器没有识别 / failed 识别出错
+    transcript  TEXT NOT NULL DEFAULT '',
+    accuracy    REAL NOT NULL DEFAULT 0,       -- 识别出的词和标准句子对上的比例 0..1
+    valid       INTEGER NOT NULL DEFAULT 0,    -- 算不算有效朗读（拿「提交朗读」那部分分）
+    bonus       INTEGER NOT NULL DEFAULT 0,    -- 额外奖励分
+    score_id    INTEGER,                       -- 交成绩后连到 scores
+    created_at  INTEGER NOT NULL,
+    scored_at   INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS ix_rec_user ON recordings(user_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_rec_play ON recordings(play_token);
+CREATE INDEX IF NOT EXISTS ix_rec_status ON recordings(status);
 """
 
 
@@ -401,6 +434,11 @@ class Database:
         if "user_id" not in score_columns:
             self.execute("ALTER TABLE scores ADD COLUMN user_id INTEGER")
             self.execute("CREATE INDEX IF NOT EXISTS ix_scores_user ON scores(user_id)")
+        # 新题型（2026-11）：题库和成绩都记游戏类型；原来的全是中英配对（match）
+        if "game_type" not in score_columns:
+            self.execute("ALTER TABLE scores ADD COLUMN game_type TEXT NOT NULL DEFAULT 'match'")
+        if "game_type" not in {row["name"] for row in self.query("PRAGMA table_info(banks)")}:
+            self.execute("ALTER TABLE banks ADD COLUMN game_type TEXT NOT NULL DEFAULT 'match'")
         # v1（2026-11）：每关默认词数 12 → 9（手机竖屏一屏正好放下 3×6 张卡）。
         # 只改还是旧默认值 12 的题库；老师特意设成别的数的不动；只做一次（user_version 记着）。
         if self.one("PRAGMA user_version")[0] < 1:
@@ -510,14 +548,15 @@ class Database:
             cur = conn.execute(
                 "INSERT INTO banks(title, level1, level2, level3, level4, source, "
                 "material_id, unit_mode, unit_from, unit_to, pairs_per_level, "
-                "word_count, unit_count, created_at, owner_id, seq) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "word_count, unit_count, created_at, owner_id, seq, game_type) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (meta["title"], meta["level1"], meta["level2"], meta["level3"],
                  meta["level4"], meta["source"], meta.get("material_id"),
                  meta.get("unit_mode", "all"), meta.get("unit_from", 0),
                  meta.get("unit_to", 0),
                  int(meta.get("pairs_per_level") or 9), len(words),
-                 len({w["unit"] for w in words}), ts, meta.get("owner_id"), int(meta.get("seq") or 0)),
+                 len({w["unit"] for w in words}), ts, meta.get("owner_id"), int(meta.get("seq") or 0),
+                 meta.get("game_type") or "match"),
             )
             bid = cur.lastrowid
             conn.executemany(
@@ -646,6 +685,18 @@ class Database:
         row = self.one("SELECT * FROM banks WHERE id=?", (bid,))
         return dict(row) if row else None
 
+    def insert_item_bank(self, meta: dict, items: list[dict]) -> int:
+        """新题型的题库：banks 一行（game_type = spell / order，word_count = 题数）+ bank_items 每题一行。"""
+        bid = self.insert_bank(dict(meta, unit_mode="all"), [])
+        with self._tx() as conn:
+            conn.execute("UPDATE banks SET word_count=?, unit_count=1 WHERE id=?", (len(items), bid))
+            conn.executemany("INSERT INTO bank_items(bank_id, ord, data) VALUES (?,?,?)",
+                             [(bid, i, json.dumps(item, ensure_ascii=False)) for i, item in enumerate(items)])
+        return bid
+
+    def bank_items(self, bid: int) -> list[dict]:
+        return [json.loads(r["data"]) for r in self.query("SELECT data FROM bank_items WHERE bank_id=? ORDER BY ord", (bid,))]
+
     def bank_words(self, bid: int) -> list[dict]:
         rows = self.query(
             "SELECT unit, en, cn, ipa, pos FROM bank_words WHERE bank_id=? ORDER BY ord",
@@ -697,15 +748,15 @@ class Database:
             cur = conn.execute(
                 "INSERT INTO scores(bank_id, bank_title, device, nickname, mode, "
                 "score, matched, total_pairs, wrong, best_combo, duration, "
-                "level_count, detail, created_at, user_id) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "level_count, detail, created_at, user_id, game_type) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (rec.get("bank_id"), rec.get("bank_title", ""),
                  rec.get("device", ""), rec.get("nickname", ""),
                  rec.get("mode", "online"), int(rec.get("score", 0)),
                  int(rec.get("matched", 0)), int(rec.get("total_pairs", 0)),
                  int(rec.get("wrong", 0)), int(rec.get("best_combo", 0)),
                  int(rec.get("duration", 0)), int(rec.get("level_count", 0)),
-                 detail, ts, user_id),
+                 detail, ts, user_id, rec.get("game_type") or "match"),
             )
         return int(cur.lastrowid)
 

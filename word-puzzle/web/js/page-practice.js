@@ -65,6 +65,10 @@
       return API.get('/api/banks/' + encodeURIComponent(id));
     }).then(function (res) {
       bank = res.bank;
+      if (bank.game_type === 'spell' || bank.game_type === 'order') {      /* 读音练习只有中英配对的题库有；新题型直接去玩 */
+        location.replace(API.path('/' + bank.game_type + '.html?bank=' + bank.id));
+        return;
+      }
       groups = (res.groups || []).map(function (g) { return { unit: g.unit, words: g.words }; });
       if (!groups.length) { fail('prac_empty'); return; }
       document.title = t('prac_title', { title: bank.title });

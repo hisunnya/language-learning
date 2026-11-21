@@ -28,6 +28,7 @@ import re
 from typing import Any
 
 from . import hierarchy
+from . import items as items_mod
 from .db import Database
 from .hierarchy import CURRICULUM_OBJ
 
@@ -359,6 +360,12 @@ def bank_payload(db: Database, bid: int, tag_teacher: int | None = None) -> dict
     bank = db.get_bank(bid)
     if not bank:
         raise BankError("题库不存在")
+    meta_keys = ("id", "title", "level1", "level2", "level3", "level4", "source", "unit_mode", "unit_from", "unit_to",
+                 "pairs_per_level", "word_count", "unit_count", "created_at", "category", "game_type")
+    if bank.get("game_type") in items_mod.ITEM_TYPES:
+        # 新题型：题目按关切好（每关最多几道见 items.PER_LEVEL）
+        return {"bank": dict({k: bank.get(k) for k in meta_keys}, tags=db.bank_tags(bid, tag_teacher)),
+                "groups": items_mod.levels(bank["game_type"], db.bank_items(bid), bank.get("level4") or "")}
     words = db.bank_words(bid)
     groups: dict[str, list[dict]] = {}
     order: list[str] = []
@@ -370,11 +377,7 @@ def bank_payload(db: Database, bid: int, tag_teacher: int | None = None) -> dict
             "en": w["en"], "cn": w["cn"], "ipa": w.get("ipa", ""),
         })
     return {
-        "bank": dict({k: bank[k] for k in
-                      ("id", "title", "level1", "level2", "level3", "level4",
-                       "source", "unit_mode", "unit_from", "unit_to",
-                       "pairs_per_level", "word_count", "unit_count", "created_at",
-                       "category")}, tags=db.bank_tags(bid, tag_teacher)),
+        "bank": dict({k: bank.get(k) for k in meta_keys}, tags=db.bank_tags(bid, tag_teacher)),
         "groups": chunk_groups([{"unit": u, "words": groups[u]} for u in order],
                                max_pairs=int(bank.get("pairs_per_level")
                                              or MAX_PAIRS_PER_LEVEL)),

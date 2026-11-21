@@ -30,6 +30,10 @@ Environment=WP_SESSION_DAYS=14
 Environment=WP_PUBLIC_HOME_URL=@PUBLIC_URL@
 Environment=WP_EDGE_TTS=@TTS_VENV@/bin/edge-tts
 Environment=WP_TTS_VOICE=en-US-AriaNeural
+# 排排坐的朗读识别（本机离线模型，录音不发给任何第三方）；录音文件在数据目录的 recordings/ 下
+Environment=WP_ASR_PYTHON=@ASR_VENV@/bin/python
+Environment=WP_ASR_MODELS_DIR=@ASR_MODELS@
+Environment=WP_ASR_MODEL=@ASR_MODEL@
 # 数据目录里没有 .lexica-data（安装时放的标记）就拒绝启动：多半是数据盘没挂上、挂进来的是一个空目录，
 # 这时候让后端启动会悄悄建一个空数据库，看起来像数据全丢了。宁可起不来，也别起一个空的。
 ExecStartPre=/bin/sh -c 'test -e @DATA_DIR@/.lexica-data || { echo "数据目录 @DATA_DIR@ 里没有 .lexica-data：数据盘没挂上？为避免悄悄建一个空数据库，拒绝启动" >&2; exit 1; }'

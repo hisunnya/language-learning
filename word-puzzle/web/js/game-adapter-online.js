@@ -43,7 +43,8 @@
         best_combo: report.best_combo,
         duration: report.duration,
         level_count: report.level_count,
-        detail: report.detail
+        detail: report.detail,
+        play_token: report.play_token || ""        /* 排排坐：服务器按它找到这一局的录音，重新算分 */
       };
       try {
         fetch(API.path('/api/scores'), {

@@ -31,16 +31,17 @@ _last_error = ""
 
 
 MAX_WORD_LENGTH = 80
+MAX_SENTENCE_LENGTH = 400          # 排排坐的整句、拼写的整个短语：只来自题库，不接受随便输入的文字
 MAX_CACHE_FILES = int(os.environ.get("WP_AUDIO_CACHE_MAX", "5000"))
 
 
-def is_valid_word(word: str) -> bool:
+def is_valid_word(word: str, limit: int = MAX_WORD_LENGTH) -> bool:
     """可以交给 TTS 子进程的词：不能以 ``-`` 开头（会被当成命令行选项），也不能含控制字符。
 
     词库里有 ``( real ) estate agent`` 这样以括号开头的词，所以不能要求首字符是字母数字；
     子进程另外用 ``--text=`` 和 ``--`` 隔开参数，这里只是第二道防线。
     """
-    if not word or len(word) > MAX_WORD_LENGTH:
+    if not word or len(word) > limit:
         return False
     if word[0] == "-":
         return False
@@ -302,10 +303,10 @@ def _synth_espeak(word: str, exe: str | None = None) -> bytes | None:
     return data or None
 
 
-def synth(word: str) -> bytes | None:
-    """合成单词音频；已安装 Edge 时不逐词切换音色。"""
+def synth(word: str, limit: int = MAX_WORD_LENGTH) -> bytes | None:
+    """合成单词音频；已安装 Edge 时不逐词切换音色。limit：整句（题库里的）可以放宽到 MAX_SENTENCE_LENGTH。"""
     word = (word or "").strip()
-    if not is_valid_word(word):
+    if not is_valid_word(word, limit):
         return None
     spoken = speakable(word)
     edge = find_edge_tts()
@@ -314,7 +315,7 @@ def synth(word: str) -> bytes | None:
     return _synth_espeak(spoken)
 
 
-def synth_many(words: list[str], workers: int = 4) -> dict[str, bytes]:
+def synth_many(words: list[str], workers: int = 4, limit: int = MAX_WORD_LENGTH) -> dict[str, bytes]:
     """用同一个引擎合成所有词，避免离线题库混用神经声线和 eSpeak。
 
     返回的字典用**原来的词**做键（页面按卡片上的文字找音频）；实际合成的是 :func:`speakable` 之后的文字，
@@ -322,7 +323,7 @@ def synth_many(words: list[str], workers: int = 4) -> dict[str, bytes]:
     unique = list(dict.fromkeys(word.strip() for word in words if word.strip()))
     if not unique:
         return {}
-    bad = [word for word in unique if not is_valid_word(word)]
+    bad = [word for word in unique if not is_valid_word(word, limit)]
     if bad:
         raise SynthesisError(f"这些词无法合成语音（{', '.join(bad[:5])}）：不能以 - 开头")
 

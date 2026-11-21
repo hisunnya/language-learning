@@ -32,6 +32,10 @@ THEME_JS_FILE = WEB / "js" / "offline-theme.js"
 THEME_CSS_FILE = WEB / "css" / "offline-theme.css"
 PRACTICE_CSS_FILE = WEB / "css" / "practice.css"
 PRACTICE_UI_FILE = WEB / "js" / "practice-ui.js"
+ITEMS_CSS_FILE = WEB / "css" / "items.css"
+ITEM_CORE_FILE = WEB / "js" / "item-core.js"
+ITEM_UI_FILES = {"spell": WEB / "js" / "spell-ui.js", "order": WEB / "js" / "order-ui.js"}
+ITEM_KIND_NAMES = {"spell": "单词大比拼", "order": "排排坐"}
 
 TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -146,6 +150,8 @@ def build_filename(bank: dict, when: time.struct_time | None = None, kind: str =
     ]
     if kind == "practice":
         parts.append("读音练习")
+    elif kind in ITEM_KIND_NAMES:
+        parts.append(ITEM_KIND_NAMES[kind])
     parts.append(time.strftime("%Y%m%d", tm))
     parts.append(time.strftime("%H%M%S", tm))
     return "-".join(parts) + ".html"
@@ -368,3 +374,125 @@ def _escape(text: str) -> str:
 
 def _audio_slug(word: str) -> str:
     return word.strip().lower()
+
+
+ITEM_TEMPLATE = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="generator" content="word-puzzle offline generator">
+<title>{title}</title>
+<style>
+{app_css}
+{items_css}
+{theme_css}
+.off-bar {{ display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 6px 0 12px; }}
+</style>
+<script>
+{theme_js}
+WPTheme.early();
+</script>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="page" id="offTitle"></h1>
+  <p class="lead" id="offSub"></p>
+  <div class="off-bar">
+    <button type="button" class="btn ghost sm" id="btn-lang" data-module-zh="English" data-module-en="中文">English</button>
+    <span id="offline-theme"></span>
+  </div>
+  <p class="hint" id="offRules"></p>
+  <div id="igMount"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+/* ---------------- 题目和读音（全部内嵌，不联网） ---------------- */
+var WP_DATA = {data};
+</script>
+<script>
+{i18n}
+</script>
+<script>
+{i18n_text}
+</script>
+<script>
+{core}
+</script>
+<script>
+{ui}
+</script>
+<script>
+{adapter}
+</script>
+<script>
+/* ---------------- 启动 ---------------- */
+(function () {{
+  function t(key, params) {{ return WPI18N.t(key, params); }}
+  var spell = WP_DATA.game === 'spell', game = null;
+  function head() {{
+    document.title = t(spell ? 'sp_docTitle' : 'or_docTitle', {{ title: WP_DATA.title }});
+    document.getElementById('offTitle').textContent = WP_DATA.title;
+    document.getElementById('offSub').textContent = WP_DATA.subtitle;
+    document.getElementById('offRules').textContent = t(spell ? 'sp_rules' : 'or_rules');
+    document.documentElement.lang = WPI18N.lang() === 'en' ? 'en' : 'zh-CN';
+    document.getElementById('btn-lang').textContent = WPI18N.lang() === 'en' ? '中文' : 'English';
+  }}
+  function start(k) {{
+    var group = WP_DATA.groups[k];
+    game = (spell ? WPSpellUI : WPOrderUI).start(document.getElementById('igMount'), {{
+      items: group.items, ords: group.ords,
+      audioUrl: function (i) {{ return WP_DATA.audio[String(group.ords[i])] || ''; }},
+      save: function (report) {{ WPAdapter.save(report, WP_DATA.meta); }},
+      playToken: function () {{ return ''; }}
+    }});
+  }}
+  function pick() {{
+    var mount = document.getElementById('igMount');
+    mount.innerHTML = '<div class="card"><h2>' + t('ig_pickLevel') + '</h2><div class="list">' + WP_DATA.groups.map(function (g, k) {{
+      return '<div class="item"><div class="main"><b>' + g.unit.replace(/</g, '&lt;') + '</b> <small>' + t('ig_levelCount', {{ n: g.items.length }}) +
+        '</small></div><div class="ops"><button type="button" class="btn sm" data-level="' + k + '">' + t('home_play') + '</button></div></div>';
+    }}).join('') + '</div></div>';
+    mount.onclick = function (ev) {{
+      var b = ev.target.closest('[data-level]');
+      if (b) {{ mount.onclick = null; start(parseInt(b.getAttribute('data-level'), 10)); }}
+    }};
+  }}
+  document.getElementById('btn-lang').onclick = function () {{ WPI18N.setLang(WPI18N.lang() === 'en' ? 'zh' : 'en'); }};
+  WPI18N.onChange(function () {{ head(); if (!game && WP_DATA.groups.length > 1) pick(); }});
+  WPTheme.init(document.getElementById('offline-theme'));
+  head();
+  if (WP_DATA.groups.length > 1) pick(); else start(0);
+}})();
+</script>
+</body>
+</html>
+"""
+
+
+def build_items_html(bank: dict, groups: list[dict], audio: dict[int, bytes] | None = None,
+                     when: time.struct_time | None = None) -> tuple[str, str]:
+    """新题型（单词大比拼 / 排排坐）的离线单文件页：题目和每道题的读音全部内嵌。排排坐可以录音、自己回放，但不评分。"""
+    game = bank.get("game_type")
+    if game not in ITEM_UI_FILES:
+        raise ValueError("不是新题型的题库")
+    out_groups, start = [], 0
+    for g in groups:
+        n = len(g.get("items") or [])
+        if n:
+            out_groups.append({"unit": g.get("unit") or "", "items": g["items"], "ords": list(range(start, start + n))})
+        start += n
+    if not out_groups:
+        raise ValueError("题库里没有题目，无法生成离线页")
+    title = bank.get("title") or "词境 Lexica"
+    subtitle = " · ".join([bank.get("level1", ""), bank.get("level2", ""), bank.get("level3", ""), bank.get("level4", "")]).strip(" ·")
+    embedded = {str(k): "data:%s;base64,%s" % (tts.content_type(clip), base64.b64encode(clip).decode("ascii"))
+                for k, clip in (audio or {}).items() if clip}
+    data = {"game": game, "title": title, "subtitle": subtitle, "groups": out_groups, "audio": embedded,
+            "meta": {"title": title, "bank_id": bank.get("id"), "game_type": game,
+                     "generated": time.strftime("%Y-%m-%d %H:%M:%S", when or time.localtime())}}
+    html = ITEM_TEMPLATE.format(
+        title=_escape(title), app_css=_read(APP_CSS_FILE), items_css=_read(ITEMS_CSS_FILE), theme_css=_read(THEME_CSS_FILE),
+        theme_js=_read(THEME_JS_FILE), i18n=_read(I18N_FILE), i18n_text=_read(I18N_TEXT_FILE), core=_read(ITEM_CORE_FILE),
+        ui=_read(ITEM_UI_FILES[game]), adapter=_read(ADAPTER_FILE), data=_json_for_script(data))
+    return build_filename(bank, when, kind=game), html

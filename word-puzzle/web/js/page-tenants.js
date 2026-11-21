@@ -270,7 +270,7 @@
   var ACTION_KEYS = {
     'teacher.create': 'ten_act_teacher_create', 'teacher.delete': 'ten_act_teacher_delete',
     'bank.share': 'ten_act_bank_share', 'bank.move': 'ten_act_bank_move', 'bank.unshare': 'ten_act_bank_unshare',
-    'bank.delete': 'ten_act_bank_delete', 'bank.unshare_self': 'ten_act_bank_unshare_self', 'bank.restore': 'ten_act_bank_restore',
+    'bank.delete': 'ten_act_bank_delete', 'bank.unshare_self': 'ten_act_bank_unshare_self', 'bank.restore': 'ten_act_bank_restore', 'bank.import': 'ten_act_bank_import',
     'student.share': 'ten_act_student_share', 'student.move': 'ten_act_student_move', 'student.unshare': 'ten_act_student_unshare',
     'student.delete': 'ten_act_student_delete', 'student.unlink_self': 'ten_act_student_unlink_self',
     'student.auto_share': 'ten_act_student_auto_share', 'user.restore': 'ten_act_user_restore',

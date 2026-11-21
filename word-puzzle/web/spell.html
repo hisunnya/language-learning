@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<script>(function(){var h=document.documentElement,r='';try{r=sessionStorage.getItem('wp_role')||''}catch(e){}h.classList.add(r==='student'?'role-student':r==='admin'?'role-admin':'role-pending')})()</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="wp-base" content="/word-puzzle">
+<title data-module-zh="单词大比拼 · 词境 Lexica" data-module-en="Spell It · Lexica">单词大比拼 · 词境 Lexica</title>
+<link rel="icon" type="image/svg+xml" href="/word-puzzle/img/icon.svg">
+<link rel="icon" type="image/png" sizes="512x512" href="/word-puzzle/img/icon-512.png">
+<link rel="apple-touch-icon" href="/word-puzzle/img/apple-touch-icon.png">
+<link rel="stylesheet" href="/word-puzzle/css/app.css?v=fd6a4039">
+<link rel="stylesheet" href="/word-puzzle/css/auth.css?v=740072a7">
+<link rel="stylesheet" href="/word-puzzle/css/items.css?v=0f91dfcd">
+<link rel="stylesheet" href="/shared/module-header.css?v=031d38e2">
+</head>
+<body data-game="spell">
+<div class="wrap">
+
+  <header class="portal-topbar">
+    <a class="portal-brand" href="/word-puzzle/" aria-label="词境 Lexica">
+      <span class="portal-brand-mark portal-brand-mark--logo" aria-hidden="true"><img src="/word-puzzle/img/icon.svg" alt="" width="40" height="40"></span>
+        <span class="portal-brand-copy"><strong><span data-module-zh="词境" data-module-en="Lexica">词境</span><em>LEXICA</em></strong><small data-module-zh="词汇练习" data-module-en="Vocabulary practice">词汇练习</small></span>
+    </a>
+    <nav class="portal-nav">
+      <a href="/word-puzzle/" data-module-zh="首页" data-module-en="Home">首页</a>
+      <a href="/word-puzzle/bank.html" class="admin-only" data-module-zh="题库工作台" data-module-en="Word banks">题库工作台</a>
+      <a href="/word-puzzle/stats.html" data-module-zh="成绩记录" data-module-en="Scores">成绩记录</a>
+    </nav>
+    <div class="portal-topbar-right" id="portalHeaderControls"></div>
+  </header>
+
+    <div class="card">
+    <h2 id="igTitle" data-module-zh="单词大比拼" data-module-en="Spell It">单词大比拼</h2>
+    <p class="sub" id="igSub"></p>
+    <div class="actions" style="margin-top:6px"><a class="btn ghost sm" id="igBack" href="/word-puzzle/" data-module-zh="返回" data-module-en="Back">返回</a></div>
+  </div>
+  <div id="igMount" aria-live="polite"><div class="card"><div class="empty" data-module-zh="加载中…" data-module-en="Loading…">加载中…</div></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/word-puzzle/js/i18n.js?v=2fe864c4"></script>
+<script src="/word-puzzle/js/i18n-lexica.js?v=3cecb28c"></script>
+<script src="/word-puzzle/js/api.js?v=e44053c6"></script>
+<script src="/word-puzzle/js/auth-ui.js?v=376b1200"></script>
+<script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
+<script src="/word-puzzle/js/recent.js?v=868a2d31"></script>
+<script src="/word-puzzle/js/item-core.js?v=975e1866"></script>
+<script src="/word-puzzle/js/spell-ui.js?v=f160d014"></script>
+<script src="/word-puzzle/js/game-adapter-online.js?v=3a2bcfb4"></script>
+<script src="/word-puzzle/js/page-items.js?v=068a6c90"></script>
+<script src="/shared/module-header.js?v=0b00f0ec"></script>
+<script src="/shared/site-footer.js?v=bd5de707"></script>
+</body>
+</html>

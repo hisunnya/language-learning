@@ -13,7 +13,7 @@ from . import bank as bank_mod
 from .db import Database
 
 SCORE_COLUMNS = ("s.id, s.user_id, s.device, s.nickname, s.bank_id, s.bank_title, s.score, s.matched, "
-                 "s.total_pairs, s.wrong, s.best_combo, s.duration, s.level_count, s.created_at, "
+                 "s.total_pairs, s.wrong, s.best_combo, s.duration, s.level_count, s.created_at, s.game_type, "
                  "u.student_no, u.name, u.class_name")
 
 
@@ -91,7 +91,7 @@ def summarize(db: Database, *, only_user_id: int | None = None, class_name: str 
             "best": max(scores), "worst": min(scores), "total": sum(scores),
             "avg_score": round(sum(scores) / len(plays), 1),
             "avg_duration": round(sum(p["duration"] for p in plays) / len(plays)),
-            "last_at": last["created_at"],
+            "last_at": last["created_at"], "game_type": last.get("game_type") or "match",
         })
     out.sort(key=lambda r: (r["class_name"], r["student_no"], r["name"], r["bank_title"]))
     banks = sorted({(r["bank_id"], r["bank_title"]) for r in out if r["bank_id"] is not None}, key=lambda b: b[1])
@@ -114,5 +114,5 @@ def plays_of(db: Database, *, user_id=None, device=None, bank_id=None, bank_titl
         out.append({"id": r["id"], "created_at": r["created_at"], "score": r["score"], "matched": r["matched"],
                     "total_pairs": r["total_pairs"], "wrong": r["wrong"], "best_combo": r["best_combo"],
                     "duration": r["duration"], "level_count": r["level_count"], "levels_total": levels,
-                    "completed": is_complete(r, levels)})
+                    "completed": is_complete(r, levels), "game_type": r["game_type"]})
     return out

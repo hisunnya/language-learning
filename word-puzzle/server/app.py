@@ -33,6 +33,8 @@ if __package__ in (None, ""):  # 允许 `python3 server/app.py` 直接跑
 
 from server import bank as bank_mod           # noqa: E402
 from server import auth as auth_mod            # noqa: E402
+from server import items as items_mod  # noqa: E402
+from server import asr, recordings as rec_mod  # noqa: E402
 from server import accesslog, hierarchy, leaderboard, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
@@ -123,6 +125,7 @@ class Handler(BaseHTTPRequestHandler):
     user: dict | None = None
     _body_read = False
     public = False                 # 这条请求是不是从公开版 /words/ 进来的（见 _dispatch）
+    rec_worker: "rec_mod.Worker | None" = None     # 排排坐录音的识别队列（build_server 里建）
     track_throttle = accesslog.Throttle(limit=900, seconds=60)     # 每个来源地址每分钟最多收这么多条上报
     public_score_throttle = accesslog.Throttle(limit=60, seconds=60)    # 公开版：每个地址每分钟最多交这么多次成绩
     public_audio_throttle = accesslog.Throttle(limit=240, seconds=60)   # 公开版：每个地址每分钟最多要这么多次读音
@@ -615,6 +618,31 @@ class Handler(BaseHTTPRequestHandler):
             self._download_offline(m.group(1), query.get("inline") == "1")
             return
 
+        # ---- 排排坐：交一条朗读录音（multipart：bank_id、item_ord、play_token、duration_ms、file） ----
+        if path == "/api/recordings" and method == "POST":
+            self.handle_recording_upload()
+            return
+        m = re.fullmatch(r"/api/recordings/(\d+)/audio", path)
+        if m and method == "GET":
+            self.handle_recording_audio(int(m.group(1)))
+            return
+
+        # ---- 新题型：某道题的整个短语 / 整句的读音（文字只取自题库，不接受客户端给的文字） ----
+        m = re.fullmatch(r"/api/banks/(\d+)/items/(\d+)/audio", path)
+        if m and method == "GET":
+            bank = db.get_bank(int(m.group(1)))
+            if not self._bank_visible(bank) or bank.get("game_type") not in items_mod.ITEM_TYPES:
+                raise HttpError(404, "题库不存在")
+            found = db.bank_items(bank["id"])
+            ordinal = int(m.group(2))
+            if ordinal >= len(found):
+                raise HttpError(404, "没有这道题")
+            data = tts.synth(items_mod.speech_text(bank["game_type"], found[ordinal]), limit=tts.MAX_SENTENCE_LENGTH)
+            if not data:
+                raise HttpError(404, "服务器没有可用的语音合成器")
+            self._send(200, data, tts.content_type(data), {"Cache-Control": "public, max-age=604800"})
+            return
+
         # ---- 发音音频（神经语音 MP3 / 本地 eSpeak WAV） ----
         if path.startswith("/api/audio/") and method == "GET":
             word = unquote(path[len("/api/audio/"):])
@@ -676,15 +704,33 @@ class Handler(BaseHTTPRequestHandler):
                         raise HttpError(400, "bank_id 不合法") from None
                     if not self._bank_visible(db.get_bank(bank_id)):
                         raise HttpError(404, "题库不存在")
+                # 游戏类型以题库为准，不信客户端报的
+                rec["game_type"] = "match"
+                if rec.get("bank_id") not in (None, ""):
+                    try:
+                        found = db.get_bank(int(rec["bank_id"]))
+                    except (TypeError, ValueError):
+                        found = None
+                    if found:
+                        rec["game_type"] = found.get("game_type") or "match"
                 if uid is not None:
                     # 身份以登录态为准，不信客户端自己报的设备号和昵称
                     rec["device"] = "u%d" % uid
                     rec["nickname"] = self.user["name"]
+                order_detail = None
+                if rec["game_type"] == "order":
+                    # 排排坐的分数由服务器算：拼接按页面报的出错次数，朗读只认这个人在这道题上交过、服务器判过的录音
+                    rec["score"], rec["matched"], order_detail = rec_mod.order_score(db, int(rec["bank_id"]), uid, rec.get("detail"))
+                    rec["detail"] = order_detail
                 try:
                     sid = db.insert_score(rec, user_id=uid)
                 except Exception as exc:
                     raise HttpError(400, f"成绩保存失败：{exc}") from exc
-                self.send_json({"ok": True, "id": sid}, status=201)
+                if order_detail is not None:
+                    rec_mod.attach(db, sid, order_detail)
+                    rec_mod.rescore(db, sid)          # 交成绩前刚识别完的录音也算进去
+                self.send_json({"ok": True, "id": sid, "score": db.one("SELECT score FROM scores WHERE id=?", (sid,))["score"]},
+                               status=201)
                 return
 
         # ---- 成绩汇总：每个学生 × 每套题一行；点开一行看每一次的明细 ----
@@ -705,9 +751,14 @@ class Handler(BaseHTTPRequestHandler):
             if uid is None and device is None:
                 raise HttpError(400, "请指明是谁的成绩")
             bank_id = int_param(query.get("bank_id"), "bank_id")
-            self.send_json({"ok": True, "plays": scorebook.plays_of(
+            plays = scorebook.plays_of(
                 db, user_id=uid, device=device, bank_id=bank_id, people=tenancy.people_where(scope, "s.user_id"),
-                bank_title=query.get("bank_title") if bank_id is None and "bank_title" in query else None)})
+                bank_title=query.get("bank_title") if bank_id is None and "bank_title" in query else None)
+            recs = rec_mod.for_scores(db, [p["id"] for p in plays if p.get("game_type") == "order"])
+            for p in plays:
+                if p.get("game_type") == "order":
+                    p["recordings"] = recs.get(p["id"], [])
+            self.send_json({"ok": True, "plays": plays})
             return
 
         if path == "/api/stats" and method == "GET":
@@ -779,6 +830,61 @@ class Handler(BaseHTTPRequestHandler):
             accesslog.record_login(self.db, str(typed or ""), user, success, code, info)
         except Exception:      # pragma: no cover
             traceback.print_exc()
+
+    def handle_recording_upload(self) -> None:
+        db = self.db
+        ctype = self.headers.get("Content-Type", "")
+        if "multipart/form-data" not in ctype:
+            raise HttpError(400, "请用 multipart/form-data 上传录音")
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            length = 0
+        if length > rec_mod.MAX_BYTES + 64 * 1024:
+            raise HttpError(413, "录音太大（最长 30 秒）", "too_large")
+        fields = parse_multipart(self.read_body(), ctype)
+
+        def field(name: str) -> str:
+            return fields.get(name, {}).get("data", b"").decode("utf-8", "ignore").strip()
+        try:
+            bank_id, item_ord = int(field("bank_id")), int(field("item_ord"))
+            client_ms = int(field("duration_ms") or 0)
+        except ValueError:
+            raise HttpError(400, "参数不合法") from None
+        bank = db.get_bank(bank_id)
+        if not self._bank_visible(bank) or bank.get("game_type") != "order":
+            raise HttpError(404, "题库不存在")
+        if not 0 <= item_ord < len(db.bank_items(bank_id)):
+            raise HttpError(404, "没有这道题")
+        upload = fields.get("file")
+        if not upload or len(upload["data"]) < 200:
+            raise HttpError(400, "录音是空的，请重录", "empty_recording")
+        name = (upload.get("filename") or "").lower()
+        mime = ("audio/mp4" if name.endswith((".m4a", ".mp4")) else "audio/ogg" if name.endswith(".ogg")
+                else "audio/aac" if name.endswith(".aac") else "audio/webm")
+        token = re.sub(r"[^A-Za-z0-9_-]", "", field("play_token"))[:64]
+        rec = rec_mod.store(db, user_id=self._uid(), bank=bank, item_ord=item_ord, play_token=token,
+                            data=upload["data"], mime=mime, client_ms=client_ms)
+        if rec["status"] == "pending" and self.rec_worker is not None:
+            self.rec_worker.submit(rec["id"])
+            rec = self.rec_worker.wait(rec["id"]) or rec
+        self.send_json({"ok": True, "recording": rec_mod.public(rec)}, status=201)
+
+    def handle_recording_audio(self, rid: int) -> None:
+        """回放录音：自己的；老师看得到这个学生的（和成绩同一个范围）。"""
+        rec = rec_mod.get(self.db, rid)
+        if not rec:
+            raise HttpError(404, "没有这条录音")
+        mine = rec["user_id"] is not None and rec["user_id"] == self._uid()
+        if not mine:
+            cond, args = tenancy.people_where(self._scope(), "r.user_id")
+            if not self.db.one("SELECT 1 FROM recordings r WHERE r.id=? AND " + cond, (rid, *args)):
+                raise HttpError(404, "没有这条录音")
+        path = rec_mod.file_path(self.db, rec)
+        if path is None:
+            raise HttpError(404, "录音文件不见了")
+        ctype = {".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".aac": "audio/aac"}.get(path.suffix, "audio/webm")
+        self._send(200, path.read_bytes(), ctype, {"Cache-Control": "private, max-age=86400"})
 
     def handle_track(self) -> None:
         """页面上报：打开、每 15 秒一次的在线心跳、离开。无效的悄悄丢掉；永远回 204。"""
@@ -1306,6 +1412,22 @@ class Handler(BaseHTTPRequestHandler):
             payload = bank_mod.bank_payload(db, bid)["groups"]
         except bank_mod.BankError as exc:
             raise HttpError(404, str(exc)) from exc
+        if bank.get("game_type") in items_mod.ITEM_TYPES:
+            # 新题型：每道题整个短语 / 整句的读音按题目序号内嵌（kind 用不上）
+            found = db.bank_items(bid)
+            texts = [items_mod.speech_text(bank["game_type"], item) for item in found]
+            try:
+                clips = tts.synth_many(texts, limit=tts.MAX_SENTENCE_LENGTH)
+                filename, html = offline.build_items_html(bank, payload, audio={i: clips.get(text.strip()) for i, text in enumerate(texts)})
+            except tts.SynthesisError as exc:
+                raise HttpError(503, str(exc)) from exc
+            except ValueError as exc:
+                raise HttpError(400, str(exc)) from exc
+            OUTBOX.mkdir(parents=True, exist_ok=True)
+            (OUTBOX / filename).write_text(html, encoding="utf-8")
+            self.send_json({"ok": True, "filename": filename, "url": "/api/offline/" + urllib_quote(filename),
+                            "size": len(html.encode("utf-8")), "levels": len(payload), "words": len(found)})
+            return
         words = db.bank_words(bid)
         try:
             audio = tts.synth_many([word["en"] for word in words])
@@ -1403,6 +1525,7 @@ def build_server(host: str = "127.0.0.1", port: int = 8000,
     except Exception:
         traceback.print_exc()
         default_id = None
+    Handler.rec_worker = rec_mod.Worker(db)          # 排排坐录音：后台一条一条识别
     httpd = ThreadingHTTPServer((host, port), Handler)
     httpd.daemon_threads = True
     httpd.default_bank_id = default_id  # type: ignore[attr-defined]

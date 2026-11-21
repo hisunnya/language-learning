@@ -25,6 +25,10 @@ SITE_NAME=word-puzzle-family
 PORT="${WP_FAMILY_PORT:-8766}"
 NGINX_PORT="${WP_FAMILY_NGINX_PORT:-8081}"
 TTS_VENV="${WP_FAMILY_TTS_VENV:-/opt/word-puzzle-family/tts-venv}"
+# 排排坐的朗读识别：本机离线模型（faster-whisper），录音不出这台机器。模型可换：tiny.en 最快、base.en 更准。
+ASR_VENV="${WP_FAMILY_ASR_VENV:-/opt/word-puzzle-family/asr-venv}"
+ASR_MODELS="${WP_FAMILY_ASR_MODELS:-/opt/word-puzzle-family/asr-models}"
+ASR_MODEL="${WP_ASR_MODEL:-base.en}"
 PUBLIC_URL="${WP_PUBLIC_URL:-}"
 PROXY_INC=/etc/nginx/word-puzzle-family-proxy.inc
 # 内网入口（可选）：WP_LAN_ADDR=容器的内网地址（例如 <容器IP>），端口默认 8082。
@@ -123,6 +127,39 @@ else
   echo "    已存在，跳过"
 fi
 
+say "安装 ffmpeg（排排坐的录音统一转成 MP3、交给识别）"
+if ! command -v ffmpeg >/dev/null 2>&1; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg \
+    || warn "ffmpeg 安装失败：录音照收（原样保存），但识别和统一格式要等装好 ffmpeg"
+else
+  echo "    已安装，跳过"
+fi
+
+say "安装朗读识别（faster-whisper，模型 $ASR_MODEL；失败时录音照收，只是没有奖励分）"
+install -d "$(dirname "$ASR_VENV")" "$ASR_MODELS"
+if [[ ! -x "$ASR_VENV/bin/python" ]] || ! "$ASR_VENV/bin/python" -c 'import faster_whisper' >/dev/null 2>&1; then
+  if python3 -m venv "$ASR_VENV" \
+      && PIP_DISABLE_PIP_VERSION_CHECK=1 timeout 900 "$ASR_VENV/bin/python" -m pip install --upgrade 'faster-whisper>=1.1,<2'; then
+    echo "    faster-whisper 已安装"
+  else
+    warn "faster-whisper 安装失败；排排坐的录音照收、照给「提交朗读」的分，没有奖励分"
+  fi
+else
+  echo "    已安装，跳过"
+fi
+if [[ -x "$ASR_VENV/bin/python" ]] && "$ASR_VENV/bin/python" -c 'import faster_whisper' >/dev/null 2>&1; then
+  # 模型只在安装时下载一次（国内服务器连不上下载站时，可以设 WP_ASR_HF_ENDPOINT 用镜像，或者把这个目录从别处整个拷过来）；
+  # 服务运行时只读本地文件，不联网。
+  if env ${WP_ASR_HF_ENDPOINT:+HF_ENDPOINT="$WP_ASR_HF_ENDPOINT"} HF_HUB_DISABLE_TELEMETRY=1 timeout 900 "$ASR_VENV/bin/python" -c \
+      "from faster_whisper import WhisperModel; WhisperModel('$ASR_MODEL', device='cpu', compute_type='int8', download_root='$ASR_MODELS')" \
+      >/dev/null 2>&1; then
+    echo "    模型 $ASR_MODEL 已就绪（$ASR_MODELS）"
+  else
+    warn "模型 $ASR_MODEL 下载失败（$ASR_MODELS）；没有模型时不做识别"
+  fi
+fi
+chmod -R a+rX "$ASR_MODELS" 2>/dev/null || true
+
 say "安装 Edge Neural 自然语音（失败时保留 eSpeak 兜底）"
 install -d "$(dirname "$TTS_VENV")"
 if [[ ! -x "$TTS_VENV/bin/edge-tts" ]]; then
@@ -149,6 +186,7 @@ say "安装 systemd 服务 $SITE_NAME"
 sed -e "s|@RUN_USER@|$RUN_USER|g" -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@DATA_DIR@|$DATA_DIR|g" \
     -e "s|@PORT@|$PORT|g" -e "s|@PUBLIC_URL@|$PUBLIC_URL|g" -e "s|@TTS_VENV@|$TTS_VENV|g" \
     -e "s|@LAN_GUEST@|$LAN_GUEST|g" -e "s|@TRUSTED_PROXIES@|$TRUSTED_PROXIES|g" \
+    -e "s|@ASR_VENV@|$ASR_VENV|g" -e "s|@ASR_MODELS@|$ASR_MODELS|g" -e "s|@ASR_MODEL@|$ASR_MODEL|g" \
     "$INSTALL_DIR/deploy/family/systemd/word-puzzle-family.service" > "/etc/systemd/system/$SITE_NAME.service"
 systemctl daemon-reload
 systemctl enable "$SITE_NAME" >/dev/null

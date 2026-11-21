@@ -1,0 +1,71 @@
+/* 新题型（单词大比拼、排排坐）的样式。颜色全部用 app.css 里每套配色都有的变量。 */
+
+.ig-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.ig-progress { color: var(--ink2); font-size: 13px; font-weight: 600; }
+.ig-points { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--heading); }
+.ig-bar { height: 6px; border-radius: 999px; background: var(--soft-line); overflow: hidden; margin-bottom: 14px; }
+.ig-bar > i { display: block; height: 100%; background: var(--blue); transition: width .25s; }
+
+.ig-cn { font-size: 20px; font-weight: 700; color: var(--heading); line-height: 1.5; margin: 6px 0 14px; }
+.ig-phrase { font-size: 22px; line-height: 2.1; color: var(--ink); display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.ig-phrase input {
+  font: inherit; font-size: 20px; min-width: 6em; width: auto; padding: 4px 10px; text-align: center;
+  border: 2px solid var(--blue); border-radius: 10px; background: var(--field-bg); color: var(--field-ink);
+}
+.ig-phrase input.right { border-color: var(--green); }
+.ig-phrase input.bad { border-color: var(--red); animation: ig-shake .3s; }
+@keyframes ig-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.ig-hint { font-family: ui-monospace, Menlo, monospace; letter-spacing: 1px; color: var(--ink2); margin-top: 6px; min-height: 1.4em; }
+.ig-msg { min-height: 1.6em; margin: 10px 0; font-weight: 700; }
+.ig-msg.ok { color: var(--green); }
+.ig-msg.bad { color: var(--red); }
+.ig-msg.info { color: var(--ink2); font-weight: 600; }
+.ig-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+/* 排排坐 */
+mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius: 4px; padding: 0 2px; }
+.ig-slots { min-height: 64px; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border: 2px dashed var(--line);
+  border-radius: 14px; background: var(--bg3); margin-bottom: 12px; align-content: flex-start; }
+.ig-slots:empty::before { content: attr(data-empty); color: var(--ink3); font-size: 14px; align-self: center; }
+.ig-pool { display: flex; flex-wrap: wrap; gap: 8px; min-height: 48px; }
+.ig-frag {
+  font: inherit; font-size: 16px; line-height: 1.4; padding: 8px 12px; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--card); color: var(--ink); box-shadow: 0 2px 0 var(--line); text-align: left;
+}
+.ig-frag:hover { border-color: var(--blue); }
+.ig-frag.placed { background: var(--blue-l); border-color: var(--blue); }
+.ig-frag.wrong { border-color: var(--red); box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 35%, transparent); }
+.ig-frag.locked { cursor: default; box-shadow: none; }
+.ig-frag[hidden] { display: none; }
+.ig-sentence { font-size: 18px; line-height: 1.7; color: var(--heading); font-weight: 600; cursor: pointer; padding: 10px 12px;
+  border-radius: 12px; background: var(--chip-bg); }
+.ig-sentence::before { content: "🔊 "; }
+
+.ig-rec { margin-top: 14px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); }
+.ig-rec h3 { margin: 0 0 8px; font-size: 15px; }
+.ig-rec-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ig-rec-time { font-variant-numeric: tabular-nums; color: var(--ink2); min-width: 4em; }
+.ig-level { flex: 1 1 120px; height: 8px; border-radius: 999px; background: var(--soft-line); overflow: hidden; }
+.ig-level > i { display: block; height: 100%; width: 0; background: var(--green); transition: width .08s; }
+.btn.rec-on { background: var(--red); box-shadow: 0 3px 0 color-mix(in srgb, var(--red) 70%, #000); }
+.ig-heard { margin-top: 10px; font-size: 14px; color: var(--ink2); line-height: 1.6; }
+.ig-heard b { color: var(--ink); }
+.ig-heard .miss { color: var(--red); text-decoration: underline wavy; }
+
+.ig-summary table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }
+.ig-summary th, .ig-summary td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--soft-line); }
+.ig-summary td.num { font-variant-numeric: tabular-nums; font-weight: 700; }
+.ig-big { font-size: 34px; font-weight: 800; color: var(--heading); }
+
+/* 首页：先选游戏类型 */
+.type-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.type-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 14px; cursor: pointer; text-align: left;
+  border: 1.5px solid var(--line); background: var(--card); color: var(--ink); font: inherit; }
+.type-card b { font-size: 16px; color: var(--heading); }
+.type-card small { color: var(--ink2); line-height: 1.5; }
+.type-card .pill { align-self: flex-start; margin-top: 4px; }
+.type-card.on { border-color: var(--blue); box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 30%, transparent); }
+.pill.type { background: var(--blue-l); color: var(--blue-d); }
+.rec-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rec-list audio { height: 32px; max-width: 220px; }
+.rec-item { display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; }

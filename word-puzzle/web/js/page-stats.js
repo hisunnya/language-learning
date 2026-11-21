@@ -59,6 +59,19 @@
     document.getElementById('sTotal').textContent = total;
   }
 
+  /* 排排坐：这一次交的朗读录音，点开就能听（学生听自己的，老师听自己名下学生的） */
+  function recordingsRow(p) {
+    if (!p.recordings || !p.recordings.length) return '';
+    return '<tr class="rec-row"><td colspan="8"><div class="rec-list"><b>' + esc(t('stats_recordings')) + '</b>' +
+      p.recordings.map(function (r) {
+        var note = !r.valid ? t('stats_recInvalid') : r.status === 'done' ? t('stats_recBonus', { n: r.bonus, p: Math.round(r.accuracy * 100) })
+          : r.status === 'pending' ? t('stats_recPending') : t('stats_recNoBonus');
+        return '<span class="rec-item">' + esc(t('stats_recSentence', { n: r.item_ord + 1 })) +
+          ' <audio controls preload="none" src="' + esc(API.path('/api/recordings/' + r.id + '/audio')) + '"></audio> ' +
+          '<small title="' + esc(r.transcript || '') + '">' + esc(note) + (r.transcript ? ' · “' + esc(r.transcript) + '”' : '') + '</small></span>';
+      }).join('') + '</div></td></tr>';
+  }
+
   function detailHtml(key) {
     var d = playsCache[key];
     if (d === 'loading' || d === undefined) return '<div class="empty">' + esc(t('stats_detailLoading')) + '</div>';
@@ -71,7 +84,8 @@
           '<td>' + esc(t('stats_pair', { a: p.matched, b: p.total_pairs })) + '</td><td>' + p.wrong + '</td><td>x' + p.best_combo + '</td>' +
           '<td>' + fmtDur(p.duration) + '</td>' +
           '<td>' + esc(p.levels_total != null ? t('stats_levelsOf', { n: p.level_count, total: p.levels_total }) : String(p.level_count)) + '</td>' +
-          '<td><span class="pill ' + (p.completed ? 'done' : 'notdone') + '">' + esc(t(p.completed ? 'stats_done' : 'stats_notDone')) + '</span></td></tr>';
+          '<td><span class="pill ' + (p.completed ? 'done' : 'notdone') + '">' + esc(t(p.completed ? 'stats_done' : 'stats_notDone')) + '</span></td></tr>' +
+          recordingsRow(p);
       }).join('') + '</tbody></table>';
   }
 
@@ -96,7 +110,8 @@
         esc(t(isOpen ? 'stats_collapse' : 'stats_expand')) + '">' +
         '<td><span class="caret">▸</span></td>' +
         '<td class="admin-only">' + esc(r.class_name) + '</td><td class="admin-only">' + esc(r.student_no) + '</td><td class="admin-only">' + esc(r.name) + '</td>' +
-        '<td class="bank">' + esc(r.bank_title || t('stats_unnamed')) + '</td>' +
+        '<td class="bank">' + (r.game_type && r.game_type !== 'match' ? '<span class="pill type">' + esc(t('type_' + r.game_type)) + '</span> ' : '') +
+        esc(r.bank_title || t('stats_unnamed')) + '</td>' +
         '<td class="num">' + r.plays + '</td><td class="num">' + r.completed + '</td>' +
         '<td class="num">' + r.best + '</td><td class="num">' + r.worst + '</td><td class="num">' + r.avg_score + '</td>' +
         '<td>' + fmtDur(r.avg_duration) + '</td><td>' + esc(API.fmtTime(r.last_at)) + '</td></tr>' +

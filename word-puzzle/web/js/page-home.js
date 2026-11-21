@@ -47,11 +47,45 @@
     });
   }
 
-  function bankItem(b, extra) {
+  /* 游戏类型：中英配对（原来的）、单词大比拼、排排坐。每个题库只属于一种 */
+  var TYPES = ['match', 'spell', 'order'];
+  var PAGES = { match: '/play.html', spell: '/spell.html', order: '/order.html' };
+  function typeOf(b) { return TYPES.indexOf(b.game_type) >= 0 ? b.game_type : 'match'; }
+  function typeFromHash() { var m = /type=(\w+)/.exec(location.hash); return m && TYPES.indexOf(m[1]) >= 0 ? m[1] : ''; }
+  var chosen = typeFromHash();
+
+  function itemCounts(b) {
+    return t('home_itemCounts', { n: b.word_count, time: API.fmtTime(b.created_at) });
+  }
+
+  function bankItem(b, extra, withType) {
+    var type = typeOf(b);
+    var ops = type === 'match'
+      ? '<a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +
+        '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('home_play')) + '</a>'
+      : '<a class="btn sm" href="' + esc(API.path(PAGES[type] + '?bank=' + b.id)) + '">' + esc(t('home_start')) + '</a>';
     return '<div class="item">' +
-      '  <div class="main"><b>' + esc(b.title) + '</b> <small>' + esc(extra || counts(b)) + '</small></div>' +
-      '  <div class="ops"><a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +
-      '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('home_play')) + '</a></div></div>';
+      '  <div class="main">' + (withType ? '<span class="pill type">' + esc(t('type_' + type)) + '</span> ' : '') +
+      '<b>' + esc(b.title) + '</b> <small>' + esc(extra || (type === 'match' ? counts(b) : itemCounts(b))) + '</small></div>' +
+      '  <div class="ops">' + ops + '</div></div>';
+  }
+
+  /* 先选玩法：只有一种玩法有题库时不用选；选过的记在地址的 #type= 里，从游戏返回时还是这一种 */
+  function availableTypes() {
+    return TYPES.filter(function (type) { return banks.some(function (b) { return typeOf(b) === type; }); });
+  }
+  function renderTypes() {
+    var box = document.getElementById('typeCards');
+    var types = availableTypes();
+    if (types.length <= 1) { box.hidden = true; chosen = types[0] || 'match'; return; }
+    if (types.indexOf(chosen) < 0) chosen = '';
+    box.hidden = false;
+    box.innerHTML = types.map(function (type) {
+      var n = banks.filter(function (b) { return typeOf(b) === type; }).length;
+      return '<button type="button" class="type-card' + (type === chosen ? ' on' : '') + '" data-type="' + type + '" aria-pressed="' + (type === chosen) + '">' +
+        '<b>' + esc(t('type_' + type)) + '</b><small>' + esc(t('type_' + type + 'Desc')) + '</small>' +
+        '<span class="pill gray">' + esc(t('type_count', { n: n })) + '</span></button>';
+    }).join('');
   }
 
   /* 每本书（分类）一个色块：带名字的书用主色标题条，「其他」用灰色标题条，一眼分得开 */
@@ -62,7 +96,10 @@
       box.innerHTML = '<div class="empty">' + esc(t(student ? 'home_emptyStudent' : 'home_emptyTeacher')) + '</div>';
       return;
     }
-    box.innerHTML = groupByCategory(banks).map(function (g) {
+    renderTypes();
+    if (!chosen) { box.innerHTML = '<div class="empty">' + esc(t('type_pick')) + '</div>'; return; }
+    var shown = banks.filter(function (b) { return typeOf(b) === chosen; });
+    box.innerHTML = groupByCategory(shown).map(function (g) {
       return '<section class="bank-group' + (g.name ? '' : ' other') + '">' +
         '<div class="bank-group-head"><b>' + esc(g.name || t(student ? 'home_catOther' : 'home_catNone')) + '</b>' +
         '<span class="pill gray">' + esc(t(g.banks.length === 1 ? 'home_groupCountOne' : 'home_groupCount', { n: g.banks.length })) + '</span></div>' +
@@ -88,7 +125,7 @@
     var now = Date.now();
     document.getElementById('recentList').innerHTML = items.map(function (x) {
       var a = WPRecent.ago(x.t, now);
-      return bankItem(x.bank, t('home_recentMeta', { ago: t(a.key, { n: a.n }), words: x.bank.word_count }));
+      return bankItem(x.bank, t('home_recentMeta', { ago: t(a.key, { n: a.n }), words: x.bank.word_count }), availableTypes().length > 1);
     }).join('');
   }
 
@@ -105,6 +142,13 @@
   WPI18N.onChange(function () { if (loaded) { renderBanks(); renderRecent(); } });
 
   document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('typeCards').addEventListener('click', function (ev) {
+      var card = ev.target.closest('[data-type]');
+      if (!card) return;
+      chosen = card.getAttribute('data-type');
+      history.replaceState(null, '', '#type=' + chosen);
+      renderBanks();
+    });
     API.get('/api/meta').then(function (meta) {
       var c = meta.curriculum || {};
       document.getElementById('curTotal').textContent = c.word_total || '—';

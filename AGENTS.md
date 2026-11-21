@@ -350,6 +350,21 @@ session cookie, uses `tenancy.PUBLIC` (built-in banks of 初中 / 高中 only) a
 no login, management, offline pages, leaderboard or uploads. Scores are stored with `mode='public'` against the
 browser's device number and each device sees only its own; audio is synthesised only for words of public banks;
 scores and audio are rate-limited per address, the API as a whole in nginx. The homepage card links to `/words/`.
+**Game types** (2026-11-21): a bank has `game_type` — `match` (the original matching game), `spell` (单词大比拼,
+fill the bracketed word of a phrase) or `order` (排排坐, put English fragments of a sentence in order, then record
+the sentence). Items of the new types live in `bank_items` (JSON, format in `server/items.py`, parsed from the
+teachers' Word files: brackets = answer; one fragment per line, yellow = key phrase kept highlighted, green line =
+reference answer, which the joined fragments must equal). `tools/import_items.py` imports a .docx (teachers'
+upload page comes later). Students pick the game type first on the home page. The pure rules are in
+`web/js/item-core.js` (node test `tests/js/item_core.test.js`); `spell-ui.js` / `order-ui.js` run both on the site
+and in the offline single-file page. Points: spell 10 per item (hint −3, wrong −2, at least 1 when solved);
+order 10 for the arrangement (−2 per wrong check, at least 2) + 30 for a valid recording + up to 20 bonus =
+word accuracy of the recognised text against the reference. The order score is computed by the server
+(`server/recordings.py`), never taken from the page. Recordings are stored as MP3 under the data directory
+(`recordings/`), recognised by a local faster-whisper model in its own venv (`server/asr.py`,
+`tools/asr_worker.py`; no prompt with the answer, VAD on, offline at run time), one at a time in a background
+queue; without recognition a recording ≥ 1 s still earns the 30 points. Students replay their recordings under
+Scores, teachers those of their students. Recording needs https (the plain-http LAN entrance cannot record).
 **Every page carries the site footer** `/shared/site-footer.js` (ICP filing number, linked to beian.miit.gov.cn,
 an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
 is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)

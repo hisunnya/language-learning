@@ -86,8 +86,12 @@
     var rel = b.relation || 'owner';
     if (rel === 'shared') src += ' <span class="pill good">' + esc(t('bank_relShared')) + '</span>';
     var canEdit = rel === 'owner', canDelete = rel !== 'system';
-    var ops = '<a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +
-      '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('bank_play')) + '</a>';
+    var type = b.game_type === 'spell' || b.game_type === 'order' ? b.game_type : 'match';
+    if (type !== 'match') src += ' <span class="pill type">' + esc(t('type_' + type)) + '</span>';
+    var ops = type === 'match'
+      ? '<a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +
+        '<a class="btn sm" href="' + esc(API.path('/play.html?bank=' + b.id)) + '">' + esc(t('bank_play')) + '</a>'
+      : '<a class="btn sm" href="' + esc(API.path('/' + type + '.html?bank=' + b.id)) + '">' + esc(t('home_start')) + '</a>';
     if (tagsEnabled()) {
       ops += (canEdit ? '<button class="btn sm ghost" data-cat="' + b.id + '">' + esc(t('home_catBtn')) + '</button>' : '') +
              '<button class="btn sm ghost" data-tags="' + b.id + '">' + esc(t('home_tagsBtn')) + '</button>';
@@ -99,7 +103,7 @@
     }
     return '<div class="item' + (highlight[b.id] ? ' flash' : '') + '" data-bank-row="' + b.id + '">' +
       '  <div class="main"><b>' + esc(b.title) + '</b> ' + src + tagPart +
-      '    <small>' + esc(counts(b)) + '</small></div>' +
+      '    <small>' + esc(type === 'match' ? counts(b) : t('home_itemCounts', { n: b.word_count, time: API.fmtTime(b.created_at) })) + '</small></div>' +
       '  <div class="ops">' + ops + '</div></div>';
   }
 
