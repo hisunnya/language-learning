@@ -272,7 +272,17 @@ class TestInstaller(unittest.TestCase):
         self.assertIsNotNone(attempts, "页面检查没有重试循环")
         self.assertGreaterEqual(len(attempts.group(1).split()), 5, "重试次数太少，等不到新 worker")
         # 根路径的内容也要重试（grep 不是状态码，要单独等）
-        self.assertRegex(INSTALL, r"grep -q '词境' && break")
+        self.assertRegex(INSTALL, r"home_body=")
+
+    def test_root_path_check_does_not_depend_on_a_pipe(self):
+        """curl | grep -q 里 grep 一找到就退出，curl 会收到 SIGPIPE（退出码 23）。
+
+        脚本开头是 set -euo pipefail，所以这样的管道会把「找到了正文」误判成失败：
+        自检会报「根路径不是词境主页」，而部署其实已经成功。所以正文要先取下来再判断。
+        """
+        code = "\n".join(l for l in INSTALL.splitlines() if not l.lstrip().startswith("#"))
+        self.assertNotRegex(code, r"curl[^\n]*\| *grep -q")
+        self.assertIn('[[ "$home_body" == *词境* ]]', INSTALL)
 
 
 class TestGuide(unittest.TestCase):

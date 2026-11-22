@@ -332,12 +332,16 @@ for page in / /privacy.html /topics/ /ham/ /chemistry/ /physics/ /shared/site-fo
   done
   [[ "$code" == "200" ]] || die "主页 / 模块打不开：$page（HTTP $code）"
 done
-# 根路径的内容也要重试：新 worker 接手前，旧 worker 会返回 302 而不是词境主页
+# 根路径的内容也要重试：新 worker 接手前，旧 worker 会返回 302 而不是词境主页。
+# 先把正文取下来再 grep：curl | grep -q 里 grep 找到就退出，curl 会收到 SIGPIPE（退出码 23），
+# 配合 set -o pipefail 会把「找到了」误判成「失败」。
+home_body=""
 for _ in 1 2 3 4 5 6 7 8 9 10; do
-  curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/" 2>/dev/null | grep -q '词境' && break
+  home_body="$(curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/" 2>/dev/null || true)"
+  [[ "$home_body" == *词境* ]] && break
   sleep 1
 done
-curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/" | grep -q '词境' || die "根路径不是词境主页"
+[[ "$home_body" == *词境* ]] || die "根路径不是词境主页"
 echo "    OK 主页、隐私说明和四个模块都能打开"
 # 公开版：不登录能拿到题库，而且只有初中、高中；管理页、管理接口、离线页都打不开
 pub="$(curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/words/api/banks")" || die "公开版 /words/api/banks 打不开"

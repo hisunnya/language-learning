@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261122_142528.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261122_143048.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -142,9 +142,14 @@ if [[ -n "$LEXICA_CTID" ]]; then
   for _ in 1 2 3 4 5 6 7 8 9 10; do have_ok && break; sleep 1; done
   if have_ok; then
     printf '    OK 容器里的页面与仓库一致\n'
-    curl --noproxy '*' -fsS --max-time 15 "http://$LEXICA_UPSTREAM/" | grep -q '词境' \
-      && printf '    OK 容器的根路径是词境主页\n' \
-      || printf '\033[1;33m[!]\033[0m 容器的根路径不是词境主页，请自己核对\n' >&2
+    # 先把正文取下来再 grep：curl | grep -q 里 grep 找到就退出，curl 会收到 SIGPIPE（退出码 23），
+    # 配合 set -o pipefail 会把「找到了」误判成「不是主页」。
+    home_body="$(curl --noproxy '*' -fsS --max-time 15 "http://$LEXICA_UPSTREAM/" 2>/dev/null || true)"
+    if [[ "$home_body" == *词境* ]]; then
+      printf '    OK 容器的根路径是词境主页\n'
+    else
+      printf '\033[1;33m[!]\033[0m 容器的根路径不是词境主页，请自己核对\n' >&2
+    fi
   else
     printf '\033[1;33m[!]\033[0m 容器里的 visits.html 和仓库不一致：学生版可能没有更新成功，请自己核对（不中断后面的部署）\n' >&2
   fi
