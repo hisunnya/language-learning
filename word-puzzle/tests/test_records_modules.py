@@ -31,10 +31,12 @@ class TestPolicy(unittest.TestCase):
 
 
 class TestRegistry(unittest.TestCase):
-    def test_lexica_is_enabled_and_the_other_subjects_are_planned(self):
+    def test_every_registered_subject_is_enabled(self):
+        """五个模块都往 /api/records 上报，所以都必须是「已启用」——
+        没启用的学科 POST 会被挡成 bad_subject（见下面的 test_validation）。"""
         enabled = modules.enabled_ids()
-        self.assertEqual(enabled, {"lexica"})
-        self.assertTrue({"topics", "ham", "chemistry", "physics"} <= {m["id"] for m in modules.listing()})
+        self.assertTrue({"lexica", "topics", "ham", "chemistry", "physics"} <= enabled)
+        self.assertEqual(enabled, {m["id"] for m in modules.listing()})
         for m in modules.listing():
             self.assertTrue(m["zh"] and m["en"] and m["path"].startswith("/") and m["path"].endswith("/"), m)
 

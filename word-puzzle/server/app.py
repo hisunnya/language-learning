@@ -508,6 +508,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/modules" and method == "GET":
             self.send_json({"ok": True, "modules": modules.listing()})
             return
+        if path == "/api/backoffice" and method == "GET":
+            self.handle_backoffice(query)
+            return
         if path == "/api/records":
             self.handle_records(method, query)
             return
@@ -1390,6 +1393,59 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json({"ok": True, "records": records})
             return
         raise HttpError(405, "不支持的方法")
+
+    def handle_backoffice(self, query: dict) -> None:
+        """总后台：一次请求拿到五个模块的登记、各自的成绩条数、名下学生和最近的记录。
+
+        「谁能看到谁」由 server/tenancy.py 决定（老师只看自己名下的学生），
+        这里不再另写过滤条件——和 /api/records 用的是同一套范围。
+        """
+        self._need_staff()
+        db = self.db
+        scope = self._scope()
+        people, pargs = tenancy.people_where(scope, "r.user_id")
+
+        summary = []
+        for module in modules.listing():
+            row = db.one(
+                "SELECT COUNT(*) AS n, COUNT(DISTINCT r.user_id) AS students, MAX(r.created_at) AS last_at "
+                "FROM subject_records r WHERE r.subject=? AND " + people,
+                (module["id"],) + tuple(pargs))
+            summary.append({
+                "id": module["id"], "zh": module["zh"], "en": module["en"], "path": module["path"],
+                "enabled": bool(module["enabled"]),
+                "records": int(row["n"] or 0) if row else 0,
+                "students": int(row["students"] or 0) if row else 0,
+                "last_at": int(row["last_at"] or 0) if row else 0,
+            })
+
+        limit = int_param(query.get("limit"), "limit", 60, 1, 500)
+        subject = str(query.get("subject") or "")
+        sql = ("SELECT r.id, r.user_id, r.device, r.subject, r.kind, r.payload, r.created_at, "
+               "u.name, u.student_no, u.class_name FROM subject_records r "
+               "LEFT JOIN users u ON u.id = r.user_id WHERE " + people)
+        args = list(pargs)
+        if subject:
+            sql += " AND r.subject=?"
+            args.append(subject)
+        sql += " ORDER BY r.id DESC LIMIT ?"
+        args.append(limit)
+        recent = []
+        for row in db.query(sql, tuple(args)):
+            d = dict(row)
+            try:
+                d["payload"] = json.loads(d["payload"])
+            except (TypeError, ValueError):
+                d["payload"] = {}
+            recent.append(d)
+
+        swhere, sargs = tenancy.student_where(scope, "u.id")
+        students = [dict(row) for row in db.query(
+            "SELECT u.id, u.student_no, u.name, u.class_name, u.last_login_at, u.disabled "
+            "FROM users u WHERE " + swhere + " ORDER BY u.class_name, u.student_no LIMIT 500", tuple(sargs))]
+
+        me = self.auth.public(self.user) if self.auth is not None else None
+        self.send_json({"ok": True, "me": me, "modules": summary, "recent": recent, "students": students})
 
     def _access_csv(self, table: str, query: dict) -> bytes:
         """访问记录 / 登录记录的完整导出：所有列，时间换成 UTC+8 的可读时间。"""

@@ -1093,6 +1093,31 @@
   /* ============================================================
      启动
      ============================================================ */
+  /* 把练习小结报给总后台（发送由 /shared/module-progress.js 负责）。
+   * 没登录就不报：这个模块不要求登录，报不上去也不该影响练习。 */
+  function practiceSummary() {
+    var all = Store.all();
+    var progress = all.progress || {};
+    var answered = 0, correct = 0;
+    Object.keys(progress).forEach(function (qid) {
+      var rec = progress[qid] || {};
+      answered += rec.n || 0;
+      correct += rec.c || 0;
+    });
+    return {
+      answered: answered,
+      correct: correct,
+      exams: (all.exams || []).length,
+      practices: (all.practice || []).length,
+      class: Store.settings().cls || 'A',
+    };
+  }
+  function reportToBackoffice() {
+    if (!window.WPModule) return;
+    window.WPModule.setSummary(practiceSummary);
+    window.WPModule.reportNow();
+  }
+
   function boot() {
     applyTheme(localStorage.getItem('lg_theme') || 'indigo');
     buildClsSwitch();
@@ -1101,6 +1126,7 @@
     renderPracticeSetup();
     fillPointSelect();
     switchView('exam');
+    reportToBackoffice();
   }
   boot();
 })();

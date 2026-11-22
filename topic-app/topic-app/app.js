@@ -88,6 +88,22 @@ async function init() {
   bindEvents();
   renderHistory();
   showEmptyState();
+  reportToBackoffice();
+}
+
+/* 把练习小结报给总后台（发送由 /shared/module-progress.js 负责）。
+ * 没登录就不报：这个模块不要求登录，报不上去也不该影响练习。 */
+function reportToBackoffice() {
+  if (!window.WPModule) return;
+  window.WPModule.setSummary(() => {
+    const history = storage.get(STORAGE_KEYS.history, []);
+    return {
+      points: storage.get(STORAGE_KEYS.points, 0),
+      discussions: history.length,
+      level: state.level,
+    };
+  });
+  window.WPModule.reportNow();
 }
 
 function topicsForLevel() {
@@ -275,6 +291,7 @@ function endDiscussion() {
   storage.set(STORAGE_KEYS.history, history);
   addPoints(pointsEarned);
   renderHistory();
+  reportToBackoffice();
 }
 
 // ====== 历史页面 ======

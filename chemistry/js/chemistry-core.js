@@ -7,10 +7,20 @@
 
   var STAGES = ['junior', 'high', 'university'];
   var TOLERANCE = 0.005;
-  var INT_MASS = { H: 1, C: 12, N: 14, O: 16, Na: 23, Mg: 24, Al: 27, S: 32, Cl: 35.5, K: 39, Ca: 40, Fe: 56, Cu: 64, Zn: 65 };
+  var INT_MASS = { H: 1, C: 12, N: 14, O: 16, F: 19, Na: 23, Mg: 24, Al: 27, Si: 28, P: 31, S: 32,
+    Cl: 35.5, K: 39, Ca: 40, Mn: 55, Fe: 56, Cu: 64, Zn: 65, Ag: 108, Ba: 137 };
   var SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉';
 
   function pick(list, rng) { return list[Math.floor(rng() * list.length)]; }
+
+  /* 按学段取题：初中只出初中题，高中出初中+高中题，大学出全部。
+   * 数据里每条都带 level 标记（junior / high），不再靠数组顺序切片。 */
+  function byLevel(items, stage) {
+    if (!items || !items.length) return [];
+    if (stage === 'junior') return items.filter(function (x) { return x.level === 'junior'; });
+    if (stage === 'high') return items.filter(function (x) { return x.level === 'junior' || x.level === 'high'; });
+    return items.slice();
+  }
   function shuffle(list, rng) {
     var out = list.slice();
     for (var i = out.length - 1; i > 0; i--) {
@@ -73,7 +83,7 @@
     rng = rng || Math.random;
     var f, value, unit = '', zh, en, visual, explain, id;
     if (stage === 'junior' || (stage === 'high' && rng() < 0.5)) {
-      var pool = stage === 'junior' ? data.formulas.slice(0, 6) : data.formulas.slice(0, 11);
+      var pool = byLevel(data.formulas, stage);
       f = pick(pool, rng);
       var mr = weigh(f.atoms, INT_MASS);
       var parts = Object.keys(f.atoms).map(function (s) { return (f.atoms[s] === 1 ? '' : f.atoms[s] + '×') + INT_MASS[s]; }).join(' + ');
@@ -149,7 +159,7 @@
         left: function (e) { return { zh: e.zh, en: e.en }; }, right: function (e) { return same(e.symbol); } },
       high: { kicker: { zh: '物质配化学式', en: 'Match substance to formula' },
         zh: '把物质名称和它的化学式配成对', en: 'Pair each substance with its formula',
-        source: data.formulas.slice(0, 11),
+        source: byLevel(data.formulas, 'high'),
         left: function (f) { return { zh: f.zh, en: f.en }; }, right: function (f) { return same(sub(f.formula)); } },
       university: { kicker: { zh: '化学式配摩尔质量', en: 'Match formula to molar mass' },
         zh: '把化学式和它的摩尔质量（g/mol）配成对', en: 'Pair each formula with its molar mass (g/mol)',
@@ -170,17 +180,42 @@
   }
 
   /* ---------------- 排序 ---------------- */
+  /* 排四样东西：按数值排序后，从所有「相邻两项间距都够大」的四元组里随机挑一个。
+   * 以前是随机试 300 次再退回到「排序后最前面四个」，那一步会悄悄破坏间距规则，
+   * 现在把候选穷举出来再挑，既保证间距又保证有变化。 */
   function spread(items, valueOf, gap, rng) {
     var sorted = items.slice().sort(function (a, b) { return valueOf(a) - valueOf(b); });
-    for (var attempt = 0; attempt < 300; attempt++) {
-      var idx = shuffle(sorted.map(function (_, i) { return i; }), rng).slice(0, 4).sort(function (a, b) { return a - b; });
-      var ok = true;
-      for (var i = 1; i < 4; i++) {
-        if (valueOf(sorted[idx[i]]) - valueOf(sorted[idx[i - 1]]) < gap) { ok = false; break; }
+    var n = sorted.length;
+    if (n < 4) return sorted.slice(0, 4);
+    var valid = [];
+    var a, b, c, d, i;
+    if (n <= 30) {
+      for (a = 0; a < n - 3; a++) {
+        for (b = a + 1; b < n - 2; b++) {
+          for (c = b + 1; c < n - 1; c++) {
+            for (d = c + 1; d < n; d++) {
+              if (valueOf(sorted[b]) - valueOf(sorted[a]) >= gap - 1e-9 &&
+                  valueOf(sorted[c]) - valueOf(sorted[b]) >= gap - 1e-9 &&
+                  valueOf(sorted[d]) - valueOf(sorted[c]) >= gap - 1e-9) {
+                valid.push([sorted[a], sorted[b], sorted[c], sorted[d]]);
+              }
+            }
+          }
+        }
       }
-      if (ok) return idx.map(function (k) { return sorted[k]; });
+    } else {
+      for (var attempt = 0; attempt < 500 && valid.length < 40; attempt++) {
+        var idx = shuffle(sorted.map(function (_, k) { return k; }), rng).slice(0, 4).sort(function (x, y) { return x - y; });
+        var win = idx.map(function (k) { return sorted[k]; });
+        var ok = true;
+        for (i = 1; i < 4; i++) {
+          if (valueOf(win[i]) - valueOf(win[i - 1]) < gap - 1e-9) { ok = false; break; }
+        }
+        if (ok) valid.push(win);
+      }
     }
-    return sorted.slice(0, 4);
+    if (!valid.length) return sorted.slice(0, 4);
+    return valid[Math.floor(rng() * valid.length)];
   }
 
   function orderQuestion(data, stage, rng) {
@@ -196,7 +231,7 @@
       zh = '把这些元素按原子序数' + (asc ? '由小到大' : '由大到小') + '排序';
       en = 'Sort these elements by atomic number, ' + (asc ? 'smallest to largest' : 'largest to smallest');
     } else if (stage === 'high') {
-      four = spread(data.phScale, function (x) { return x.ph; }, 1.2, rng);
+      four = spread(byLevel(data.phSubstances, stage), function (x) { return x.ph; }, 1.2, rng);
       label = function (x) { return { key: x.zh, zh: x.zh, en: x.en, value: x.ph }; };
       valueText = function (x) { return x.zh + ' pH ' + x.ph; };
       kicker = { zh: 'pH 排序', en: 'Order by pH' };
@@ -248,6 +283,96 @@
       reaction.products.map(function (f, i) { return term(f, n + i); }).join(' + ');
   }
 
+  /* ---------------- 配平题的选项：每次现算，不写死在题库里 ----------------
+   * 以前每个反应在题库里写死 4 个系数选项，整个题库只有 8 道题、26 个不同的系数串，
+   * 学生翻来覆去就是那几组数字。现在干扰项按学生真会犯的错现场生成：
+   *   ① 某一个系数写错（+1 / −1 / +2 …）
+   *   ② 两个系数对调
+   *   ③ 某个系数忘了乘，抄成了 1
+   * 每个干扰项都要用 unbalanced() 验算过：必须真的配不平，也不能和正确答案重复，
+   * 所以这道题永远只有一个站得住脚的答案。 */
+  function balanceChoices(reaction, rng) {
+    rng = rng || Math.random;
+    var correct = reaction.coefficients.slice();
+    var n = correct.length;
+    var correctKey = correct.join(',');
+    var pool = [];
+    function push(c) {
+      if (!c || c.length !== n) return;
+      for (var i = 0; i < c.length; i++) {
+        if (!isFinite(c[i]) || c[i] < 1 || Math.floor(c[i]) !== c[i]) return;
+      }
+      var key = c.join(',');
+      if (key === correctKey) return;
+      for (var j = 0; j < pool.length; j++) if (pool[j].join(',') === key) return;
+      if (!unbalanced(reaction, c).length) return;   /* 配平了就不算错误答案 */
+      pool.push(c);
+    }
+    var i, j, k, c;
+    for (i = 0; i < n; i++) {
+      [1, -1, 2, -2, 3, -3].forEach(function (delta) {
+        var cc = correct.slice(); cc[i] = cc[i] + delta; push(cc);
+      });
+    }
+    for (i = 0; i < n; i++) {
+      for (j = i + 1; j < n; j++) {
+        c = correct.slice(); k = c[i]; c[i] = c[j]; c[j] = k; push(c);
+      }
+    }
+    for (i = 0; i < n; i++) { c = correct.slice(); c[i] = 1; push(c); }
+    /* 兜底：万一上面凑不满 3 个，就按系数逐一试 +/-1 再试整体缩放 */
+    for (var extra = 0; extra < n && pool.length < 3; extra++) {
+      for (var d = 1; d <= 4 && pool.length < 3; d++) {
+        c = correct.slice(); c[extra % n] = c[extra % n] + d; push(c);
+        c = correct.slice(); c[extra % n] = c[extra % n] - d; push(c);
+      }
+    }
+    var picked = shuffle(pool, rng).slice(0, 3);
+    var all = shuffle([correct].concat(picked), rng);
+    return {
+      answer: correct.join(', '),
+      choices: all.map(function (cc) { return cc.join(', '); }),
+      keys: all.map(function (cc) { return cc.join(','); })
+    };
+  }
+
+  /* ---------------- pH 选项：围绕真实 pH 生成，而不是相邻整数 ----------------
+   * 干扰项优先取「别的溶液的真实 pH」（学生最容易把胃液和柠檬汁搞混），
+   * 凑不够再按 0.5 / 1 / 1.5 的步长偏移。 */
+  function phChoices(item, pool, rng) {
+    rng = rng || Math.random;
+    var answer = Number(item.ph);
+    /* 键统一用一位小数：题库里两种溶液常常是同一个 pH（柠檬汁和胃液都是 2.0），
+       如果正确答案的键和干扰项的键写法不一样，那个同 pH 的溶液就会变成第二个
+       「正确答案」——页面上就出现两个一模一样的选项。 */
+    var used = {};
+    used[answer.toFixed(1)] = true;
+    var distractors = [];
+    function add(value) {
+      if (!isFinite(value) || value <= 0 || value > 14) return;
+      var rounded = Math.round(value * 10) / 10;
+      var key = rounded.toFixed(1);
+      if (used[key]) return;
+      used[key] = true;
+      distractors.push(rounded);
+    }
+    /* 别的物质的真实 pH：最有迷惑性 */
+    (pool || []).forEach(function (other) {
+      if (other === item || other.ph === undefined) return;
+      if (distractors.length < 3) add(Number(other.ph));
+    });
+    [0.5, -0.5, 1, -1, 1.5, -1.5, 2, -2, 0.2, -0.2, 0.3, -0.3, 2.5, -2.5].forEach(function (delta) {
+      if (distractors.length < 3) add(answer + delta);
+    });
+    var picked = shuffle(distractors, rng).slice(0, 3);
+    var all = shuffle([answer].concat(picked), rng);
+    return {
+      answer: answer.toFixed(1),
+      choices: all.map(function (v) { return v.toFixed(1); }),
+      keys: all.map(function (v) { return v.toFixed(1); })
+    };
+  }
+
   function describe(elements, balancedWord) {
     if (!elements.length) return { key: 'ok', zh: '已经配平', en: 'Already balanced' };
     var zh = elements.length === 1 ? '只有 ' + elements[0] + ' 不守恒' : elements.join('、') + ' 都不守恒';
@@ -263,7 +388,11 @@
 
   function junior(data, rng) {
     var entry = pick(data.wrongFormulas, rng);
-    var valid = data.formulas.slice(0, 11).filter(function (f) { return f.formula !== entry.right; });
+    /* 干扰项是三个**真的存在**的化学式：既不能是这道题的正确答案（那个化学式本身没写错），
+       也不能和写错的那个一样（否则两个选项一模一样，学生没法选）。 */
+    var valid = byLevel(data.formulas, 'junior').filter(function (f) {
+      return f.formula !== entry.right && f.formula !== entry.wrong;
+    });
     var good = shuffle(valid, rng).slice(0, 3).map(function (f) { return same(sub(f.formula)); });
     var wrong = same(sub(entry.wrong));
     return {
@@ -345,6 +474,7 @@
   root.ChemistryCore = {
     STAGES: STAGES, fmt: fmt, sub: sub, parseFormula: parseFormula, unbalanced: unbalanced, parseReaction: parseReaction,
     numericQuestion: numericQuestion, checkNumeric: checkNumeric, matchQuestion: matchQuestion,
-    orderQuestion: orderQuestion, mistakeQuestion: mistakeQuestion, INT_MASS: INT_MASS
+    orderQuestion: orderQuestion, mistakeQuestion: mistakeQuestion, INT_MASS: INT_MASS,
+    byLevel: byLevel, balanceChoices: balanceChoices, phChoices: phChoices
   };
 })(typeof window !== 'undefined' ? window : globalThis);

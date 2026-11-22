@@ -17,7 +17,7 @@
       chooseAtomCount: '「{formula}」中含有几个「{symbol}」原子？',
       chooseMolarMass: '「{formula} · {name}」的摩尔质量约是多少？',
       chooseChemicalChange: '以下哪项变化生成了新物质？',
-      balance: '选择配平系数：{reaction}',
+      balance: '选择配平系数',
       calculatePh: '「{name}」的 pH 约是多少？',
       answer: '选择一个答案',
       correct: '正确！继续保持好奇心。',
@@ -46,7 +46,7 @@
       chooseAtomCount: 'How many {symbol} atoms are in {formula}?',
       chooseMolarMass: 'What is the approximate molar mass of {formula} · {name}?',
       chooseChemicalChange: 'Which change creates a new substance?',
-      balance: 'Choose the balanced coefficients: {reaction}',
+      balance: 'Choose the balanced coefficients',
       calculatePh: 'What is the approximate pH of {name}?',
       answer: 'Choose one answer',
       correct: 'Correct! Keep exploring.',
@@ -198,31 +198,37 @@
     }
 
     if (state.stage === 'junior') {
-      var chemical = data.changes.filter(function (item) { return item.type === 'chemical'; });
-      var physical = data.changes.filter(function (item) { return item.type !== 'chemical'; });
+      var chemical = Core.byLevel(data.changes.filter(function (item) { return item.type === 'chemical'; }), state.stage);
+      var physical = Core.byLevel(data.changes.filter(function (item) { return item.type !== 'chemical'; }), state.stage);
       var right = chemical[Math.floor(Math.random() * chemical.length)];
       var options = shuffle([right].concat(shuffle(physical).slice(0, 3)));
       return {
         kicker: text('mode').reactions, visual: '',
         prompt: text('chooseChemicalChange'),
         choices: options.map(function (item) { return elementName(item); }),
-        answer: elementName(right)
+        answer: elementName(right),
+        explain: right.whyZh, explainEn: right.whyEn
       };
     }
     if (state.stage === 'high') {
-      var reaction = data.balancedReactions[Math.floor(Math.random() * data.balancedReactions.length)];
+      var pool = Core.byLevel(data.balancedReactions, state.stage);
+      var reaction = pool[Math.floor(Math.random() * pool.length)];
+      var built = Core.balanceChoices(Core.parseReaction(reaction));
       return {
-        kicker: text('mode').reactions, visual: '',
-        prompt: text('balance', { reaction: reaction.prompt }),
-        choices: shuffle(reaction.choices), answer: reaction.answer
+        kicker: text('mode').reactions, visual: reaction.prompt,
+        prompt: text('balance'),
+        choices: built.choices, answer: built.answer,
+        explain: reaction.whyZh, explainEn: reaction.whyEn
       };
     }
-    var ph = data.phQuestions[Math.floor(Math.random() * data.phQuestions.length)];
+    var phPool = Core.byLevel(data.phSubstances, state.stage);
+    var ph = phPool[Math.floor(Math.random() * phPool.length)];
+    var builtPh = Core.phChoices(ph, phPool);
     return {
       kicker: text('mode').reactions, visual: 'pH',
       prompt: text('calculatePh', { name: elementName(ph) }),
-      choices: nearbyNumbers(ph.answer, [1, -1, 2, -2, 3], 4, 0).filter(Boolean),
-      answer: String(ph.answer)
+      choices: builtPh.choices, answer: builtPh.answer,
+      explain: ph.whyZh, explainEn: ph.whyEn
     };
   }
 
@@ -318,6 +324,7 @@
     var q = state.question;
     $('answerExplain').textContent = language() === 'en' && q.explainEn ? q.explainEn : q.explain;
     state.round += 1;
+    maybeReport();
     updateStats();
     $('nextQuestion').disabled = false;
   }
@@ -479,7 +486,12 @@
       feedback.classList.add('wrong');
       button.classList.add('wrong');
     }
+    var question = state.question;
+    if (question && question.explain) {
+      $('answerExplain').textContent = language() === 'en' && question.explainEn ? question.explainEn : question.explain;
+    }
     state.round += 1;
+    maybeReport();
     updateStats();
     $('nextQuestion').disabled = false;
   }
@@ -542,8 +554,26 @@
     if (!state.answered) renderQuestion();
   }
 
+  /* 把这次练习的小结报给总后台（发送由 /shared/module-progress.js 负责）。
+   * 没登录就不报：这个模块不要求登录，报不上去也不该影响练习。
+   * 每 10 题报一次，离开页面时再补报一次（那边有 pagehide 处理）。 */
+  function practiceSummary() {
+    return { score: state.score, streak: state.streak, rounds: Math.max(0, state.round - 1),
+      stage: state.stage, mode: state.mode };
+  }
+  function maybeReport() {
+    if (!window.WPModule) return;
+    if (state.round % 10 !== 1) return;
+    window.WPModule.reportNow();
+  }
+  function startReporting() {
+    if (!window.WPModule) return;
+    window.WPModule.setSummary(practiceSummary);
+    window.WPModule.reportNow();
+  }
+
   // 给测试用：读出当前题目，界面逻辑本身不依赖它
-  window.ChemQuiz = { current: function () { return state.question; } };
+  window.ChemQuiz = { current: function () { return state.question; }, summary: practiceSummary };
 
   fetch('data/chemistry.json').then(function (response) {
     if (!response.ok) throw new Error('Chemistry data failed to load');
@@ -561,6 +591,7 @@
     if (langButton) langButton.addEventListener('click', function () { setTimeout(applyDynamicLanguage, 0); });
     renderElements();
     renderQuestion();
+    startReporting();
   }).catch(function (error) {
     $('questionTitle').textContent = COPY[language()].loadFailed;
     $('questionKicker').textContent = String(error && error.message ? error.message : '');

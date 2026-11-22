@@ -86,14 +86,19 @@ for path in \
   hub/deploy/site-proxy.conf \
   hub/privacy.html \
   hub/shared/site-footer.js \
+  hub/shared/module-progress.js \
   topic-app/topic-app/index.html \
   ham-exam/index.html \
   chemistry/index.html \
   chemistry/js/chemistry.js \
+  chemistry/js/chemistry-core.js \
   chemistry/data/chemistry.json \
   physics/index.html \
   physics/js/physics.js \
-  physics/data/physics.json; do
+  physics/data/physics.json \
+  backends/index.html \
+  backends/js/backends.js \
+  backends/css/backends.css; do
   [[ -f "$REPO_DIR/$path" ]] || die "仓库文件缺失：$path；请确认 git pull 已完成"
 done
 
@@ -118,7 +123,7 @@ if [[ -n "$LEXICA_CTID" ]]; then
   (cd "$REPO_DIR" && COPYFILE_DISABLE=1 tar czf "$SRC_TGZ" \
     --exclude='word-puzzle/var' --exclude='__pycache__' --exclude='.DS_Store' --exclude='*/tests' \
     --exclude='ham-exam/raw-files' --exclude='ham-exam/tools' \
-    word-puzzle hub topic-app/topic-app ham-exam chemistry physics)
+    word-puzzle hub topic-app/topic-app ham-exam chemistry physics backends)
   pct push "$LEXICA_CTID" "$SRC_TGZ" /root/lexica-src.tgz
   # 解到一个新目录再整个换上去：仓库里删掉的文件，容器里也跟着没有（直接解到旧目录上会把它们留下来）
   pct exec "$LEXICA_CTID" -- bash -lc "rm -rf /root/language-learning.new && mkdir -p /root/language-learning.new \
@@ -198,6 +203,9 @@ check_path /physics/
 check_path /physics/data/physics.json
 check_path /physics/js/physics-core.js
 check_path /physics/js/physics.js
+check_path /backends/
+check_path /backends/js/backends.js
+check_path /backends/css/backends.css
 check_path /words/
 check_path /words/api/banks
 check_path /word-puzzle/
@@ -228,6 +236,7 @@ cat <<EOF
   无线电执照：http://$SERVER_NAME/ham/
   化学探秘：http://$SERVER_NAME/chemistry/
   物理探秘：http://$SERVER_NAME/physics/
+  总后台：http://$SERVER_NAME/backends/   （要老师账号，不放在主页上）
   词境学生版：http://$SERVER_NAME/word-puzzle/   （要登录，不放在主页上）
 
 $([[ -n "$LEXICA_CTID" ]] && echo "整站在容器 $LEXICA_CTID 里，已经更新（服务：pct exec $LEXICA_CTID -- systemctl status word-puzzle-family）；浏览器 Ctrl+Shift+R 强刷。" || echo "没有写 LEXICA_CTID：只更新了这台机器（词境服务：systemctl status word-puzzle），容器没有更新。")

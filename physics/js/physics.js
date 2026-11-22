@@ -111,6 +111,7 @@
     }
     $('answerExplain').textContent = explainText(state.question);
     state.round += 1;
+    maybeReport();
     updateStats();
     $('nextQuestion').disabled = false;
   }
@@ -319,8 +320,26 @@
     if (!state.answered) renderQuestion();
   }
 
+  /* 把这次练习的小结报给总后台（发送由 /shared/module-progress.js 负责）。
+   * 没登录就不报：这个模块不要求登录，报不上去也不该影响练习。
+   * 每 10 题报一次，离开页面时再补报一次（那边有 pagehide 处理）。 */
+  function practiceSummary() {
+    return { score: state.score, streak: state.streak, rounds: Math.max(0, state.round - 1),
+      stage: state.stage, mode: state.mode };
+  }
+  function maybeReport() {
+    if (!window.WPModule) return;
+    if (state.round % 10 !== 1) return;
+    window.WPModule.reportNow();
+  }
+  function startReporting() {
+    if (!window.WPModule) return;
+    window.WPModule.setSummary(practiceSummary);
+    window.WPModule.reportNow();
+  }
+
   // 给测试用：读出当前题目，界面逻辑本身不依赖它
-  window.PhysicsQuiz = { current: function () { return state.question; } };
+  window.PhysicsQuiz = { current: function () { return state.question; }, summary: practiceSummary };
 
   fetch('data/physics.json').then(function (response) {
     if (!response.ok) throw new Error('Physics data failed to load');
@@ -338,6 +357,7 @@
     if (langButton) langButton.addEventListener('click', function () { setTimeout(applyDynamicLanguage, 0); });
     renderQuantities();
     renderQuestion();
+    startReporting();
   }).catch(function (error) {
     $('questionTitle').textContent = copy().loadFailed;
     $('questionKicker').textContent = String(error && error.message ? error.message : '');

@@ -158,8 +158,9 @@ say "同步主页和不用登录的模块到 $INSTALL_DIR/site"
 # 先在旁边拼好一份完整的，再整体换上去：换的那一瞬间之外，网站上永远是一份完整的旧版或新版
 SITE_NEW="$INSTALL_DIR/site.new.$$"
 rm -rf "$SITE_NEW"
-install -d "$SITE_NEW/hub" "$SITE_NEW/topics" "$SITE_NEW/ham" "$SITE_NEW/chemistry" "$SITE_NEW/physics"
+install -d "$SITE_NEW/hub" "$SITE_NEW/topics" "$SITE_NEW/ham" "$SITE_NEW/chemistry" "$SITE_NEW/physics" "$SITE_NEW/backends"
 cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/privacy.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$SITE_NEW/hub/"
+cp -a "$REPO_DIR/backends/." "$SITE_NEW/backends/"
 sed -i "s/__ASSET_VERSION__/$(date +%Y%m%d%H%M%S)/g" "$SITE_NEW/hub/index.html"
 cp -a "$REPO_DIR/topic-app/topic-app/." "$SITE_NEW/topics/"
 for f in index.html css data images js; do cp -a "$REPO_DIR/ham-exam/$f" "$SITE_NEW/ham/"; done

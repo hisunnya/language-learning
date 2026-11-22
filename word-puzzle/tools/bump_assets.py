@@ -18,19 +18,28 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
-PAGES_ADD = sorted((REPO / "word-puzzle" / "web").glob("*.html"))            # 这里缺 ?v= 的也补上
+PAGES_ADD = sorted((REPO / "word-puzzle" / "web").glob("*.html")) + [REPO / "backends" / "index.html"]   # 这里缺 ?v= 的也补上
 PAGES_UPDATE = [REPO / p for p in ("hub/index.html", "hub/privacy.html", "chemistry/index.html", "physics/index.html",
                                    "topic-app/topic-app/index.html", "ham-exam/index.html")]   # 只改已有的 ?v=
-REF = re.compile(r'(?P<attr>src|href)="(?P<url>/(?:word-puzzle|shared)/[^"?#]+\.(?:js|css))(?:\?v=(?P<v>[^"]*))?"')
+REF = re.compile(r'(?P<attr>src|href)="(?P<url>(?:/(?:word-puzzle|shared)/)?[^"?#\s]+\.(?:js|css))(?:\?v=(?P<v>[^"]*))?"')
 # JS 里自己拼的引用（module-header.js 在微信里才去加载 wechat.js）：(含引用的文件, 被引用的文件名, 被引用文件的路径)
 EMBEDDED = [("hub/shared/module-header.js", "wechat.js", "hub/shared/wechat.js")]
 
 
-def resolve(url: str) -> Path | None:
+def resolve(url: str, page: Path | None = None) -> Path | None:
+    """/word-puzzle/xxx → word-puzzle/web/xxx；/shared/xxx → hub/shared/xxx；
+    同一目录下的相对引用（css/x.css、js/x.js）按页面所在目录找。"""
     if url.startswith("/word-puzzle/"):
         return REPO / "word-puzzle" / "web" / url[len("/word-puzzle/"):]
     if url.startswith("/shared/"):
         return REPO / "hub" / "shared" / url[len("/shared/"):]
+    if page is not None and not url.startswith(("/", "#", "http:", "https:")):
+        target = (page.parent / url).resolve()
+        try:                      # 别让 ../ 逃出仓库
+            target.relative_to(REPO)
+        except ValueError:
+            return None
+        return target
     return None
 
 
@@ -60,12 +69,14 @@ def pages_pass(write: bool) -> list[str]:
         rel = page.relative_to(REPO)
 
         def fix(m: re.Match) -> str:
-            target = resolve(m.group("url"))
+            target = resolve(m.group("url"), page)
             if target is None or not target.exists():
                 return m.group(0)
             want = tag(target)
             if m.group("v") is None and not add_missing:
                 return m.group(0)
+            if m.group("v") and "__" in m.group("v"):
+                return m.group(0)          # 主页用 __ASSET_VERSION__ 占位（部署时换成时间戳）
             if m.group("v") != want:
                 problems.append("%s：%s ?v=%s 应为 ?v=%s" % (rel, m.group("url"), m.group("v"), want))
             return '%s="%s?v=%s"' % (m.group("attr"), m.group("url"), want)

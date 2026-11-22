@@ -93,14 +93,14 @@ for (const stage of Core.STAGES) {
   const high = lcg(2);
   for (let i = 0; i < 400; i++) {
     const q = Core.numericQuestion(DATA, 'high', high);
+    // 高中阶段的化学式池按 level 取（Core.byLevel），不是题库的前 11 条
+    const molar = Core.byLevel(DATA.formulas, 'high').map((f) => weigh(f.atoms, Core.INT_MASS));
     if (q.id === 'mass-from-moles') {
       const n = Number(q.zh.match(/^([\d.]+) mol/)[1]);
-      const molar = DATA.formulas.slice(0, 11).map((f) => weigh(f.atoms, Core.INT_MASS));
       assert.ok(molar.some((m) => Math.abs(q.value / n - m) < 1e-9), `质量 ÷ 物质的量 应等于某个化学式的摩尔质量：${q.value} / ${n}`);
     }
     if (q.id === 'moles-from-mass') {
       const grams = Number(q.zh.match(/^([\d.]+) g/)[1]);
-      const molar = DATA.formulas.slice(0, 11).map((f) => weigh(f.atoms, Core.INT_MASS));
       assert.ok(molar.some((m) => Math.abs(grams / q.value - m) < 1e-9), `质量 ÷ 物质的量 应等于某个化学式的摩尔质量：${grams} / ${q.value}`);
     }
   }

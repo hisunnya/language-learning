@@ -1,0 +1,140 @@
+/* 总后台（/backends/）的样式。五套配色沿用全站的「主色 + 底色」惯例：
+   每套都是一份完整的变量集，缺一个就不算一套（hub/tests/test_hub.py 会逐个比对）。 */
+html[data-theme="indigo"] {
+  --bo-bg: #f4f6fb; --bo-surface: #ffffff; --bo-surface-2: #eef2ff; --bo-ink: #172033; --bo-muted: #68758a;
+  --bo-line: #dce3ef; --bo-accent: #4f46e5; --bo-accent-ink: #ffffff; --bo-accent-soft: #e0e7ff;
+  --bo-good: #087f5b; --bo-bad: #b4233b; --bo-shadow: 0 12px 30px rgba(30, 41, 59, .08);
+}
+html[data-theme="ink"] {
+  --bo-bg: #0c1210; --bo-surface: #141d19; --bo-surface-2: #1d2b24; --bo-ink: #e8f4ee; --bo-muted: #9cb1a5;
+  --bo-line: #293a31; --bo-accent: #34d399; --bo-accent-ink: #062317; --bo-accent-soft: #17372a;
+  --bo-good: #5ee0a0; --bo-bad: #ff8a80; --bo-shadow: 0 12px 30px rgba(0, 0, 0, .24);
+}
+html[data-theme="amber"] {
+  --bo-bg: #fbf6ec; --bo-surface: #ffffff; --bo-surface-2: #f7ecdb; --bo-ink: #30251b; --bo-muted: #81705e;
+  --bo-line: #e9ddc9; --bo-accent: #b45309; --bo-accent-ink: #ffffff; --bo-accent-soft: #f8ecd9;
+  --bo-good: #15803d; --bo-bad: #b4233b; --bo-shadow: 0 12px 30px rgba(87, 58, 20, .08);
+}
+html[data-theme="lotus"] {
+  --bo-bg: #fdf4f6; --bo-surface: #ffffff; --bo-surface-2: #f9eef3; --bo-ink: #321d29; --bo-muted: #846c79;
+  --bo-line: #edd9e2; --bo-accent: #db2777; --bo-accent-ink: #ffffff; --bo-accent-soft: #fce7f3;
+  --bo-good: #087f5b; --bo-bad: #b4233b; --bo-shadow: 0 12px 30px rgba(120, 20, 60, .08);
+}
+html[data-theme="obsidian"] {
+  --bo-bg: #08080a; --bo-surface: #111114; --bo-surface-2: #1a1a1f; --bo-ink: #f3f0e5; --bo-muted: #aaa59a;
+  --bo-line: #302d24; --bo-accent: #d4af37; --bo-accent-ink: #15120a; --bo-accent-soft: #292411;
+  --bo-good: #64d6a5; --bo-bad: #ff8a80; --bo-shadow: 0 12px 32px rgba(0, 0, 0, .28);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; min-height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bo-bg); color: var(--bo-ink);
+}
+button, input, select { font: inherit; color: inherit; }
+
+.bo-page { max-width: 1240px; margin: 0 auto; padding: 18px 24px 40px; }
+.bo-page .portal-topbar { position: sticky; top: 8px; }
+
+/* ---------- 登录门 ---------- */
+.gate { display: grid; place-items: center; min-height: 62vh; }
+.gate[hidden] { display: none; }
+.gate-form {
+  width: min(420px, 100%); padding: 28px;
+  border: 1px solid var(--bo-line); border-radius: 14px;
+  background: var(--bo-surface); box-shadow: var(--bo-shadow);
+}
+.gate-form h1 { margin: 0 0 6px; font-size: 24px; }
+.gate-copy { margin: 0 0 18px; color: var(--bo-muted); font-size: 13px; line-height: 1.6; }
+.gate-form label { display: block; margin-bottom: 12px; font-size: 12px; font-weight: 700; color: var(--bo-muted); }
+.gate-form input {
+  display: block; width: 100%; margin-top: 6px; min-height: 46px; padding: 10px 13px;
+  border: 1px solid var(--bo-line); border-radius: 10px; background: var(--bo-bg); font-size: 15px;
+}
+.gate-form input:focus { outline: 2px solid var(--bo-accent); outline-offset: 1px; }
+.gate-submit {
+  width: 100%; min-height: 48px; border: 0; border-radius: 10px;
+  background: var(--bo-accent); color: var(--bo-accent-ink); font-weight: 800; cursor: pointer;
+}
+.gate-submit:disabled { opacity: .5; cursor: not-allowed; }
+.gate-msg { min-height: 20px; margin: 12px 0 0; font-size: 13px; font-weight: 700; color: var(--bo-bad); }
+
+/* ---------- 主体 ---------- */
+.bo-main[hidden] { display: none; }
+.bo-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding: 20px 0 16px; border-bottom: 1px solid var(--bo-line);
+}
+.eyebrow { margin: 0 0 6px; color: var(--bo-accent); font-size: 11px; font-weight: 800; letter-spacing: 1.6px; }
+.bo-bar h1 { margin: 0; font-size: clamp(23px, 2.6vw, 32px); }
+.bo-bar-copy { margin: 8px 0 0; color: var(--bo-muted); font-size: 14px; line-height: 1.6; }
+.bo-user { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bo-user-chip {
+  display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
+  border: 1px solid var(--bo-line); border-radius: 999px; background: var(--bo-surface);
+  font-size: 13px; font-weight: 700;
+}
+.bo-role { padding: 3px 9px; border-radius: 999px; background: var(--bo-accent-soft); color: var(--bo-accent); font-size: 11px; }
+.ghost-button {
+  min-height: 40px; padding: 9px 16px; border: 1px solid var(--bo-line); border-radius: 10px;
+  background: var(--bo-surface); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.ghost-button:hover { border-color: var(--bo-accent); color: var(--bo-accent); }
+
+.bo-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .62fr); gap: 24px; padding: 24px 0 0; align-items: start; }
+.bo-section { min-width: 0; margin-bottom: 26px; }
+.bo-section > h2 { margin: 0 0 12px; font-size: 18px; }
+.bo-section-note { margin: -6px 0 12px; color: var(--bo-muted); font-size: 12px; line-height: 1.6; }
+
+.module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 12px; }
+.module-card {
+  padding: 16px; border: 1px solid var(--bo-line); border-radius: 12px;
+  background: var(--bo-surface); box-shadow: var(--bo-shadow);
+}
+.module-card.is-off { opacity: .72; }
+.module-card h3 { margin: 0 0 2px; font-size: 16px; }
+.module-card .module-en { color: var(--bo-muted); font-size: 11px; letter-spacing: .6px; }
+.module-stats { display: flex; gap: 16px; margin: 13px 0 0; }
+.module-stats div { min-width: 0; }
+.module-stats b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.module-stats span { color: var(--bo-muted); font-size: 10px; font-weight: 700; }
+.module-last { margin: 10px 0 0; color: var(--bo-muted); font-size: 11px; }
+.module-open {
+  display: inline-block; margin-top: 12px; padding: 7px 13px; border-radius: 8px;
+  background: var(--bo-accent-soft); color: var(--bo-accent); font-size: 12px; font-weight: 800; text-decoration: none;
+}
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th, .data-table td { padding: 9px 10px; border-bottom: 1px solid var(--bo-line); text-align: left; vertical-align: top; }
+.data-table th { color: var(--bo-muted); font-size: 11px; font-weight: 800; letter-spacing: .4px; }
+.data-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--bo-line); border-radius: 12px; background: var(--bo-surface); }
+.payload-cell { color: var(--bo-muted); font-size: 12px; word-break: break-word; }
+.empty-note { padding: 18px; color: var(--bo-muted); font-size: 13px; text-align: center; }
+
+.link-list { display: grid; gap: 8px; }
+.link-list a {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px; border: 1px solid var(--bo-line); border-radius: 10px;
+  background: var(--bo-surface); color: inherit; font-size: 13px; font-weight: 700; text-decoration: none;
+}
+.link-list a:hover { border-color: var(--bo-accent); }
+.link-list .arrow { color: var(--bo-accent); }
+
+.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.filter-row select {
+  min-height: 40px; padding: 8px 12px; border: 1px solid var(--bo-line); border-radius: 9px;
+  background: var(--bo-surface); font-size: 13px; font-weight: 700;
+}
+
+.bo-foot { margin-top: 10px; padding: 16px 0; border-top: 1px solid var(--bo-line); color: var(--bo-muted); font-size: 11px; line-height: 1.7; }
+
+@media (max-width: 900px) {
+  .bo-grid { grid-template-columns: 1fr; }
+  .bo-page { padding: 12px 14px 30px; }
+}
+@media (max-width: 560px) {
+  .module-stats { gap: 12px; }
+  .bo-bar { align-items: flex-start; flex-direction: column; }
+}

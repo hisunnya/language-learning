@@ -30,9 +30,17 @@ class TestChemistryData(unittest.TestCase):
             self.assertTrue(all(count > 0 for count in formula["atoms"].values()))
 
     def test_reaction_answers_are_present_in_choices(self):
+        """配平题的选项是现算的（Core.balanceChoices），题库里只存标准答案。
+
+        所以这里检查的是「标准答案的系数个数和方程式两边的物质个数对得上」，
+        选项的正确性由 tests/js/chemistry.test.js 在 node 里逐题验算。
+        """
         for reaction in DATA["balancedReactions"]:
-            self.assertIn(reaction["answer"], reaction["choices"])
-            self.assertGreaterEqual(len(reaction["choices"]), 4)
+            sides = reaction["prompt"].split("→")
+            count = sum(len(side.split("+")) for side in sides)
+            coefficients = [c.strip() for c in reaction["answer"].split(",")]
+            self.assertEqual(len(coefficients), count, reaction["prompt"])
+            self.assertTrue(all(c.isdigit() and int(c) >= 1 for c in coefficients), reaction["prompt"])
 
     def test_junior_changes_can_build_one_right_three_wrong(self):
         kinds = [item["type"] for item in DATA["changes"]]
@@ -62,11 +70,31 @@ class TestChemistryData(unittest.TestCase):
         self.assertIn('src="js/chemistry.js"', HTML)
 
     def test_every_reaction_is_really_balanced(self):
-        """独立写一个解析器验算：标准系数必须让两边每种原子个数相等。"""
+        """独立写一个解析器验算：标准系数必须让两边每种原子个数相等。
+
+        解析器要认得括号（Ca(OH)2 是 1 个钙、2 个氧、2 个氢），
+        否则带括号的方程式会被算成不平。
+        """
         def atoms(formula):
-            counts = {}
-            for symbol, n in re.findall(r"([A-Z][a-z]?)(\d*)", formula):
-                counts[symbol] = counts.get(symbol, 0) + int(n or 1)
+            def group(text, i):
+                counts = {}
+                while i < len(text) and text[i] != ")":
+                    if text[i] == "(":
+                        inner, i = group(text, i + 1)
+                        i += 1  # 跳过 ')'
+                        mult = re.match(r"\d*", text[i:])
+                        factor = int(mult.group() or 1)
+                        i += len(mult.group())
+                        for symbol, n in inner.items():
+                            counts[symbol] = counts.get(symbol, 0) + n * factor
+                    else:
+                        m = re.match(r"([A-Z][a-z]?)(\d*)", text[i:])
+                        if not m:
+                            raise AssertionError("化学式无法解析：%s" % formula)
+                        counts[m.group(1)] = counts.get(m.group(1), 0) + int(m.group(2) or 1)
+                        i += m.end()
+                return counts, i
+            counts, _ = group(formula, 0)
             return counts
 
         for entry in DATA["balancedReactions"]:
@@ -90,11 +118,21 @@ class TestChemistryData(unittest.TestCase):
         self.assertGreaterEqual(len(DATA["wrongFormulas"]), 6)
 
     def test_ph_scale_has_room_to_order(self):
-        values = sorted(item["ph"] for item in DATA["phScale"])
-        self.assertGreaterEqual(len(values), 6)
-        self.assertEqual(len(set(values)), len(values))
-        for item in DATA["phScale"]:
+        """pH 排序题要挑得出四项。
+
+        同一种 pH 可以出现在几种溶液上（柠檬汁和胃液都是 2.0），所以不比 pH 本身是否唯一，
+        而是看**不同的** pH 够不够多、排序时相邻两项能不能拉开 1.0 的差距。
+        """
+        values = sorted(item["ph"] for item in DATA["phSubstances"])
+        self.assertGreaterEqual(len(set(values)), 6)
+        self.assertGreaterEqual(len(DATA["phSubstances"]), 12)
+        for item in DATA["phSubstances"]:
             self.assertTrue(item["zh"] and item["en"])
+            self.assertTrue(0 < item["ph"] <= 14, item["zh"])
+            self.assertIn(item["kind"], ("acid", "base", "neutral"), item["zh"])
+        # 相邻的四个不同 pH 之间至少差 1.0，排序题才不会出「几乎一样」的两项
+        spaced = [v for v in values if all(abs(v - other) >= 1.0 for other in values if other != v)]
+        self.assertGreaterEqual(len(spaced), 4)
 
     def test_element_dataset_cites_iupac(self):
         self.assertTrue(any("iupac.org" in source["url"] for source in DATA["sources"]))

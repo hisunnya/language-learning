@@ -1,98 +1,1876 @@
 {
   "elements": [
-    {"symbol":"H","zh":"氢","en":"Hydrogen","number":1,"mass":1.008},
-    {"symbol":"He","zh":"氦","en":"Helium","number":2,"mass":4.0026},
-    {"symbol":"Li","zh":"锂","en":"Lithium","number":3,"mass":6.94},
-    {"symbol":"Be","zh":"铍","en":"Beryllium","number":4,"mass":9.0122},
-    {"symbol":"B","zh":"硼","en":"Boron","number":5,"mass":10.81},
-    {"symbol":"C","zh":"碳","en":"Carbon","number":6,"mass":12.011},
-    {"symbol":"N","zh":"氮","en":"Nitrogen","number":7,"mass":14.007},
-    {"symbol":"O","zh":"氧","en":"Oxygen","number":8,"mass":15.999},
-    {"symbol":"F","zh":"氟","en":"Fluorine","number":9,"mass":18.998},
-    {"symbol":"Ne","zh":"氖","en":"Neon","number":10,"mass":20.180},
-    {"symbol":"Na","zh":"钠","en":"Sodium","number":11,"mass":22.990},
-    {"symbol":"Mg","zh":"镁","en":"Magnesium","number":12,"mass":24.305},
-    {"symbol":"Al","zh":"铝","en":"Aluminium","number":13,"mass":26.982},
-    {"symbol":"Si","zh":"硅","en":"Silicon","number":14,"mass":28.085},
-    {"symbol":"P","zh":"磷","en":"Phosphorus","number":15,"mass":30.974},
-    {"symbol":"S","zh":"硫","en":"Sulfur","number":16,"mass":32.06},
-    {"symbol":"Cl","zh":"氯","en":"Chlorine","number":17,"mass":35.45},
-    {"symbol":"Ar","zh":"氩","en":"Argon","number":18,"mass":39.948},
-    {"symbol":"K","zh":"钾","en":"Potassium","number":19,"mass":39.098},
-    {"symbol":"Ca","zh":"钙","en":"Calcium","number":20,"mass":40.078},
-    {"symbol":"Sc","zh":"钪","en":"Scandium","number":21,"mass":44.956},
-    {"symbol":"Ti","zh":"钛","en":"Titanium","number":22,"mass":47.867},
-    {"symbol":"V","zh":"钒","en":"Vanadium","number":23,"mass":50.942},
-    {"symbol":"Cr","zh":"铬","en":"Chromium","number":24,"mass":51.996},
-    {"symbol":"Mn","zh":"锰","en":"Manganese","number":25,"mass":54.938},
-    {"symbol":"Fe","zh":"铁","en":"Iron","number":26,"mass":55.845},
-    {"symbol":"Co","zh":"钴","en":"Cobalt","number":27,"mass":58.933},
-    {"symbol":"Ni","zh":"镍","en":"Nickel","number":28,"mass":58.693},
-    {"symbol":"Cu","zh":"铜","en":"Copper","number":29,"mass":63.546},
-    {"symbol":"Zn","zh":"锌","en":"Zinc","number":30,"mass":65.38}
+    {
+      "symbol": "H",
+      "zh": "氢",
+      "en": "Hydrogen",
+      "number": 1,
+      "mass": 1.008
+    },
+    {
+      "symbol": "He",
+      "zh": "氦",
+      "en": "Helium",
+      "number": 2,
+      "mass": 4.0026
+    },
+    {
+      "symbol": "Li",
+      "zh": "锂",
+      "en": "Lithium",
+      "number": 3,
+      "mass": 6.94
+    },
+    {
+      "symbol": "Be",
+      "zh": "铍",
+      "en": "Beryllium",
+      "number": 4,
+      "mass": 9.0122
+    },
+    {
+      "symbol": "B",
+      "zh": "硼",
+      "en": "Boron",
+      "number": 5,
+      "mass": 10.81
+    },
+    {
+      "symbol": "C",
+      "zh": "碳",
+      "en": "Carbon",
+      "number": 6,
+      "mass": 12.011
+    },
+    {
+      "symbol": "N",
+      "zh": "氮",
+      "en": "Nitrogen",
+      "number": 7,
+      "mass": 14.007
+    },
+    {
+      "symbol": "O",
+      "zh": "氧",
+      "en": "Oxygen",
+      "number": 8,
+      "mass": 15.999
+    },
+    {
+      "symbol": "F",
+      "zh": "氟",
+      "en": "Fluorine",
+      "number": 9,
+      "mass": 18.998
+    },
+    {
+      "symbol": "Ne",
+      "zh": "氖",
+      "en": "Neon",
+      "number": 10,
+      "mass": 20.18
+    },
+    {
+      "symbol": "Na",
+      "zh": "钠",
+      "en": "Sodium",
+      "number": 11,
+      "mass": 22.99
+    },
+    {
+      "symbol": "Mg",
+      "zh": "镁",
+      "en": "Magnesium",
+      "number": 12,
+      "mass": 24.305
+    },
+    {
+      "symbol": "Al",
+      "zh": "铝",
+      "en": "Aluminium",
+      "number": 13,
+      "mass": 26.982
+    },
+    {
+      "symbol": "Si",
+      "zh": "硅",
+      "en": "Silicon",
+      "number": 14,
+      "mass": 28.085
+    },
+    {
+      "symbol": "P",
+      "zh": "磷",
+      "en": "Phosphorus",
+      "number": 15,
+      "mass": 30.974
+    },
+    {
+      "symbol": "S",
+      "zh": "硫",
+      "en": "Sulfur",
+      "number": 16,
+      "mass": 32.06
+    },
+    {
+      "symbol": "Cl",
+      "zh": "氯",
+      "en": "Chlorine",
+      "number": 17,
+      "mass": 35.45
+    },
+    {
+      "symbol": "Ar",
+      "zh": "氩",
+      "en": "Argon",
+      "number": 18,
+      "mass": 39.948
+    },
+    {
+      "symbol": "K",
+      "zh": "钾",
+      "en": "Potassium",
+      "number": 19,
+      "mass": 39.098
+    },
+    {
+      "symbol": "Ca",
+      "zh": "钙",
+      "en": "Calcium",
+      "number": 20,
+      "mass": 40.078
+    },
+    {
+      "symbol": "Sc",
+      "zh": "钪",
+      "en": "Scandium",
+      "number": 21,
+      "mass": 44.956
+    },
+    {
+      "symbol": "Ti",
+      "zh": "钛",
+      "en": "Titanium",
+      "number": 22,
+      "mass": 47.867
+    },
+    {
+      "symbol": "V",
+      "zh": "钒",
+      "en": "Vanadium",
+      "number": 23,
+      "mass": 50.942
+    },
+    {
+      "symbol": "Cr",
+      "zh": "铬",
+      "en": "Chromium",
+      "number": 24,
+      "mass": 51.996
+    },
+    {
+      "symbol": "Mn",
+      "zh": "锰",
+      "en": "Manganese",
+      "number": 25,
+      "mass": 54.938
+    },
+    {
+      "symbol": "Fe",
+      "zh": "铁",
+      "en": "Iron",
+      "number": 26,
+      "mass": 55.845
+    },
+    {
+      "symbol": "Co",
+      "zh": "钴",
+      "en": "Cobalt",
+      "number": 27,
+      "mass": 58.933
+    },
+    {
+      "symbol": "Ni",
+      "zh": "镍",
+      "en": "Nickel",
+      "number": 28,
+      "mass": 58.693
+    },
+    {
+      "symbol": "Cu",
+      "zh": "铜",
+      "en": "Copper",
+      "number": 29,
+      "mass": 63.546
+    },
+    {
+      "symbol": "Zn",
+      "zh": "锌",
+      "en": "Zinc",
+      "number": 30,
+      "mass": 65.38
+    }
   ],
   "formulas": [
-    {"formula":"H2O","zh":"水","en":"water","atoms":{"H":2,"O":1}},
-    {"formula":"CO2","zh":"二氧化碳","en":"carbon dioxide","atoms":{"C":1,"O":2}},
-    {"formula":"O2","zh":"氧气","en":"oxygen","atoms":{"O":2}},
-    {"formula":"H2","zh":"氢气","en":"hydrogen","atoms":{"H":2}},
-    {"formula":"NaCl","zh":"氯化钠","en":"sodium chloride","atoms":{"Na":1,"Cl":1}},
-    {"formula":"CaCO3","zh":"碳酸钙","en":"calcium carbonate","atoms":{"Ca":1,"C":1,"O":3}},
-    {"formula":"HCl","zh":"氯化氢","en":"hydrogen chloride","atoms":{"H":1,"Cl":1}},
-    {"formula":"H2SO4","zh":"硫酸","en":"sulfuric acid","atoms":{"H":2,"S":1,"O":4}},
-    {"formula":"NH3","zh":"氨","en":"ammonia","atoms":{"N":1,"H":3}},
-    {"formula":"NaOH","zh":"氢氧化钠","en":"sodium hydroxide","atoms":{"Na":1,"O":1,"H":1}},
-    {"formula":"CH4","zh":"甲烷","en":"methane","atoms":{"C":1,"H":4}},
-    {"formula":"C6H12O6","zh":"葡萄糖","en":"glucose","atoms":{"C":6,"H":12,"O":6}}
+    {
+      "formula": "H2O",
+      "zh": "水",
+      "en": "Water",
+      "atoms": {
+        "H": 2,
+        "O": 1
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "CO2",
+      "zh": "二氧化碳",
+      "en": "Carbon dioxide",
+      "atoms": {
+        "C": 1,
+        "O": 2
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "O2",
+      "zh": "氧气",
+      "en": "Oxygen",
+      "atoms": {
+        "O": 2
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "H2",
+      "zh": "氢气",
+      "en": "Hydrogen",
+      "atoms": {
+        "H": 2
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "N2",
+      "zh": "氮气",
+      "en": "Nitrogen",
+      "atoms": {
+        "N": 2
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "CO",
+      "zh": "一氧化碳",
+      "en": "Carbon monoxide",
+      "atoms": {
+        "C": 1,
+        "O": 1
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "NaCl",
+      "zh": "氯化钠",
+      "en": "Sodium chloride",
+      "atoms": {
+        "Na": 1,
+        "Cl": 1
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "CaCO3",
+      "zh": "碳酸钙",
+      "en": "Calcium carbonate",
+      "atoms": {
+        "Ca": 1,
+        "C": 1,
+        "O": 3
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "Na2CO3",
+      "zh": "碳酸钠",
+      "en": "Sodium carbonate",
+      "atoms": {
+        "Na": 2,
+        "C": 1,
+        "O": 3
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "NaHCO3",
+      "zh": "碳酸氢钠",
+      "en": "Sodium bicarbonate",
+      "atoms": {
+        "Na": 1,
+        "H": 1,
+        "C": 1,
+        "O": 3
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "KCl",
+      "zh": "氯化钾",
+      "en": "Potassium chloride",
+      "atoms": {
+        "K": 1,
+        "Cl": 1
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "HCl",
+      "zh": "氯化氢",
+      "en": "Hydrogen chloride",
+      "atoms": {
+        "H": 1,
+        "Cl": 1
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "H2SO4",
+      "zh": "硫酸",
+      "en": "Sulfuric acid",
+      "atoms": {
+        "H": 2,
+        "S": 1,
+        "O": 4
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "HNO3",
+      "zh": "硝酸",
+      "en": "Nitric acid",
+      "atoms": {
+        "H": 1,
+        "N": 1,
+        "O": 3
+      },
+      "level": "high"
+    },
+    {
+      "formula": "H3PO4",
+      "zh": "磷酸",
+      "en": "Phosphoric acid",
+      "atoms": {
+        "H": 3,
+        "P": 1,
+        "O": 4
+      },
+      "level": "high"
+    },
+    {
+      "formula": "H2CO3",
+      "zh": "碳酸",
+      "en": "Carbonic acid",
+      "atoms": {
+        "H": 2,
+        "C": 1,
+        "O": 3
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "NH3",
+      "zh": "氨",
+      "en": "Ammonia",
+      "atoms": {
+        "N": 1,
+        "H": 3
+      },
+      "level": "high"
+    },
+    {
+      "formula": "NaOH",
+      "zh": "氢氧化钠",
+      "en": "Sodium hydroxide",
+      "atoms": {
+        "Na": 1,
+        "O": 1,
+        "H": 1
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "KClO3",
+      "zh": "氯酸钾",
+      "en": "Potassium chlorate",
+      "atoms": {
+        "K": 1,
+        "Cl": 1,
+        "O": 3
+      },
+      "level": "high"
+    },
+    {
+      "formula": "Fe3O4",
+      "zh": "四氧化三铁",
+      "en": "Magnetite (iron(II,III) oxide)",
+      "atoms": {
+        "Fe": 3,
+        "O": 4
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "ZnSO4",
+      "zh": "硫酸锌",
+      "en": "Zinc sulfate",
+      "atoms": {
+        "Zn": 1,
+        "S": 1,
+        "O": 4
+      },
+      "level": "high"
+    },
+    {
+      "formula": "Ca(OH)2",
+      "zh": "氢氧化钙",
+      "en": "Calcium hydroxide",
+      "atoms": {
+        "Ca": 1,
+        "O": 2,
+        "H": 2
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "Mg(OH)2",
+      "zh": "氢氧化镁",
+      "en": "Magnesium hydroxide",
+      "atoms": {
+        "Mg": 1,
+        "O": 2,
+        "H": 2
+      },
+      "level": "high"
+    },
+    {
+      "formula": "CH4",
+      "zh": "甲烷",
+      "en": "Methane",
+      "atoms": {
+        "C": 1,
+        "H": 4
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "C2H5OH",
+      "zh": "乙醇",
+      "en": "Ethanol",
+      "atoms": {
+        "C": 2,
+        "H": 6,
+        "O": 1
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "C2H4",
+      "zh": "乙烯",
+      "en": "Ethene",
+      "atoms": {
+        "C": 2,
+        "H": 4
+      },
+      "level": "high"
+    },
+    {
+      "formula": "C2H2",
+      "zh": "乙炔",
+      "en": "Acetylene",
+      "atoms": {
+        "C": 2,
+        "H": 2
+      },
+      "level": "high"
+    },
+    {
+      "formula": "C6H12O6",
+      "zh": "葡萄糖",
+      "en": "Glucose",
+      "atoms": {
+        "C": 6,
+        "H": 12,
+        "O": 6
+      },
+      "level": "high"
+    },
+    {
+      "formula": "SO2",
+      "zh": "二氧化硫",
+      "en": "Sulfur dioxide",
+      "atoms": {
+        "S": 1,
+        "O": 2
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "NO2",
+      "zh": "二氧化氮",
+      "en": "Nitrogen dioxide",
+      "atoms": {
+        "N": 1,
+        "O": 2
+      },
+      "level": "high"
+    },
+    {
+      "formula": "CuSO4",
+      "zh": "硫酸铜",
+      "en": "Copper sulfate",
+      "atoms": {
+        "Cu": 1,
+        "S": 1,
+        "O": 4
+      },
+      "level": "junior"
+    },
+    {
+      "formula": "Fe2O3",
+      "zh": "氧化铁",
+      "en": "Iron(III) oxide",
+      "atoms": {
+        "Fe": 2,
+        "O": 3
+      },
+      "level": "junior"
+    }
   ],
   "changes": [
-    {"zh":"冰块融化","en":"Ice melting","type":"physical"},
-    {"zh":"铁钉生锈","en":"Iron rusting","type":"chemical"},
-    {"zh":"玻璃破碎","en":"Glass breaking","type":"physical"},
-    {"zh":"蜡烛燃烧","en":"A candle burning","type":"chemical"},
-    {"zh":"水沸腾","en":"Water boiling","type":"physical"},
-    {"zh":"苹果切开后变褐","en":"A cut apple turning brown","type":"chemical"}
+    {
+      "zh": "干冰升华",
+      "en": "Dry ice sublimation",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "只是二氧化碳由固态直接变成气态，物质本身的成分没有改变，没有生成新物质。",
+      "whyEn": "Only the state changes from solid carbon dioxide straight to gas; the substance itself is unchanged and no new substance forms."
+    },
+    {
+      "zh": "碘升华",
+      "en": "Iodine sublimation",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "紫色碘蒸气与固态碘是同一种物质，只是状态不同，没有新物质生成。",
+      "whyEn": "The violet iodine vapour and the solid iodine are the same substance in different states, so no new substance is formed."
+    },
+    {
+      "zh": "蔗糖溶解在水中",
+      "en": "Sugar dissolving in water",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "蔗糖分子只是分散到水中形成溶液，溶质和溶剂本身都没有变成新物质。",
+      "whyEn": "The sugar molecules merely disperse through the water to form a solution; neither solute nor solvent becomes a new substance."
+    },
+    {
+      "zh": "磁铁吸引铁钉",
+      "en": "A magnet attracting iron nails",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "只是铁钉的形状和位置发生改变，物质成分不变，没有新物质生成。",
+      "whyEn": "Only the position and shape of the nails change; the composition is unchanged and no new substance is formed."
+    },
+    {
+      "zh": "石蜡熔化",
+      "en": "Paraffin melting",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "固态石蜡受热变成液态，仍是石蜡，只是状态改变，没有新物质生成。",
+      "whyEn": "Solid paraffin becomes liquid on heating but it is still paraffin, only the state changes and no new substance appears."
+    },
+    {
+      "zh": "水蒸气在玻璃上凝结成水珠",
+      "en": "Water vapour condensing into droplets on glass",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "气态水变成液态水，水的成分没有改变，没有新物质生成。",
+      "whyEn": "Gaseous water becomes liquid water; the composition is unchanged and no new substance is formed."
+    },
+    {
+      "zh": "石油分馏",
+      "en": "Fractional distillation of petroleum",
+      "type": "physical",
+      "level": "high",
+      "whyZh": "分馏只是利用各组分的沸点不同分离出汽油、煤油等，分子本身没有被破坏，没有新物质生成。",
+      "whyEn": "Fractional distillation separates gasoline, kerosene and the like purely by boiling point; the molecules are not broken down and no new substance forms."
+    },
+    {
+      "zh": "石墨导电",
+      "en": "Graphite conducting electricity",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "石墨依靠层间可以自由移动的电子导电，导电前后都是石墨，没有新物质生成。",
+      "whyEn": "Graphite conducts through the mobile electrons between its layers; it is graphite before and after, so no new substance is produced."
+    },
+    {
+      "zh": "酒精挥发",
+      "en": "Alcohol evaporating",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "液态酒精变成酒精蒸气，仍是同一种物质，没有新物质生成。",
+      "whyEn": "Liquid alcohol becomes alcohol vapour, still the same substance, and no new substance is formed."
+    },
+    {
+      "zh": "食盐溶于水",
+      "en": "Table salt dissolving in water",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "氯化钠以离子形式均匀分散到水中，溶质仍是氯化钠，没有新物质生成。",
+      "whyEn": "Sodium chloride simply spreads through the water as ions; the solute remains sodium chloride and no new substance forms."
+    },
+    {
+      "zh": "铁丝弯折",
+      "en": "Bending an iron wire",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "只是铁丝的形状改变，物质的成分和性质都没有变，没有新物质生成。",
+      "whyEn": "Only the shape of the wire changes; its composition and properties do not, so no new substance is formed."
+    },
+    {
+      "zh": "纸被撕碎",
+      "en": "Paper being torn up",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "纸只是被分成了许多小块，成分没有改变，没有新物质生成。",
+      "whyEn": "The paper is merely broken into smaller pieces; its composition is unchanged and no new substance is formed."
+    },
+    {
+      "zh": "铜丝导电",
+      "en": "Copper wire conducting electricity",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "自由电子在铜中定向移动，导电前后都是铜，没有新物质生成。",
+      "whyEn": "Free electrons move directionally in the copper; it is copper before and after, so no new substance is produced."
+    },
+    {
+      "zh": "用蒸馏法得到蒸馏水",
+      "en": "Obtaining distilled water by distillation",
+      "type": "physical",
+      "level": "high",
+      "whyZh": "水蒸气冷凝后仍是水，只是把不挥发杂质留下了，没有生成新物质。",
+      "whyEn": "The vapour condenses back into water; only the non-volatile impurities are left behind, so no new substance is formed."
+    },
+    {
+      "zh": "食物腐败变质",
+      "en": "Food spoiling",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "食物在微生物作用下生成酸、酒精等新的物质，发生了化学变化。",
+      "whyEn": "Microbes convert the food into new substances such as acids and alcohol, so a chemical change has occurred."
+    },
+    {
+      "zh": "纸张燃烧",
+      "en": "Paper burning",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "纸中的纤维素与氧气反应生成二氧化碳和水等新物质，属于化学变化。",
+      "whyEn": "The cellulose in the paper reacts with oxygen to form new substances such as carbon dioxide and water, so a chemical change occurs."
+    },
+    {
+      "zh": "酒精灯燃烧",
+      "en": "An alcohol lamp burning",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "酒精与氧气反应生成二氧化碳和水，燃烧后生成了新物质。",
+      "whyEn": "The alcohol reacts with oxygen to give carbon dioxide and water, so burning produces new substances."
+    },
+    {
+      "zh": "碳酸饮料冒出气泡",
+      "en": "A carbonated drink fizzing",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "溶解的二氧化碳逸出形成气泡，同时碳酸分解生成水和二氧化碳，是化学变化。",
+      "whyEn": "Dissolved carbon dioxide escapes as bubbles as the carbonic acid decomposes into water and carbon dioxide, which is a chemical change."
+    },
+    {
+      "zh": "牛奶变酸",
+      "en": "Milk turning sour",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "乳酸菌把牛奶中的糖分解成乳酸，产生了新物质，属于化学变化。",
+      "whyEn": "Bacteria ferment the sugars of the milk into lactic acid, producing a new substance, so a chemical change occurs."
+    },
+    {
+      "zh": "切洋葱时流泪",
+      "en": "Tearing when cutting onions",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "洋葱被切开时细胞破裂生成含硫化合物并与眼睛里的水反应，生成新物质。",
+      "whyEn": "Cutting ruptures the onion cells so that sulfur compounds are released and react with the water in the eyes, producing new substances."
+    },
+    {
+      "zh": "绿色植物的光合作用",
+      "en": "Photosynthesis in green plants",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "二氧化碳和水在光照和叶绿素作用下生成葡萄糖和氧气，生成了新物质。",
+      "whyEn": "Carbon dioxide and water are converted into glucose and oxygen under light and chlorophyll, so new substances are formed."
+    },
+    {
+      "zh": "人体的呼吸作用",
+      "en": "Cellular respiration in the human body",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "葡萄糖在酶的作用下与氧气反应生成二氧化碳和水，同时释放能量，属于化学变化。",
+      "whyEn": "Glucose reacts with oxygen under enzymes to give carbon dioxide and water and release energy, which is a chemical change."
+    },
+    {
+      "zh": "铁与硫酸铜溶液反应",
+      "en": "Iron reacting with copper sulfate solution",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "铁把铜从硫酸铜中置换出来，生成硫酸亚铁和铜两种新物质。",
+      "whyEn": "Iron displaces copper from the copper sulfate solution, producing two new substances, iron(II) sulfate and copper."
+    },
+    {
+      "zh": "石灰水变浑浊",
+      "en": "Limewater turning cloudy",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "氢氧化钙与二氧化碳反应生成不溶于水的碳酸钙沉淀，出现了新物质。",
+      "whyEn": "Calcium hydroxide reacts with carbon dioxide to form insoluble calcium carbonate, so a new substance appears."
+    },
+    {
+      "zh": "铁与稀硫酸反应",
+      "en": "Iron reacting with dilute sulfuric acid",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "铁与稀硫酸反应生成硫酸亚铁和氢气，产生了新物质。",
+      "whyEn": "Iron reacts with dilute sulfuric acid to give iron(II) sulfate and hydrogen, so new substances are produced."
+    },
+    {
+      "zh": "煤燃烧",
+      "en": "Coal burning",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "煤中的碳与氧气反应生成二氧化碳并放热，是典型的化学变化。",
+      "whyEn": "The carbon in the coal reacts with oxygen to give carbon dioxide and heat, a typical chemical change."
+    },
+    {
+      "zh": "电解食盐水制氢气",
+      "en": "Electrolysis of brine to make hydrogen",
+      "type": "chemical",
+      "level": "high",
+      "whyZh": "电能促使氯化钠和水分解，生成氢气、氯气和氢氧化钠，生成了新物质。",
+      "whyEn": "Electricity drives the decomposition of the brine, giving hydrogen, chlorine and sodium hydroxide, so new substances are formed."
+    },
+    {
+      "zh": "铁丝在氧气中燃烧",
+      "en": "Iron wire burning in oxygen",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "铁与氧气反应生成四氧化三铁，燃烧前后物质种类不同，属于化学变化。",
+      "whyEn": "Iron reacts with oxygen to give magnetite; the substance before and after burning is different, so a chemical change occurs."
+    },
+    {
+      "zh": "冰块融化",
+      "en": "Ice melting",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "只是状态变了，固态的水变成液态的水，成分还是水，没有新物质生成。",
+      "whyEn": "Only the state changed: solid water became liquid water. No new substance was formed."
+    },
+    {
+      "zh": "铁钉生锈",
+      "en": "Iron rusting",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "铁与氧气、水反应生成了新的物质（铁锈），有新物质生成。",
+      "whyEn": "Iron reacted with oxygen and water to form a new substance (rust)."
+    },
+    {
+      "zh": "玻璃破碎",
+      "en": "Glass breaking",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "只是形状变了，玻璃的成分没有变，没有新物质生成。",
+      "whyEn": "Only the shape changed; the composition of the glass stayed the same."
+    },
+    {
+      "zh": "蜡烛燃烧",
+      "en": "A candle burning",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "石蜡燃烧生成了二氧化碳和水，都是新物质。",
+      "whyEn": "The wax burned and produced carbon dioxide and water, both new substances."
+    },
+    {
+      "zh": "水沸腾",
+      "en": "Water boiling",
+      "type": "physical",
+      "level": "junior",
+      "whyZh": "液态水变成水蒸气，只是状态变了，没有新物质生成。",
+      "whyEn": "Liquid water became vapour; only the state changed, no new substance was formed."
+    },
+    {
+      "zh": "苹果切开后变褐",
+      "en": "A cut apple turning brown",
+      "type": "chemical",
+      "level": "junior",
+      "whyZh": "果肉里的物质与空气中的氧气发生了反应，生成褐色的新物质。",
+      "whyEn": "Substances in the flesh reacted with oxygen from the air, forming a new brown substance."
+    }
   ],
   "balancedReactions": [
-    {"prompt":"H2 + O2 → H2O","answer":"2, 1, 2","choices":["2, 1, 2","1, 1, 1","2, 2, 2","1, 2, 1"]},
-    {"prompt":"N2 + H2 → NH3","answer":"1, 3, 2","choices":["1, 3, 2","1, 2, 1","2, 3, 2","1, 1, 3"]},
-    {"prompt":"Fe + O2 → Fe2O3","answer":"4, 3, 2","choices":["4, 3, 2","2, 1, 1","2, 3, 2","3, 2, 1"]},
-    {"prompt":"CH4 + O2 → CO2 + H2O","answer":"1, 2, 1, 2","choices":["1, 2, 1, 2","1, 1, 1, 1","2, 3, 2, 2","1, 3, 1, 1"]},
-    {"prompt":"Mg + O2 → MgO","answer":"2, 1, 2","choices":["2, 1, 2","1, 1, 1","2, 2, 1","1, 2, 2"]},
-    {"prompt":"Al + O2 → Al2O3","answer":"4, 3, 2","choices":["4, 3, 2","2, 3, 1","4, 2, 3","2, 1, 1"]},
-    {"prompt":"C3H8 + O2 → CO2 + H2O","answer":"1, 5, 3, 4","choices":["1, 5, 3, 4","1, 3, 3, 4","2, 5, 3, 4","1, 5, 4, 3"]},
-    {"prompt":"Fe2O3 + CO → Fe + CO2","answer":"1, 3, 2, 3","choices":["1, 3, 2, 3","1, 1, 2, 1","2, 3, 4, 3","1, 3, 1, 3"]}
+    {
+      "prompt": "H2 + O2 → H2O",
+      "answer": "2,1,2",
+      "level": "junior",
+      "zh": "氢气在氧气中燃烧",
+      "en": "Hydrogen burning in oxygen",
+      "whyZh": "氧原子个数必须为偶数，先把 H2O 的系数配成 2，氧原子随之有 2 个，O2 前也配 2，氢原子左右各 2 个，得 2∶1∶2。",
+      "whyEn": "Oxygen must come in an even count, so H2O takes 2; that needs 2 oxygen atoms, so O2 takes 2, and hydrogen is 2 on each side, giving 2:1:2."
+    },
+    {
+      "prompt": "C + O2 → CO2",
+      "answer": "1,1,1",
+      "level": "junior",
+      "zh": "碳在氧气中燃烧",
+      "en": "Carbon burning in oxygen",
+      "whyZh": "一个碳原子与两个氧原子结合成 CO2，左右各 1 个碳和 2 个氧已相等，系数全为 1。",
+      "whyEn": "One carbon atom combines with two oxygen atoms to give CO2, so both sides already carry 1 C and 2 O and every coefficient is 1."
+    },
+    {
+      "prompt": "CH4 + O2 → CO2 + H2O",
+      "answer": "1,2,1,2",
+      "level": "junior",
+      "zh": "甲烷燃烧",
+      "en": "Methane combustion",
+      "whyZh": "先由碳定出 CO2 为 1，再数出 4 个氢原子要配 2 个 H2O，共需 4 个氧原子，故 O2 系数为 2。",
+      "whyEn": "Carbon fixes CO2 at 1; the 4 hydrogen atoms then need 2 H2O, which together require 4 oxygen atoms, so O2 takes 2."
+    },
+    {
+      "prompt": "C2H5OH + O2 → CO2 + H2O",
+      "answer": "1,3,2,3",
+      "level": "junior",
+      "zh": "酒精燃烧",
+      "en": "Ethanol combustion",
+      "whyZh": "分子中有 2 个碳原子，故 CO2 配 2；有 6 个氢原子，故 H2O 配 3；右侧共 7 个氧原子，左侧酒精自带 1 个，故 O2 配 3。",
+      "whyEn": "The molecule holds 2 carbon atoms, so CO2 takes 2; its 6 hydrogen atoms make 3 H2O; the products then carry 7 oxygen atoms, one of which comes from ethanol, so O2 takes 3."
+    },
+    {
+      "prompt": "Fe + O2 → Fe3O4",
+      "answer": "3,2,1",
+      "level": "junior",
+      "zh": "铁在氧气中燃烧生成四氧化三铁",
+      "en": "Iron burning in oxygen to give magnetite",
+      "whyZh": "生成物含 3 个铁原子和 4 个氧原子，故 Fe 前配 3、O2 前配 2，正好提供 4 个氧原子。",
+      "whyEn": "The product holds 3 iron and 4 oxygen atoms, so Fe takes 3 and O2 takes 2, supplying exactly those 4 oxygen atoms."
+    },
+    {
+      "prompt": "Fe + CuSO4 → FeSO4 + Cu",
+      "answer": "1,1,1,1",
+      "level": "junior",
+      "zh": "铁与硫酸铜溶液反应（置换反应）",
+      "en": "Iron displacing copper from copper sulfate solution",
+      "whyZh": "铁原子逐个把铜离子替换出来，硫酸根离子原样转移，左右各 1 个铁、1 个铜、1 个硫酸根，系数全为 1。",
+      "whyEn": "Each iron atom displaces a copper ion while the sulfate ion is carried over unchanged, so 1 Fe, 1 Cu and 1 sulfate appear on each side and all coefficients are 1."
+    },
+    {
+      "prompt": "Fe + H2SO4 → FeSO4 + H2",
+      "answer": "1,1,1,1",
+      "level": "junior",
+      "zh": "铁与稀硫酸反应",
+      "en": "Iron reacting with dilute sulfuric acid",
+      "whyZh": "1 个铁原子把 2 个氢离子置换成 1 个氢分子，硫酸根留在铁上形成 FeSO4，系数均为 1。",
+      "whyEn": "One iron atom displaces two hydrogen ions to make one H2 molecule, while sulfate stays with iron as FeSO4, so all coefficients are 1."
+    },
+    {
+      "prompt": "Zn + H2SO4 → ZnSO4 + H2",
+      "answer": "1,1,1,1",
+      "level": "junior",
+      "zh": "锌与稀硫酸反应",
+      "en": "Zinc reacting with dilute sulfuric acid",
+      "whyZh": "锌显 +2 价，硫酸根显 −2 价按 1∶1 结合成 ZnSO4，2 个氢原子生成 1 个氢分子，系数均为 1。",
+      "whyEn": "Zinc is +2 and sulfate is −2, so they combine 1:1 as ZnSO4, and the two hydrogen atoms make one H2 molecule, giving all coefficients 1."
+    },
+    {
+      "prompt": "Mg + HCl → MgCl2 + H2",
+      "answer": "1,2,1,1",
+      "level": "junior",
+      "zh": "镁与稀盐酸反应",
+      "en": "Magnesium reacting with dilute hydrochloric acid",
+      "whyZh": "镁显 +2 价需要 2 个氯离子，故 HCl 配 2；2 个氢原子生成 1 个氢分子，H2 系数为 1。",
+      "whyEn": "Magnesium is +2 and needs two chloride ions, so HCl takes 2; the two hydrogen atoms give one H2 molecule, so H2 takes 1."
+    },
+    {
+      "prompt": "Fe + HCl → FeCl2 + H2",
+      "answer": "1,2,1,1",
+      "level": "junior",
+      "zh": "铁与稀盐酸反应",
+      "en": "Iron reacting with dilute hydrochloric acid",
+      "whyZh": "铁与盐酸只能生成 +2 价的 FeCl2，需要 2 个氯原子故 HCl 配 2，氢原子两边各 2 个，H2 系数为 1。",
+      "whyEn": "Iron with hydrochloric acid gives only +2 FeCl2, which needs two chlorine atoms, so HCl takes 2; hydrogen is 2 on each side and H2 takes 1."
+    },
+    {
+      "prompt": "Na + H2O → NaOH + H2",
+      "answer": "2,2,2,1",
+      "level": "junior",
+      "zh": "钠与水反应",
+      "en": "Sodium reacting with water",
+      "whyZh": "2 个钠原子生成 2 个 NaOH 共需 2 个氧原子，故 H2O 配 2；这 2 个水分子里的 4 个氢原子中有 2 个进入 NaOH，另 2 个生成 1 个氢分子。",
+      "whyEn": "Two sodium atoms need two oxygen atoms for 2 NaOH, so H2O takes 2; of their four hydrogen atoms two go into the NaOH and the other two form one H2 molecule."
+    },
+    {
+      "prompt": "CaO + H2O → Ca(OH)2",
+      "answer": "1,1,1",
+      "level": "junior",
+      "zh": "生石灰与水反应生成熟石灰",
+      "en": "Quicklime reacting with water to form slaked lime",
+      "whyZh": "氧化钙中 1 个钙原子、1 个氧原子加水后变成含 1 个钙、2 个氢氧根的 Ca(OH)2，系数均为 1。",
+      "whyEn": "The one calcium and one oxygen of CaO pick up water to give Ca(OH)2 with one calcium and two hydroxide groups, so all coefficients are 1."
+    },
+    {
+      "prompt": "Ca(OH)2 + CO2 → CaCO3 + H2O",
+      "answer": "1,1,1,1",
+      "level": "junior",
+      "zh": "二氧化碳使澄清石灰水变浑浊",
+      "en": "Carbon dioxide turning clear limewater cloudy",
+      "whyZh": "1 个 CO2 与 1 个 Ca(OH)2 结合成 1 个 CaCO3 沉淀并放出 1 个水分子，左右原子数相等，系数均为 1。",
+      "whyEn": "One CO2 combines with one Ca(OH)2 to give one CaCO3 precipitate and one water molecule, so the atom counts match with all coefficients 1."
+    },
+    {
+      "prompt": "CaCO3 + HCl → CaCl2 + CO2 + H2O",
+      "answer": "1,2,1,1,1",
+      "level": "junior",
+      "zh": "碳酸钙与盐酸反应",
+      "en": "Calcium carbonate reacting with hydrochloric acid",
+      "whyZh": "碳酸根要拆成 CO2 和水，1 个碳酸根含 1 个碳、3 个氧，生成 1 个 CO2 与 1 个水正好吻合；2 个氢原子需 2 个盐酸，氯原子进入 CaCl2。",
+      "whyEn": "The carbonate splits into CO2 and water: one carbonate carries 1 C and 3 O, which exactly fits one CO2 and one H2O; two hydrogen atoms need two HCl, and the chlorine goes into CaCl2."
+    },
+    {
+      "prompt": "CaCO3 → CaO + CO2",
+      "answer": "1,1,1",
+      "level": "junior",
+      "zh": "石灰石高温煅烧",
+      "en": "Limestone calcined at high temperature",
+      "whyZh": "高温下碳酸钙分解成氧化钙和二氧化碳，1 个 CaCO3 恰好给出 1 个 CaO 和 1 个 CO2，系数均为 1。",
+      "whyEn": "At high temperature calcium carbonate splits into calcium oxide and carbon dioxide, and one CaCO3 gives exactly one CaO and one CO2, so all coefficients are 1."
+    },
+    {
+      "prompt": "Na2CO3 + HCl → NaCl + H2O + CO2",
+      "answer": "1,2,2,1,1",
+      "level": "junior",
+      "zh": "碳酸钠与盐酸反应",
+      "en": "Sodium carbonate reacting with hydrochloric acid",
+      "whyZh": "碳酸根给出 1 个 CO2 和 1 个水，2 个钠原子需要 2 个氯离子，故生成 2 个 NaCl，同时用掉 2 个盐酸。",
+      "whyEn": "The carbonate gives 1 CO2 and 1 H2O, and the two sodium atoms need two chloride ions, so 2 NaCl form while 2 HCl are consumed."
+    },
+    {
+      "prompt": "NaOH + HCl → NaCl + H2O",
+      "answer": "1,1,1,1",
+      "level": "junior",
+      "zh": "氢氧化钠与盐酸的中和反应",
+      "en": "Neutralization of sodium hydroxide with hydrochloric acid",
+      "whyZh": "酸碱中和按等量氢离子与氢氧根结合，1 个 NaOH 的 1 个氢氧根与 1 个盐酸的 1 个氢离子生成 1 个水分子，系数均为 1。",
+      "whyEn": "In neutralization equal amounts of H+ and OH- combine, so one hydroxide from NaOH with one hydrogen ion from HCl makes one water molecule and all coefficients are 1."
+    },
+    {
+      "prompt": "Ca(OH)2 + HCl → CaCl2 + H2O",
+      "answer": "1,2,1,2",
+      "level": "junior",
+      "zh": "氢氧化钙与盐酸反应",
+      "en": "Calcium hydroxide reacting with hydrochloric acid",
+      "whyZh": "钙显 +2 价需要 2 个氯离子，故盐酸配 2；两个氢氧根各与一个氢离子结合生成 2 个水分子。",
+      "whyEn": "Calcium is +2 and needs two chloride ions, so HCl takes 2, and the two hydroxide groups each pair with one hydrogen ion to give two water molecules."
+    },
+    {
+      "prompt": "CO2 + H2O → H2CO3",
+      "answer": "1,1,1",
+      "level": "junior",
+      "zh": "二氧化碳与水反应生成碳酸",
+      "en": "Carbon dioxide reacting with water to form carbonic acid",
+      "whyZh": "1 个二氧化碳分子加 1 个水分子正好构成 1 个碳酸分子，左右原子数一一对应，系数均为 1。",
+      "whyEn": "One carbon dioxide molecule plus one water molecule makes exactly one carbonic acid molecule, atom for atom, so all coefficients are 1."
+    },
+    {
+      "prompt": "H2CO3 → CO2 + H2O",
+      "answer": "1,1,1",
+      "level": "junior",
+      "zh": "碳酸分解",
+      "en": "Decomposition of carbonic acid",
+      "whyZh": "1 个碳酸分子中 1 个碳原子与 3 个氧原子重新分配成 1 个二氧化碳分子和 1 个水分子，系数均为 1。",
+      "whyEn": "In one carbonic acid molecule the carbon and three oxygen atoms rearrange into one CO2 and one H2O, so all coefficients are 1."
+    },
+    {
+      "prompt": "H2O → H2 + O2",
+      "answer": "2,2,1",
+      "level": "junior",
+      "zh": "水的电解",
+      "en": "Electrolysis of water",
+      "whyZh": "氧原子个数必须为偶数，在 O2 前配 2，则需 4 个氧原子即 2 个水分子，这 2 个水分子共 4 个氢原子正好生成 2 个氢分子。",
+      "whyEn": "The oxygen count must be even, so O2 takes 2, which needs 4 oxygen atoms and hence 2 water molecules; their 4 hydrogen atoms give exactly 2 H2 molecules."
+    },
+    {
+      "prompt": "S + O2 → SO2",
+      "answer": "1,1,1",
+      "level": "junior",
+      "zh": "硫在氧气中燃烧",
+      "en": "Sulfur burning in oxygen",
+      "whyZh": "1 个硫原子与 2 个氧原子结合成 1 个二氧化硫分子，左右原子数相等，系数均为 1。",
+      "whyEn": "One sulfur atom combines with two oxygen atoms to give one sulfur dioxide molecule, the counts already match, and all coefficients are 1."
+    },
+    {
+      "prompt": "Mg + O2 → MgO",
+      "answer": "2,1,2",
+      "level": "junior",
+      "zh": "镁在氧气中燃烧",
+      "en": "Magnesium burning in oxygen",
+      "whyZh": "氧化镁中镁与氧为 1∶1，故镁前配 2 提供 2 个镁原子，氧气前也配 2 提供 2 个氧原子。",
+      "whyEn": "Magnesium and oxygen are 1:1 in MgO, so 2 Mg supply two magnesium atoms and 2 O2 supply the two oxygen atoms to match."
+    },
+    {
+      "prompt": "P + O2 → P2O5",
+      "answer": "4,5,2",
+      "level": "junior",
+      "zh": "红磷在氧气中燃烧",
+      "en": "Red phosphorus burning in oxygen",
+      "whyZh": "五氧化二磷分子中有 2 个磷原子和 5 个氧原子，故 P 前配 4、P2O5 前配 2，氧原子共 10 个要由 5 个 O2 提供。",
+      "whyEn": "A P2O5 molecule holds 2 phosphorus and 5 oxygen atoms, so P takes 4 and P2O5 takes 2; the 10 oxygen atoms must come from 5 O2."
+    },
+    {
+      "prompt": "KClO3 → KCl + O2",
+      "answer": "2,2,3",
+      "level": "high",
+      "zh": "氯酸钾受热分解制氧气",
+      "en": "Thermal decomposition of potassium chlorate to give oxygen",
+      "whyZh": "氯酸钾中钾与氯为 1∶1，故 KClO3 与 KCl 同为 2；剩下 6 个氧原子组成 3 个 O2。",
+      "whyEn": "Potassium and chlorine are 1:1 in the chlorate, so KClO3 and KCl both take 2; the six remaining oxygen atoms form 3 O2."
+    },
+    {
+      "prompt": "KMnO4 → K2MnO4 + MnO2 + O2",
+      "answer": "2,1,1,1",
+      "level": "high",
+      "zh": "高锰酸钾受热分解制氧气",
+      "en": "Thermal decomposition of potassium permanganate to give oxygen",
+      "whyZh": "先按钾原子把 KMnO4 与 K2MnO4 的系数配成 2 和 1，2 个锰原子一个进 K2MnO4、一个进 MnO2，8 个氧原子中余下的 2 个组成 1 个 O2。",
+      "whyEn": "Potassium fixes 2 KMnO4 against 1 K2MnO4; the two manganese atoms split between K2MnO4 and MnO2, and of the eight oxygen atoms the two left over form 1 O2."
+    },
+    {
+      "prompt": "H2O2 → H2O + O2",
+      "answer": "2,2,1",
+      "level": "high",
+      "zh": "过氧化氢分解",
+      "en": "Decomposition of hydrogen peroxide",
+      "whyZh": "过氧化氢中氢与氧为 1∶1，2 个 H2O2 含 4 个氢原子和 4 个氧原子，生成 2 个水分子后余 2 个氧原子组成 1 个 O2。",
+      "whyEn": "Hydrogen and oxygen are 1:1 in H2O2, so 2 H2O2 carry 4 H and 4 O; two water molecules use 2 O, leaving 2 O to form one O2."
+    },
+    {
+      "prompt": "AgNO3 + NaCl → AgCl + NaNO3",
+      "answer": "1,1,1,1",
+      "level": "high",
+      "zh": "硝酸银与氯化钠生成氯化银沉淀",
+      "en": "Silver nitrate with sodium chloride forming a silver chloride precipitate",
+      "whyZh": "银离子与氯离子按 1∶1 结合成 AgCl 沉淀，钠离子与硝酸根结合成 NaNO3，各元素左右守恒，系数均为 1。",
+      "whyEn": "Silver and chloride ions pair 1:1 as the AgCl precipitate while sodium pairs with nitrate as NaNO3; every element balances with all coefficients 1."
+    },
+    {
+      "prompt": "BaCl2 + Na2SO4 → BaSO4 + NaCl",
+      "answer": "1,1,1,2",
+      "level": "high",
+      "zh": "氯化钡与硫酸钠生成硫酸钡沉淀",
+      "en": "Barium chloride with sodium sulfate forming a barium sulfate precipitate",
+      "whyZh": "钡离子与硫酸根按 1∶1 生成 BaSO4 沉淀，2 个钠原子则需 2 个氯离子，故 NaCl 配 2。",
+      "whyEn": "Barium and sulfate pair 1:1 as the BaSO4 precipitate, and the two sodium atoms need two chloride ions, so NaCl takes 2."
+    },
+    {
+      "prompt": "Cu + AgNO3 → Cu(NO3)2 + Ag",
+      "answer": "1,2,1,2",
+      "level": "high",
+      "zh": "铜与硝酸银溶液反应",
+      "en": "Copper reacting with silver nitrate solution",
+      "whyZh": "铜显 +2 价，每个铜原子要配 2 个硝酸根，故 AgNO3 取 2；2 个银离子被置换出 2 个银原子。",
+      "whyEn": "Copper is +2 and each atom needs two nitrate ions, so AgNO3 takes 2, and the two silver ions are displaced as two silver atoms."
+    },
+    {
+      "prompt": "Na + Cl2 → NaCl",
+      "answer": "2,1,2",
+      "level": "high",
+      "zh": "钠在氯气中燃烧",
+      "en": "Sodium burning in chlorine",
+      "whyZh": "钠显 +1 价、氯显 −1 价按 1∶1 结合，故 Na 与 Cl2 前都配 2，生成 2 个 NaCl。",
+      "whyEn": "Sodium is +1 and chlorine is −1, so they combine 1:1; Na and Cl2 both take 2 and 2 NaCl form."
+    },
+    {
+      "prompt": "C2H4 + O2 → CO2 + H2O",
+      "answer": "1,3,2,2",
+      "level": "high",
+      "zh": "乙烯燃烧",
+      "en": "Combustion of ethene",
+      "whyZh": "乙烯含 2 个碳原子，故 CO2 配 2；含 4 个氢原子，故 H2O 配 2；生成物共 6 个氧原子，乙烯自带 1 个，O2 配 3。",
+      "whyEn": "Ethene has 2 carbon atoms, so CO2 takes 2, and 4 hydrogen atoms, so H2O takes 2; the products carry 6 oxygen atoms and ethene supplies 1, so O2 takes 3."
+    },
+    {
+      "prompt": "C2H2 + O2 → CO2 + H2O",
+      "answer": "2,5,4,2",
+      "level": "high",
+      "zh": "乙炔燃烧",
+      "en": "Combustion of acetylene",
+      "whyZh": "先把碳原子配平：2 个 C2H2 含 4 个碳原子，故 CO2 配 4；再由 4 个氢原子得 H2O 配 2，共需 10 个氧原子，扣除生成物自带 2 个还差 8 个，故 O2 配 5。",
+      "whyEn": "Balance carbon first: 2 C2H2 hold 4 carbon atoms, so CO2 takes 4; the 4 hydrogen atoms then give 2 H2O; the products need 10 oxygen atoms and already carry 2, leaving 8 to be supplied by 5 O2."
+    },
+    {
+      "prompt": "Al + O2 → Al2O3",
+      "answer": "4,3,2",
+      "level": "high",
+      "zh": "铝在氧气中燃烧生成氧化铝",
+      "en": "Aluminium burning in oxygen to give aluminium oxide",
+      "whyZh": "氧化铝中铝与氧为 2∶3，故 Al 前配 4 提供 4 个铝原子，O2 前配 3 提供 6 个氧原子。",
+      "whyEn": "Aluminium and oxygen are 2:3 in Al2O3, so Al takes 4 to supply four aluminium atoms and O2 takes 3 to supply six oxygen atoms."
+    },
+    {
+      "prompt": "NH3 + HCl → NH4Cl",
+      "answer": "1,1,1",
+      "level": "high",
+      "zh": "氨与氯化氢反应生成氯化铵",
+      "en": "Ammonia reacting with hydrogen chloride to give ammonium chloride",
+      "whyZh": "氨分子上的 1 个氮原子连同 3 个氢原子与 1 个氯化氢结合成 1 个氯化铵分子，左右原子数相等，系数均为 1。",
+      "whyEn": "The nitrogen of one ammonia molecule takes the three hydrogens plus the HCl to give one ammonium chloride, the counts already match and all coefficients are 1."
+    },
+    {
+      "prompt": "NH3 + O2 → NO + H2O",
+      "answer": "4,5,4,6",
+      "level": "high",
+      "zh": "氨的催化氧化",
+      "en": "Catalytic oxidation of ammonia",
+      "whyZh": "先由氮定出 4 个 NH3 与 4 个 NO，氨共 12 个氢原子故 H2O 配 6，生成物共 10 个氧原子，氨中无氧，故 O2 配 5。",
+      "whyEn": "Nitrogen fixes 4 NH3 and 4 NO; the twelve hydrogen atoms then give 6 H2O; the products carry 10 oxygen atoms and ammonia has none, so O2 takes 5."
+    },
+    {
+      "prompt": "NO + O2 → NO2",
+      "answer": "2,1,2",
+      "level": "high",
+      "zh": "一氧化氮被氧化成二氧化氮",
+      "en": "Oxidation of nitric oxide to nitrogen dioxide",
+      "whyZh": "一氧化氮中氮显 +2 价，生成 +4 价的二氧化氮，每个氮原子需再得 1 个氧原子，故 2 个 NO 配 1 个 O2。",
+      "whyEn": "Nitrogen goes from +2 in NO to +4 in NO2, needing one extra oxygen atom each, so 2 NO take 1 O2."
+    },
+    {
+      "prompt": "NO2 + H2O → HNO3 + NO",
+      "answer": "3,1,2,1",
+      "level": "high",
+      "zh": "二氧化氮与水反应",
+      "en": "Nitrogen dioxide reacting with water",
+      "whyZh": "由氮原子守恒，3 个 NO2 的 3 个氮原子分成 2 个硝酸和 1 个一氧化氮；氧原子左侧 3×2+1=7 个，右侧 2×3+1=7 个，氢原子 2 个也守恒。",
+      "whyEn": "Nitrogen balance splits the three N of 3 NO2 into 2 HNO3 and 1 NO; oxygen counts 3×2+1=7 on the left and 2×3+1=7 on the right, and the 2 hydrogen atoms balance too."
+    },
+    {
+      "prompt": "SO3 + H2O → H2SO4",
+      "answer": "1,1,1",
+      "level": "high",
+      "zh": "三氧化硫与水反应生成硫酸",
+      "en": "Sulfur trioxide reacting with water to give sulfuric acid",
+      "whyZh": "1 个三氧化硫分子加 1 个水分子恰好得到 1 个硫酸分子，左右各 1 个硫、4 个氧、2 个氢，系数均为 1。",
+      "whyEn": "One SO3 molecule plus one H2O molecule gives exactly one H2SO4, with 1 S, 4 O and 2 H on both sides, so all coefficients are 1."
+    },
+    {
+      "prompt": "Fe2O3 + CO → Fe + CO2",
+      "answer": "1,3,2,3",
+      "level": "high",
+      "zh": "一氧化碳还原氧化铁炼铁",
+      "en": "Carbon monoxide reducing iron oxide to make iron",
+      "whyZh": "氧化铁中 2 个铁原子被还原成 2 个铁原子，故 Fe2O3 与 Fe 系数相同取 1；3 个氧原子与 3 个一氧化碳结合生成 3 个二氧化碳。",
+      "whyEn": "The two iron atoms of Fe2O3 become two iron atoms, so Fe2O3 and Fe both take 1; the three oxygen atoms join three CO molecules to give three CO2."
+    },
+    {
+      "prompt": "Fe2O3 + HCl → FeCl3 + H2O",
+      "answer": "1,6,2,3",
+      "level": "high",
+      "zh": "氧化铁与盐酸反应",
+      "en": "Iron oxide reacting with hydrochloric acid",
+      "whyZh": "铁显 +3 价，2 个铁原子需 6 个氯离子，故盐酸配 6；6 个氢原子与氧化铁中的 3 个氧原子生成 3 个水分子。",
+      "whyEn": "Iron is +3, so the two iron atoms need six chloride ions and HCl takes 6; the six hydrogen atoms and the three oxygen atoms then form three water molecules."
+    },
+    {
+      "prompt": "CH3COOH + NaOH → CH3COONa + H2O",
+      "answer": "1,1,1,1",
+      "level": "high",
+      "zh": "乙酸与氢氧化钠的中和反应",
+      "en": "Neutralization of acetic acid with sodium hydroxide",
+      "whyZh": "乙酸给出 1 个氢离子与氢氧化钠的 1 个氢氧根结合成 1 个水分子，剩余的醋酸根与钠离子构成醋酸钠，系数均为 1。",
+      "whyEn": "Acetic acid gives one hydrogen ion that pairs with one hydroxide to form one water molecule, and the remaining acetate pairs with sodium as the acetate salt, so all coefficients are 1."
+    },
+    {
+      "prompt": "NH4Cl + NaOH → NaCl + NH3 + H2O",
+      "answer": "1,1,1,1,1",
+      "level": "high",
+      "zh": "铵盐与碱反应放出氨气",
+      "en": "An ammonium salt reacting with a base to release ammonia",
+      "whyZh": "铵根中的 4 个氢原子与 1 个氢氧根结合生成 1 个氨分子和 1 个水分子，钠离子与氯离子结合成 NaCl，系数均为 1。",
+      "whyEn": "The four hydrogens of the ammonium ion combine with one hydroxide to give one ammonia and one water molecule, while sodium pairs with chloride as NaCl, so all coefficients are 1."
+    },
+    {
+      "prompt": "Cu + H2SO4 → CuSO4 + SO2 + H2O",
+      "answer": "1,2,1,1,2",
+      "level": "high",
+      "zh": "铜与浓硫酸反应",
+      "en": "Copper reacting with concentrated sulfuric acid",
+      "whyZh": "铜被氧化成 +2 价需配 1 个硫酸根，1 个硫酸分子中其余的硫被还原成二氧化硫，同时 2 个硫酸提供 4 个氧原子与 2 个铜反应生成 2 个水分子。",
+      "whyEn": "Copper is oxidised to +2 and needs one sulfate, while the sulfur of the other sulfuric acid is reduced to SO2; the two sulfuric acids supply four oxygen atoms that make two water molecules."
+    },
+    {
+      "prompt": "N2 + H2 → NH3",
+      "answer": "1, 3, 2",
+      "level": "high",
+      "zh": "氮气和氢气合成氨",
+      "en": "Nitrogen and hydrogen combining to form ammonia",
+      "whyZh": "配平后左边每个原子有 1 个，右边也是；系数要取最简整数比。",
+      "whyEn": "After balancing, both sides carry the same number of each atom; the coefficients must be the smallest whole numbers."
+    },
+    {
+      "prompt": "Fe + O2 → Fe2O3",
+      "answer": "4, 3, 2",
+      "level": "junior",
+      "zh": "铁在氧气中燃烧生成氧化铁",
+      "en": "Iron burning in oxygen to form iron(III) oxide",
+      "whyZh": "配平后左边每个原子有 4 个，右边也是；系数要取最简整数比。",
+      "whyEn": "After balancing, both sides carry the same number of each atom; the coefficients must be the smallest whole numbers."
+    },
+    {
+      "prompt": "C3H8 + O2 → CO2 + H2O",
+      "answer": "1, 5, 3, 4",
+      "level": "high",
+      "zh": "丙烷完全燃烧",
+      "en": "Complete combustion of propane",
+      "whyZh": "配平后左边每个原子有 1 个，右边也是；系数要取最简整数比。",
+      "whyEn": "After balancing, both sides carry the same number of each atom; the coefficients must be the smallest whole numbers."
+    }
+  ],
+  "phSubstances": [
+    {
+      "zh": "胃液",
+      "en": "Gastric juice",
+      "ph": 2.0,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "胃液里含有盐酸，浓度大约是 0.01～0.1 mol/L，所以 pH 只有 2 左右；胃酸的强酸性正是它能帮助消化蛋白质的原因。",
+      "whyEn": "Gastric juice contains hydrochloric acid at roughly 0.01–0.1 mol/L, which is why its pH is around 2; that strong acidity helps digest proteins."
+    },
+    {
+      "zh": "柠檬汁",
+      "en": "Lemon juice",
+      "ph": 2.0,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "柠檬汁里的柠檬酸等有机酸让它显酸性，pH 大约是 2；有机酸是弱酸，所以比同样 pH 的盐酸温和。",
+      "whyEn": "Organic acids such as citric acid make lemon juice acidic at about pH 2; being weak acids they are far milder than hydrochloric acid at the same pH."
+    },
+    {
+      "zh": "食醋",
+      "en": "Vinegar",
+      "ph": 2.9,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "食醋的主要成分是醋酸，稀释后 pH 约 3，酸性比柠檬汁弱一点。",
+      "whyEn": "Vinegar is mostly acetic acid; diluted it has a pH around 3, a little less acidic than lemon juice."
+    },
+    {
+      "zh": "碳酸饮料",
+      "en": "Carbonated soft drink",
+      "ph": 3.5,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "饮料里溶解的二氧化碳与水反应生成碳酸，所以显弱酸性，pH 约 3～4。",
+      "whyEn": "The carbon dioxide dissolved in the drink forms carbonic acid, so it is mildly acidic at pH 3–4."
+    },
+    {
+      "zh": "番茄汁",
+      "en": "Tomato juice",
+      "ph": 4.0,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "番茄含有柠檬酸、苹果酸等有机酸，所以 pH 略低于 7。",
+      "whyEn": "Tomatoes contain citric and malic acids, which is why their juice sits just below neutral."
+    },
+    {
+      "zh": "苹果汁",
+      "en": "Apple juice",
+      "ph": 3.5,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "苹果里的苹果酸让果汁显酸性，pH 约 3～4。",
+      "whyEn": "Malic acid in apples makes the juice acidic, around pH 3–4."
+    },
+    {
+      "zh": "橙汁",
+      "en": "Orange juice",
+      "ph": 3.5,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "橙汁以柠檬酸为主，pH 和柠檬汁接近，约 3～4。",
+      "whyEn": "Citric acid dominates orange juice, giving it a pH close to lemon juice, around 3–4."
+    },
+    {
+      "zh": "雨水（正常）",
+      "en": "Rainwater (unpolluted)",
+      "ph": 5.6,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "雨水溶解了空气中的二氧化碳生成碳酸，所以正常雨水是弱酸性的，pH 约 5.6。",
+      "whyEn": "Rainwater dissolves carbon dioxide from the air, which forms carbonic acid; unpolluted rain is therefore weakly acidic at about pH 5.6."
+    },
+    {
+      "zh": "汗液",
+      "en": "Sweat",
+      "ph": 4.5,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "汗液里含有乳酸等代谢产物，所以略带酸性，pH 约 4～5。",
+      "whyEn": "Sweat contains metabolic products such as lactic acid, so it is mildly acidic at around pH 4–5."
+    },
+    {
+      "zh": "牛奶",
+      "en": "Milk",
+      "ph": 6.6,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "牛奶接近中性但略偏酸，pH 约 6.5～6.7；其中酪蛋白分解产生的乳酸让它偏酸。",
+      "whyEn": "Milk is close to neutral but slightly acidic, pH 6.5–6.7; lactic acid from broken-down casein makes the difference."
+    },
+    {
+      "zh": "纯水",
+      "en": "Pure water",
+      "ph": 7.0,
+      "kind": "neutral",
+      "level": "junior",
+      "whyZh": "25 ℃ 的纯水 pH 恰好是 7，因为水会微弱电离出等量的氢离子和氢氧根离子。",
+      "whyEn": "Pure water at 25 °C has a pH of exactly 7, because water ionises very slightly into equal amounts of hydrogen and hydroxide ions."
+    },
+    {
+      "zh": "自来水",
+      "en": "Tap water",
+      "ph": 7.5,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "自来水经过消毒并含有少量矿物质，通常呈弱碱性，pH 约 7～8.5。",
+      "whyEn": "Tap water is disinfected and carries dissolved minerals, so it is usually mildly basic at pH 7–8.5."
+    },
+    {
+      "zh": "矿泉水",
+      "en": "Mineral water",
+      "ph": 7.5,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "矿泉水溶有多种矿物质，多数呈弱碱性，pH 约 7～8.5。",
+      "whyEn": "Mineral water carries a range of dissolved minerals, most kinds mildly basic at pH 7–8.5."
+    },
+    {
+      "zh": "人体血液",
+      "en": "Human blood",
+      "ph": 7.4,
+      "kind": "base",
+      "level": "high",
+      "whyZh": "血液靠碳酸氢盐缓冲体系把 pH 稳定在 7.35～7.45，略偏碱性。",
+      "whyEn": "A bicarbonate buffer keeps blood pH between 7.35 and 7.45, slightly on the basic side."
+    },
+    {
+      "zh": "海水",
+      "en": "Seawater",
+      "ph": 8.1,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "海水中碳酸盐类含量较高，平均 pH 约 8.1，呈弱碱性。",
+      "whyEn": "Seawater holds substantial carbonate, averaging about pH 8.1 — mildly basic."
+    },
+    {
+      "zh": "小苏打水",
+      "en": "Baking soda water",
+      "ph": 8.3,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "小苏打是碳酸氢钠，它在水中水解出氢氧根离子，所以溶液显弱碱性。",
+      "whyEn": "Baking soda is sodium hydrogencarbonate, which hydrolyses in water to give hydroxide ions, so the solution is mildly basic."
+    },
+    {
+      "zh": "肥皂水",
+      "en": "Soapy water",
+      "ph": 9.5,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "肥皂是高级脂肪酸盐，在水中水解使溶液显碱性，pH 通常在 9～10。",
+      "whyEn": "Soap is a fatty acid salt; it hydrolyses in water, making the solution basic at roughly pH 9–10."
+    },
+    {
+      "zh": "草木灰水",
+      "en": "Plant ash water",
+      "ph": 10.5,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "草木灰含碳酸钾等碱性成分，溶于水后溶液显碱性。",
+      "whyEn": "Plant ash contains basic salts such as potassium carbonate, so its water extract is alkaline."
+    },
+    {
+      "zh": "家用氨水",
+      "en": "Household ammonia solution",
+      "ph": 11.5,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "氨水是氨的水溶液，氨与水反应生成氢氧根离子，pH 约 11。",
+      "whyEn": "Household ammonia is ammonia dissolved in water; ammonia reacts with water to give hydroxide ions, giving a pH near 11."
+    },
+    {
+      "zh": "澄清石灰水",
+      "en": "Clear limewater",
+      "ph": 12.4,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "澄清石灰水是氢氧化钙的饱和溶液，虽然氢氧化钙微溶，但溶液显强碱性，pH 约 12。",
+      "whyEn": "Clear limewater is a saturated calcium hydroxide solution. Calcium hydroxide is only slightly soluble, yet the solution is clearly basic at about pH 12."
+    },
+    {
+      "zh": "氢氧化钠溶液",
+      "en": "Sodium hydroxide solution",
+      "ph": 13.0,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "氢氧化钠是强碱，在水中完全电离出氢氧根离子，pH 可达 13。",
+      "whyEn": "Sodium hydroxide is a strong base and ionises completely to give hydroxide ions, reaching pH 13."
+    },
+    {
+      "zh": "稀盐酸",
+      "en": "Dilute hydrochloric acid",
+      "ph": 1.0,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "盐酸是强酸，在水中完全电离出氢离子，所以 pH 很低。",
+      "whyEn": "Hydrochloric acid is a strong acid and ionises completely to give hydrogen ions, so its pH is very low."
+    },
+    {
+      "zh": "稀硫酸",
+      "en": "Dilute sulfuric acid",
+      "ph": 1.0,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "硫酸是强酸，稀释后同样完全电离，pH 与同浓度的盐酸接近。",
+      "whyEn": "Sulfuric acid is a strong acid; diluted it still ionises completely, so its pH matches hydrochloric acid of the same concentration."
+    },
+    {
+      "zh": "碱石灰",
+      "en": "Soda lime",
+      "ph": 12.0,
+      "kind": "base",
+      "level": "high",
+      "whyZh": "碱石灰是氧化钙与氢氧化钠的混合物，两者都能与水反应生成碱，所以显强碱性。",
+      "whyEn": "Soda lime is a mixture of calcium oxide and sodium hydroxide; both react with water to form a base, so it is strongly alkaline."
+    },
+    {
+      "zh": "碳酸钠溶液",
+      "en": "Sodium carbonate solution",
+      "ph": 11.5,
+      "kind": "base",
+      "level": "high",
+      "whyZh": "碳酸钠是盐，但碳酸根会水解产生氢氧根离子，所以水溶液显碱性，pH 约 11。",
+      "whyEn": "Sodium carbonate is a salt, yet the carbonate ion hydrolyses to give hydroxide ions, so the solution is basic at about pH 11."
+    },
+    {
+      "zh": "酸雨",
+      "en": "Acid rain",
+      "ph": 4.5,
+      "kind": "acid",
+      "level": "junior",
+      "whyZh": "酸雨里溶了更多的二氧化硫和氮氧化物，形成的酸比正常雨水强，pH 小于 5.6。",
+      "whyEn": "Acid rain carries more dissolved sulfur dioxide and nitrogen oxides, making it more strongly acidic than clean rain, with a pH below 5.6."
+    },
+    {
+      "zh": "小苏打溶液",
+      "en": "Baking-soda solution",
+      "ph": 8.3,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "碳酸氢钠在水中水解，溶液显弱碱性，pH 约 8～9。",
+      "whyEn": "Sodium hydrogencarbonate hydrolyses in water, so the solution is mildly basic at pH 8–9."
+    },
+    {
+      "zh": "家用漂白水",
+      "en": "Household bleach",
+      "ph": 12.5,
+      "kind": "base",
+      "level": "junior",
+      "whyZh": "家用漂白水的主要成分是次氯酸钠，溶液显强碱性，pH 约 12～13；所以它绝不能和洁厕灵混用。",
+      "whyEn": "Household bleach is mostly sodium hypochlorite and is strongly alkaline, pH 12–13, which is why it must never be mixed with toilet cleaner."
+    }
   ],
   "phQuestions": [
-    {"zh":"0.1 mol/L 盐酸","en":"0.1 mol/L hydrochloric acid","kind":"acid","molarity":0.1,"answer":1},
-    {"zh":"0.01 mol/L 盐酸","en":"0.01 mol/L hydrochloric acid","kind":"acid","molarity":0.01,"answer":2},
-    {"zh":"0.001 mol/L 盐酸","en":"0.001 mol/L hydrochloric acid","kind":"acid","molarity":0.001,"answer":3},
-    {"zh":"0.0001 mol/L 盐酸","en":"0.0001 mol/L hydrochloric acid","kind":"acid","molarity":0.0001,"answer":4},
-    {"zh":"0.1 mol/L 氢氧化钠溶液","en":"0.1 mol/L sodium hydroxide solution","kind":"base","molarity":0.1,"answer":13},
-    {"zh":"0.01 mol/L 氢氧化钠溶液","en":"0.01 mol/L sodium hydroxide solution","kind":"base","molarity":0.01,"answer":12},
-    {"zh":"0.001 mol/L 氢氧化钠溶液","en":"0.001 mol/L sodium hydroxide solution","kind":"base","molarity":0.001,"answer":11}
+    {
+      "zh": "0.1 mol/L 盐酸",
+      "en": "0.1 mol/L hydrochloric acid",
+      "kind": "acid",
+      "molarity": 0.1,
+      "answer": 1
+    },
+    {
+      "zh": "0.01 mol/L 盐酸",
+      "en": "0.01 mol/L hydrochloric acid",
+      "kind": "acid",
+      "molarity": 0.01,
+      "answer": 2
+    },
+    {
+      "zh": "0.001 mol/L 盐酸",
+      "en": "0.001 mol/L hydrochloric acid",
+      "kind": "acid",
+      "molarity": 0.001,
+      "answer": 3
+    },
+    {
+      "zh": "0.0001 mol/L 盐酸",
+      "en": "0.0001 mol/L hydrochloric acid",
+      "kind": "acid",
+      "molarity": 0.0001,
+      "answer": 4
+    },
+    {
+      "zh": "0.1 mol/L 氢氧化钠溶液",
+      "en": "0.1 mol/L sodium hydroxide solution",
+      "kind": "base",
+      "molarity": 0.1,
+      "answer": 13
+    },
+    {
+      "zh": "0.01 mol/L 氢氧化钠溶液",
+      "en": "0.01 mol/L sodium hydroxide solution",
+      "kind": "base",
+      "molarity": 0.01,
+      "answer": 12
+    },
+    {
+      "zh": "0.001 mol/L 氢氧化钠溶液",
+      "en": "0.001 mol/L sodium hydroxide solution",
+      "kind": "base",
+      "molarity": 0.001,
+      "answer": 11
+    }
   ],
   "wrongFormulas": [
-    {"zh":"氯化钠","en":"Sodium chloride","wrong":"NaCl2","right":"NaCl","whyZh":"钠显 +1 价、氯显 −1 价，按 1∶1 结合，应写作 NaCl。","whyEn":"Na is +1 and Cl is −1, so they combine 1:1: NaCl."},
-    {"zh":"氯化钙","en":"Calcium chloride","wrong":"CaCl","right":"CaCl2","whyZh":"钙显 +2 价、氯显 −1 价，按 1∶2 结合，应写作 CaCl2。","whyEn":"Ca is +2 and Cl is −1, so they combine 1:2: CaCl2."},
-    {"zh":"氯化镁","en":"Magnesium chloride","wrong":"MgCl","right":"MgCl2","whyZh":"镁显 +2 价、氯显 −1 价，按 1∶2 结合，应写作 MgCl2。","whyEn":"Mg is +2 and Cl is −1, so they combine 1:2: MgCl2."},
-    {"zh":"氧化钠","en":"Sodium oxide","wrong":"NaO","right":"Na2O","whyZh":"钠显 +1 价、氧显 −2 价，按 2∶1 结合，应写作 Na2O。","whyEn":"Na is +1 and O is −2, so they combine 2:1: Na2O."},
-    {"zh":"氧化铝","en":"Aluminium oxide","wrong":"Al3O2","right":"Al2O3","whyZh":"铝显 +3 价、氧显 −2 价，按 2∶3 结合，应写作 Al2O3。","whyEn":"Al is +3 and O is −2, so they combine 2:3: Al2O3."},
-    {"zh":"氧化铁","en":"Iron(III) oxide","wrong":"FeO3","right":"Fe2O3","whyZh":"铁显 +3 价、氧显 −2 价，按 2∶3 结合，应写作 Fe2O3。","whyEn":"Fe is +3 and O is −2, so they combine 2:3: Fe2O3."},
-    {"zh":"碳酸钙","en":"Calcium carbonate","wrong":"CaCO2","right":"CaCO3","whyZh":"碳酸根是 CO3（−2 价），与 +2 价的钙按 1∶1 结合，应写作 CaCO3。","whyEn":"Carbonate is CO3 (−2), which pairs 1:1 with Ca (+2): CaCO3."},
-    {"zh":"氧化镁","en":"Magnesium oxide","wrong":"Mg2O","right":"MgO","whyZh":"镁显 +2 价、氧显 −2 价，按 1∶1 结合，应写作 MgO。","whyEn":"Mg is +2 and O is −2, so they combine 1:1: MgO."}
-  ],
-  "phScale": [
-    {"zh":"胃液","en":"Gastric juice","ph":1.5},
-    {"zh":"柠檬汁","en":"Lemon juice","ph":2.4},
-    {"zh":"酸雨","en":"Acid rain","ph":4.5},
-    {"zh":"纯水","en":"Pure water","ph":7},
-    {"zh":"小苏打溶液","en":"Baking-soda solution","ph":8.3},
-    {"zh":"肥皂水","en":"Soapy water","ph":10},
-    {"zh":"家用氨水","en":"Household ammonia","ph":11.5},
-    {"zh":"家用漂白水","en":"Household bleach","ph":12.5}
+    {
+      "zh": "氯化钠",
+      "en": "Sodium chloride",
+      "wrong": "NaCl2",
+      "right": "NaCl",
+      "whyZh": "钠显 +1 价、氯显 −1 价，按 1∶1 结合即可中和，写成 NaCl2 就多了一个氯原子。",
+      "whyEn": "Sodium is +1 and chlorine is −1, so they combine 1:1; writing NaCl2 adds one chlorine atom too many."
+    },
+    {
+      "zh": "氯化钙",
+      "en": "Calcium chloride",
+      "wrong": "CaCl",
+      "right": "CaCl2",
+      "whyZh": "钙显 +2 价、氯显 −1 价，需要两个氯离子才能配平电荷，正确式子是 CaCl2。",
+      "whyEn": "Calcium is +2 and chlorine is −1, so two chloride ions are needed to balance the charge; the correct formula is CaCl2."
+    },
+    {
+      "zh": "氯化钡",
+      "en": "Barium chloride",
+      "wrong": "BaCl",
+      "right": "BaCl2",
+      "whyZh": "钡显 +2 价、氯显 −1 价，两个氯离子才能与一个钡离子配平，正确式子是 BaCl2。",
+      "whyEn": "Barium is +2 and chlorine is −1, so two chloride ions balance one barium ion; the correct formula is BaCl2."
+    },
+    {
+      "zh": "氯化银",
+      "en": "Silver chloride",
+      "wrong": "AgCl2",
+      "right": "AgCl",
+      "whyZh": "银显 +1 价、氯显 −1 价，按 1∶1 结合，正确式子是 AgCl。",
+      "whyEn": "Silver is +1 and chlorine is −1 and pair 1:1, so the correct formula is AgCl."
+    },
+    {
+      "zh": "氯化铵",
+      "en": "Ammonium chloride",
+      "wrong": "NH4Cl2",
+      "right": "NH4Cl",
+      "whyZh": "铵根显 +1 价、氯显 −1 价，按 1∶1 结合，正确式子是 NH4Cl。",
+      "whyEn": "The ammonium ion is +1 and chloride is −1, pairing 1:1, so the correct formula is NH4Cl."
+    },
+    {
+      "zh": "氧化镁",
+      "en": "Magnesium oxide",
+      "wrong": "MgO2",
+      "right": "MgO",
+      "whyZh": "镁显 +2 价、氧显 −2 价，按 1∶1 结合，正确式子是 MgO。",
+      "whyEn": "Magnesium is +2 and oxygen is −2, combining 1:1, so the correct formula is MgO."
+    },
+    {
+      "zh": "氢氧化钠",
+      "en": "Sodium hydroxide",
+      "wrong": "Na(OH)2",
+      "right": "NaOH",
+      "whyZh": "钠显 +1 价、氢氧根显 −1 价，按 1∶1 结合，正确式子是 NaOH。",
+      "whyEn": "Sodium is +1 and the hydroxide group is −1, pairing 1:1, so the correct formula is NaOH."
+    },
+    {
+      "zh": "氢氧化钙",
+      "en": "Calcium hydroxide",
+      "wrong": "Ca(OH)",
+      "right": "Ca(OH)2",
+      "whyZh": "钙显 +2 价、氢氧根显 −1 价，需要两个氢氧根才能配平，正确式子是 Ca(OH)2。",
+      "whyEn": "Calcium is +2 and the hydroxide group is −1, so two hydroxide groups are needed; the correct formula is Ca(OH)2."
+    },
+    {
+      "zh": "氢氧化铝",
+      "en": "Aluminium hydroxide",
+      "wrong": "Al(OH)",
+      "right": "Al(OH)3",
+      "whyZh": "铝显 +3 价、氢氧根显 −1 价，需要三个氢氧根才能配平，正确式子是 Al(OH)3。",
+      "whyEn": "Aluminium is +3 and hydroxide is −1, so three hydroxide groups are needed; the correct formula is Al(OH)3."
+    },
+    {
+      "zh": "碳酸钙",
+      "en": "Calcium carbonate",
+      "wrong": "CaCO2",
+      "right": "CaCO3",
+      "whyZh": "碳酸根显 −2 价、钙显 +2 价，按 1∶1 结合且碳酸根本身是 C 与三个 O，正确式子是 CaCO3。",
+      "whyEn": "Carbonate is −2 and calcium is +2, combining 1:1, and the carbonate group is one C with three O; the correct formula is CaCO3."
+    },
+    {
+      "zh": "碳酸钠",
+      "en": "Sodium carbonate",
+      "wrong": "NaCO3",
+      "right": "Na2CO3",
+      "whyZh": "碳酸根显 −2 价、钠显 +1 价，需要两个钠离子才能配平，正确式子是 Na2CO3。",
+      "whyEn": "Carbonate is −2 and sodium is +1, so two sodium ions are needed to balance it; the correct formula is Na2CO3."
+    },
+    {
+      "zh": "硫酸镁",
+      "en": "Magnesium sulfate",
+      "wrong": "MgSO3",
+      "right": "MgSO4",
+      "whyZh": "镁显 +2 价、硫酸根显 −2 价，按 1∶1 结合，且硫酸根是 S 与四个 O，正确式子是 MgSO4。",
+      "whyEn": "Magnesium is +2 and sulfate is −2, pairing 1:1, and the sulfate group is one S with four O; the correct formula is MgSO4."
+    },
+    {
+      "zh": "硫酸铜",
+      "en": "Copper sulfate",
+      "wrong": "CuSO3",
+      "right": "CuSO4",
+      "whyZh": "铜显 +2 价、硫酸根显 −2 价，按 1∶1 结合，且硫酸根是 S 与四个 O，正确式子是 CuSO4。",
+      "whyEn": "Copper is +2 and sulfate is −2, pairing 1:1, and the sulfate group is one S with four O; the correct formula is CuSO4."
+    },
+    {
+      "zh": "硫酸铝",
+      "en": "Aluminium sulfate",
+      "wrong": "AlSO4",
+      "right": "Al2(SO4)3",
+      "whyZh": "铝显 +3 价、硫酸根显 −2 价，最简整数比为 2∶3，正确式子是 Al2(SO4)3。",
+      "whyEn": "Aluminium is +3 and sulfate is −2, so the smallest whole-number ratio is 2:3; the correct formula is Al2(SO4)3."
+    },
+    {
+      "zh": "硝酸钙",
+      "en": "Calcium nitrate",
+      "wrong": "CaNO3",
+      "right": "Ca(NO3)2",
+      "whyZh": "钙显 +2 价、硝酸根显 −1 价，需要两个硝酸根，正确式子是 Ca(NO3)2。",
+      "whyEn": "Calcium is +2 and nitrate is −1, so two nitrate groups are needed; the correct formula is Ca(NO3)2."
+    },
+    {
+      "zh": "硝酸钾",
+      "en": "Potassium nitrate",
+      "wrong": "KNO2",
+      "right": "KNO3",
+      "whyZh": "钾显 +1 价、硝酸根显 −1 价，按 1∶1 结合，且硝酸根是 N 与三个 O，正确式子是 KNO3。",
+      "whyEn": "Potassium is +1 and nitrate is −1, pairing 1:1, and the nitrate group is one N with three O; the correct formula is KNO3."
+    },
+    {
+      "zh": "磷酸钾",
+      "en": "Potassium phosphate",
+      "wrong": "KPO3",
+      "right": "K3PO4",
+      "whyZh": "磷酸根显 −3 价、钾显 +1 价，最简整数比为 3∶1，正确式子是 K3PO4。",
+      "whyEn": "Phosphate is −3 and potassium is +1, so the smallest whole-number ratio is 3:1; the correct formula is K3PO4."
+    },
+    {
+      "zh": "氧化铁（铁锈主要成分）",
+      "en": "Iron(III) oxide (main component of rust)",
+      "wrong": "FeO",
+      "right": "Fe2O3",
+      "whyZh": "铁锈中的铁显 +3 价、氧显 −2 价，最简整数比为 2∶3，正确式子是 Fe2O3 而不是 FeO。",
+      "whyEn": "In rust the iron is +3 and oxygen is −2, so the smallest whole-number ratio is 2:3; the correct formula is Fe2O3, not FeO."
+    },
+    {
+      "zh": "高锰酸钾",
+      "en": "Potassium permanganate",
+      "wrong": "KMnO3",
+      "right": "KMnO4",
+      "whyZh": "钾显 +1 价、高锰酸根显 −1 价，按 1∶1 结合，且高锰酸根是 Mn 与四个 O，正确式子是 KMnO4。",
+      "whyEn": "Potassium is +1 and permanganate is −1, pairing 1:1, and the permanganate group is one Mn with four O; the correct formula is KMnO4."
+    },
+    {
+      "zh": "二氧化硫",
+      "en": "Sulfur dioxide",
+      "wrong": "SO",
+      "right": "SO2",
+      "whyZh": "硫在二氧化硫中显 +4 价、氧显 −2 价，按 1∶2 结合，正确式子是 SO2。",
+      "whyEn": "Sulfur is +4 in the compound and oxygen is −2, so they combine 1:2; the correct formula is SO2."
+    },
+    {
+      "zh": "氯化钠",
+      "en": "Sodium chloride",
+      "wrong": "NaCl2",
+      "right": "NaCl",
+      "whyZh": "钠显 +1 价、氯显 −1 价，按 1∶1 结合，应写作 NaCl。",
+      "whyEn": "Na is +1 and Cl is −1, so they combine 1:1: NaCl."
+    },
+    {
+      "zh": "氯化钙",
+      "en": "Calcium chloride",
+      "wrong": "CaCl",
+      "right": "CaCl2",
+      "whyZh": "钙显 +2 价、氯显 −1 价，按 1∶2 结合，应写作 CaCl2。",
+      "whyEn": "Ca is +2 and Cl is −1, so they combine 1:2: CaCl2."
+    },
+    {
+      "zh": "氯化镁",
+      "en": "Magnesium chloride",
+      "wrong": "MgCl",
+      "right": "MgCl2",
+      "whyZh": "镁显 +2 价、氯显 −1 价，按 1∶2 结合，应写作 MgCl2。",
+      "whyEn": "Mg is +2 and Cl is −1, so they combine 1:2: MgCl2."
+    },
+    {
+      "zh": "氧化钠",
+      "en": "Sodium oxide",
+      "wrong": "NaO",
+      "right": "Na2O",
+      "whyZh": "钠显 +1 价、氧显 −2 价，按 2∶1 结合，应写作 Na2O。",
+      "whyEn": "Na is +1 and O is −2, so they combine 2:1: Na2O."
+    },
+    {
+      "zh": "氧化铝",
+      "en": "Aluminium oxide",
+      "wrong": "Al3O2",
+      "right": "Al2O3",
+      "whyZh": "铝显 +3 价、氧显 −2 价，按 2∶3 结合，应写作 Al2O3。",
+      "whyEn": "Al is +3 and O is −2, so they combine 2:3: Al2O3."
+    },
+    {
+      "zh": "氧化铁",
+      "en": "Iron(III) oxide",
+      "wrong": "FeO3",
+      "right": "Fe2O3",
+      "whyZh": "铁显 +3 价、氧显 −2 价，按 2∶3 结合，应写作 Fe2O3。",
+      "whyEn": "Fe is +3 and O is −2, so they combine 2:3: Fe2O3."
+    },
+    {
+      "zh": "碳酸钙",
+      "en": "Calcium carbonate",
+      "wrong": "CaCO2",
+      "right": "CaCO3",
+      "whyZh": "碳酸根是 CO3（−2 价），与 +2 价的钙按 1∶1 结合，应写作 CaCO3。",
+      "whyEn": "Carbonate is CO3 (−2), which pairs 1:1 with Ca (+2): CaCO3."
+    },
+    {
+      "zh": "氧化镁",
+      "en": "Magnesium oxide",
+      "wrong": "Mg2O",
+      "right": "MgO",
+      "whyZh": "镁显 +2 价、氧显 −2 价，按 1∶1 结合，应写作 MgO。",
+      "whyEn": "Mg is +2 and O is −2, so they combine 1:1: MgO."
+    }
   ],
   "sources": [
-    {"name":"IUPAC Periodic Table of Elements (2022)","url":"https://iupac.org/what-we-do/periodic-table-of-elements/","note":"元素符号、原子序数及标准原子量；练习题为本项目原创。"}
+    {
+      "name": "IUPAC Periodic Table of Elements (2022)",
+      "url": "https://iupac.org/what-we-do/periodic-table-of-elements/",
+      "note": "元素符号、原子序数及标准原子量；练习题为本项目原创。"
+    },
+    {
+      "name": "教育部《义务教育化学课程标准（2022年版）》",
+      "url": "http://www.moe.gov.cn/srcsite/A26/s8001/202204/t20220420_619921.html",
+      "note": "确定初中化学的教学范围与四大反应类型、常见物质分类等框架，初中化学方程式题按此标准选题。"
+    },
+    {
+      "name": "人民教育出版社官方网站",
+      "url": "https://www.pep.com.cn/",
+      "note": "人教版初中化学教材的出版方，确认方程式书写与物质名称沿用教材规范。"
+    },
+    {
+      "name": "Wikipedia: 化学方程式（中文）",
+      "url": "https://zh.wikipedia.org/wiki/%E5%8C%96%E5%AD%A6%E6%96%B9%E7%A8%8B%E5%BC%8F",
+      "note": "中文词条对照化学方程式的定义与书写规则，用于中英文反应名称与配平说法的措辞。"
+    },
+    {
+      "name": "Wikipedia: Chemical equation（化学方程式）",
+      "url": "https://en.wikipedia.org/wiki/Chemical_equation",
+      "note": "确认化学方程式的结构、系数含义与“系数为化学计量数”的配平规则，用于 reactions 的 why 说明。"
+    },
+    {
+      "name": "Wikipedia: Redox reaction（氧化还原反应）",
+      "url": "https://en.wikipedia.org/wiki/Redox_reaction",
+      "note": "确认氧化还原反应的得失电子配平思路，用于氧化、还原类方程式的 whyZh / whyEn。"
+    },
+    {
+      "name": "Wikipedia: pH（酸碱度）",
+      "url": "https://en.wikipedia.org/wiki/PH",
+      "note": "确认 25 摄氏度下 pH<7 为酸性、pH=7 为中性、pH>7 为碱性，是 phSubstances 取值范围与说明的依据。"
+    },
+    {
+      "name": "Wikipedia: 酸碱度（中文）",
+      "url": "https://zh.wikipedia.org/wiki/pH%E5%80%BC",
+      "note": "中文术语对照：pH 值、酸、碱、中性等概念的中文表述。"
+    },
+    {
+      "name": "Wikipedia: Gastric acid（胃酸）",
+      "url": "https://en.wikipedia.org/wiki/Gastric_acid",
+      "note": "给出人体胃酸的 pH 在 1 到 3 之间，用于 phSubstances 中“胃液”取 2.0。"
+    },
+    {
+      "name": "Wikipedia: Seawater（海水）",
+      "url": "https://en.wikipedia.org/wiki/Seawater",
+      "note": "给出海水 pH 通常在 7.5 到 8.4 之间，用于 phSubstances 中“海水”取 8.1。"
+    },
+    {
+      "name": "Wikipedia: Acid rain（酸雨）",
+      "url": "https://en.wikipedia.org/wiki/Acid_rain",
+      "note": "给出正常饮用水中性 pH 约 6.5 到 8.5、酸雨 pH 约 4 到 5，用于“雨水”“碳酸饮料”等取值。"
+    },
+    {
+      "name": "Wikipedia: Blood（血液）",
+      "url": "https://en.wikipedia.org/wiki/Blood",
+      "note": "确认血液的缓冲体系与正常 pH 范围，用于 phSubstances 中“人体血液”取 7.4。"
+    },
+    {
+      "name": "Wikipedia: Vinegar（醋）",
+      "url": "https://en.wikipedia.org/wiki/Vinegar",
+      "note": "确认食醋是醋酸（弱酸）的水溶液，浓度约 4% 到 18%，用于“食醋”取 2.9。"
+    },
+    {
+      "name": "Wikipedia: Sodium hydroxide（氢氧化钠）",
+      "url": "https://en.wikipedia.org/wiki/Sodium_hydroxide",
+      "note": "确认氢氧化钠是强碱且完全电离，用于“氢氧化钠溶液”取 13.0。"
+    },
+    {
+      "name": "Wikipedia: Calcium hydroxide（氢氧化钙）",
+      "url": "https://en.wikipedia.org/wiki/Calcium_hydroxide",
+      "note": "确认氢氧化钙微溶于水、其饱和溶液（澄清石灰水）呈强碱性，用于“澄清石灰水”取 12.4。"
+    },
+    {
+      "name": "Wikipedia: Electrolysis of water（水的电解）",
+      "url": "https://en.wikipedia.org/wiki/Electrolysis_of_water",
+      "note": "给出电解水的总反应式 2H2O → 2H2 + O2 及阴阳极半反应，用于相关方程式与“电解食盐水”的说明。"
+    },
+    {
+      "name": "Wikipedia: Molar mass（摩尔质量）",
+      "url": "https://en.wikipedia.org/wiki/Molar_mass",
+      "note": "确认摩尔质量的定义与由相对原子质量求和计算的方法，用于 formulas 的 molar 字段。"
+    },
+    {
+      "name": "Wikipedia: Standard atomic weight（标准原子量）",
+      "url": "https://en.wikipedia.org/wiki/Standard_atomic_weight",
+      "note": "确认标准相对原子质量由 IUPAC 下属 CIAAW 发布，用于核对题目给定的元素相对原子质量表。"
+    },
+    {
+      "name": "CIAAW / IUPAC Atomic Masses（国际原子量委员会原子量表）",
+      "url": "https://www.ciaaw.org/atomic-masses.htm",
+      "note": "IUPAC 原子量委员会公布的原子量数据来源，用于核对 formulas 的摩尔质量计算基准。"
+    }
   ]
 }
