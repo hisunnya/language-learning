@@ -28,7 +28,8 @@
       element: '元素',
       number: '原子序数',
       mass: '原子量',
-      formula: '化学式'
+      formula: '化学式',
+      loadFailed: '题库加载失败，请检查网络后刷新页面。'
     },
     en: {
       stage: { junior: 'Middle school', high: 'High school', university: 'University' },
@@ -56,7 +57,8 @@
       element: 'Element',
       number: 'Atomic number',
       mass: 'Atomic weight',
-      formula: 'Formula'
+      formula: 'Formula',
+      loadFailed: 'Could not load the question bank. Check your connection and reload the page.'
     }
   };
 
@@ -239,6 +241,7 @@
     $('questionTitle').textContent = question.prompt;
     $('formulaStage').textContent = question.visual;
     $('formulaStage').hidden = !question.visual;           /* 没有要展示的内容（化学式、符号、方程式）就不留一个空框 */
+    $('formulaStage').setAttribute('aria-hidden', question.visual ? 'false' : 'true');   /* 有内容就留给读屏：公式是解题要用的信息 */
     $('formulaStage').classList.toggle('empty', question.visual.length < 3);
     $('answerFeedback').textContent = '';
     $('answerFeedback').className = 'answer-feedback';
@@ -282,6 +285,7 @@
     $('questionTitle').textContent = q[lang];
     $('formulaStage').textContent = q.visual;
     $('formulaStage').hidden = !q.visual;
+    $('formulaStage').setAttribute('aria-hidden', q.visual ? 'false' : 'true');   /* 有内容就留给读屏：公式和解题步骤是解题要用的信息 */
     $('formulaStage').classList.toggle('steps', !!q.steps);
     $('formulaStage').classList.toggle('empty', !q.steps && q.visual.length < 3);
     $('answerFeedback').textContent = '';
@@ -558,6 +562,7 @@
     renderElements();
     renderQuestion();
   }).catch(function (error) {
-    $('questionTitle').textContent = error.message;
+    $('questionTitle').textContent = COPY[language()].loadFailed;
+    $('questionKicker').textContent = String(error && error.message ? error.message : '');
   });
 })();

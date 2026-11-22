@@ -108,6 +108,28 @@ class TestPhysicsPage(unittest.TestCase):
         self.assertEqual(re.findall(r"#[0-9a-fA-F]{3,8}\b", body), [],
                          "颜色应该写在 [data-theme] 变量里")
 
+    def test_formula_stage_is_readable_when_it_shows_a_formula(self):
+        """大舞台里有公式或解题步骤时，读屏必须能读到（AGENTS.md：这里只放解题要用的内容）。"""
+        self.assertNotIn('id="formulaStage" aria-hidden="true"', HTML,
+                         "大舞台不能对读屏永久隐藏：公式和解题步骤是解题要用的信息")
+        self.assertIn("setAttribute('aria-hidden'", UI)
+        # 每一处写内容的地方，都要同步设置 aria-hidden
+        writes = re.findall(r"\$\('formulaStage'\)\.textContent = [^;]+;", UI)
+        self.assertTrue(writes)
+        for write in writes:
+            tail = UI[UI.index(write):UI.index(write) + 400]
+            self.assertIn("aria-hidden", tail, write)
+
+    def test_load_failure_message_is_bilingual(self):
+        """加载失败时的提示要走语言表：error.message 是英文的技术信息，不能直接上屏。"""
+        self.assertIn("loadFailed", UI)
+        self.assertNotIn("textContent = error.message", UI)
+        block = re.search(r"var COPY = \{(.*?)\n  \};", UI, re.S)
+        sections = re.search(r"zh:\s*\{(.*?)\n    \},\s*en:\s*\{(.*?)\n    \}", block.group(1), re.S)
+        self.assertIsNotNone(sections)
+        for part in sections.groups():
+            self.assertIn("loadFailed", part)
+
 
 if __name__ == "__main__":
     unittest.main()

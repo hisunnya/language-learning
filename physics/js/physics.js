@@ -11,7 +11,8 @@
       orderWrong: '正确顺序：{answer}',
       feedbackRight: '答对 +10',
       submit: '提交',
-      yourAnswer: '你的答案'
+      yourAnswer: '你的答案',
+      loadFailed: '题库加载失败，请检查网络后刷新页面。'
     },
     en: {
       marks: { units: 'UNIT LAB', calc: 'CALC LAB', input: 'INPUT LAB', match: 'MATCH LAB', order: 'ORDER LAB', mistake: 'DEBUG LAB', concepts: 'CONCEPT LAB' },
@@ -21,7 +22,8 @@
       orderWrong: 'Correct order: {answer}',
       feedbackRight: '+10 points',
       submit: 'Submit',
-      yourAnswer: 'Your answer'
+      yourAnswer: 'Your answer',
+      loadFailed: 'Could not load the question bank. Check your connection and reload the page.'
     }
   };
   var state = { stage: 'junior', mode: 'units', score: 0, streak: 0, round: 1, answered: false, focus: null, question: null };
@@ -71,6 +73,7 @@
     $('questionTitle').textContent = q[lang];
     $('formulaStage').textContent = q.visual;
     $('formulaStage').hidden = !q.visual;                  /* 没有要展示的内容（公式、符号、单位）就不留一个空框 */
+    $('formulaStage').setAttribute('aria-hidden', q.visual ? 'false' : 'true');   /* 有内容就留给读屏：公式和解题步骤是解题要用的信息 */
     $('formulaStage').classList.toggle('steps', !!q.steps);
     $('formulaStage').classList.toggle('empty', !q.steps && q.visual.length < 3);
     $('answerFeedback').textContent = '';
@@ -336,6 +339,7 @@
     renderQuantities();
     renderQuestion();
   }).catch(function (error) {
-    $('questionTitle').textContent = error.message;
+    $('questionTitle').textContent = copy().loadFailed;
+    $('questionKicker').textContent = String(error && error.message ? error.message : '');
   });
 })();

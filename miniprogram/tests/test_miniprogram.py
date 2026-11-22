@@ -45,6 +45,18 @@ def theme_blocks() -> dict[str, dict[str, str]]:
     return blocks
 
 
+def scoring_constants(source: str) -> dict[str, int]:
+    """从 game-core.js 里读出计分常量（两份 core 的名字一样）。"""
+    names = ("LEVEL_TIME", "LEVEL_BONUS_MAX", "PAIR_SCORE", "COMBO_STEP", "COMBO_CAP",
+             "MISS_TIME", "MISS_SCORE", "TIME_BONUS")
+    found = {}
+    for name in names:
+        match = re.search(r"var\s+%s\s*=\s*(\d+)\s*;" % name, source)
+        if match:
+            found[name] = int(match.group(1))
+    return found
+
+
 class TestProjectFiles(unittest.TestCase):
     def test_json_files_are_valid_and_pages_are_complete(self):
         app = json.loads(read("app.json"))
@@ -171,6 +183,24 @@ class TestSharedCore(unittest.TestCase):
         self.assertIn("resume: function", core)
         self.assertIn("st.score = st.levelStartScore || 0;", core)
         # 与网站版的一致性由 word-puzzle/tests/js/core_parity.test.js 守着
+
+    def test_scoring_constants_match_the_website(self):
+        """两份 core 的分值常量必须一样（行为一致性由 core_parity.test.js 守着，这里先挡住改一边忘另一边）。"""
+        mini = scoring_constants(read("utils/game-core.js"))
+        web = scoring_constants((ROOT.parent / "word-puzzle" / "web" / "js" / "game-core.js").read_text(encoding="utf-8"))
+        self.assertEqual(mini, web)
+
+    def test_readme_states_the_current_scoring_rules(self):
+        """README 里的计分规则必须和代码一致：写错了会直接误导验收和玩家。"""
+        c = scoring_constants(read("utils/game-core.js"))
+        readme = read("README.md")
+        self.assertIn("每对 +%d 分" % c["PAIR_SCORE"], readme)
+        self.assertIn("连击每级 +%d 分" % c["COMBO_STEP"], readme)
+        self.assertIn("扣 %d 秒扣 %d 分" % (c["MISS_TIME"], c["MISS_SCORE"]), readme)
+        self.assertIn("每秒折算 %d 分" % c["TIME_BONUS"], readme)
+        self.assertIn("每关 %d 秒" % c["LEVEL_TIME"], readme)
+        # 2026-11-21 减半以前的旧规则不能当成现行规则写
+        self.assertNotIn("每对 +100，连击每级 +20", readme)
 
 
 @unittest.skipUnless(NODE, "本机没有 node，跳过小程序行为测试")

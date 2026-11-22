@@ -11,6 +11,12 @@ Thumbs.db
 *.orig
 *.rej
 
+# 写到一半、还没做完的脚本或用例（文件名带 .wip）：留着参考，但不会被测试发现、也不会误提交
+*.wip
+
+# git filter-repo 重写历史时留下的备份目录（AGENTS.md §1：重写已发布的历史要主人同意）
+.git-rewrite/
+
 # 编辑器
 .vscode/
 .idea/

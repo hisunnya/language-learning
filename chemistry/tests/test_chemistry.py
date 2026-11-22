@@ -124,6 +124,28 @@ class TestChemistryCopy(unittest.TestCase):
         sets = [set(re.findall(r"(--[a-z-]+):", body)) for _, body in blocks]
         self.assertTrue(all(variables == sets[0] for variables in sets))
 
+    def test_formula_stage_is_readable_when_it_shows_a_formula(self):
+        """大舞台里有化学式或解题步骤时，读屏必须能读到（AGENTS.md：这里只放解题要用的内容）。"""
+        self.assertNotIn('id="formulaStage" aria-hidden="true"', HTML,
+                         "大舞台不能对读屏永久隐藏：化学式和解题步骤是解题要用的信息")
+        self.assertIn("setAttribute('aria-hidden'", SCRIPT)
+        # 每一处写内容的地方，都要同步设置 aria-hidden
+        writes = re.findall(r"\$\('formulaStage'\)\.textContent = [^;]+;", SCRIPT)
+        self.assertTrue(writes)
+        for write in writes:
+            tail = SCRIPT[SCRIPT.index(write):SCRIPT.index(write) + 400]
+            self.assertIn("aria-hidden", tail, write)
+
+    def test_load_failure_message_is_bilingual(self):
+        """加载失败时的提示要走语言表：error.message 是英文的技术信息，不能直接上屏。"""
+        self.assertIn("loadFailed", SCRIPT)
+        self.assertNotIn("textContent = error.message", SCRIPT)
+        block = re.search(r"var COPY = \{(.*?)\n  \};", SCRIPT, re.S)
+        sections = re.search(r"zh:\s*\{(.*?)\n    \},\s*en:\s*\{(.*?)\n    \}", block.group(1), re.S)
+        self.assertIsNotNone(sections)
+        for part in sections.groups():
+            self.assertIn("loadFailed", part)
+
 
 if __name__ == "__main__":
     unittest.main()
