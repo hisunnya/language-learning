@@ -323,10 +323,18 @@ class TestGuide(unittest.TestCase):
     TEXT = (CLOUD / "部署说明.md").read_text(encoding="utf-8") if (CLOUD / "部署说明.md").exists() else ""
 
     def test_the_guide_covers_the_steps_and_the_rules_around_them(self):
-        for needle in ("install.sh", "harden.sh", "enable-tls.sh", "ssh -L 8081:127.0.0.1:8081",
+        for needle in ("install.sh", "harden.sh", "enable-tls.sh",
+                       "LocalForward", "~/.ssh/config",
                        "备案", "流量穿透", "快照", "WP_ACME_STAGING",
                        "migrate-data.sh", "sync-from-home.sh", "rehearse", "cutover --yes", "自动把快照放回去"):
             self.assertIn(needle, self.TEXT)
+
+    def test_the_guide_says_the_tunnel_comes_from_the_ssh_config(self):
+        """转发是写在 ~/.ssh/config 里的：说明里不能只教手动 -L 那一种写法。"""
+        self.assertIn("LocalForward 127.0.0.1:8081 127.0.0.1:8081", self.TEXT)
+        self.assertIn("ExitOnForwardFailure no", self.TEXT)
+        # 手动那条路也留着（没有 ssh config 的人还能用）
+        self.assertIn("ssh -N -L 127.0.0.1:8081:127.0.0.1:8081", self.TEXT)
 
 
 if __name__ == "__main__":

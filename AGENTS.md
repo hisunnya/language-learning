@@ -404,10 +404,11 @@ approved. So after every change that reaches the home server:
 2. **Data**: `sync-from-home.sh rehearse --apply` moves the whole database over (the home service keeps
    running; `cutover` is only for the moment the filing is approved and the cloud takes over).
    This is real student data on both machines — both are private, neither is public before the filing.
-3. **Check**: open the cloud through an SSH tunnel (`ssh -L 8081:127.0.0.1:8081 <别名>`) and walk the
-   entrances. The tunnel may also be bound to the workstation's own LAN address
-   (`-L <本机IP>:8081:127.0.0.1:8081`) so a phone on the same network can reach it — the cloud's tunnel
-   entry is plain HTTP (`deploy/family/install.sh` installs a separate set of forwarding headers when
+3. **Check**: open the cloud through an SSH tunnel and walk the entrances. The forwarding is already
+   configured in `~/.ssh/config` for the cloud host (`LocalForward`), so a plain `ssh <别名>` brings the
+   tunnel up with it — no `-L` needed. It is bound to both `127.0.0.1:8081` (this machine) and the
+   workstation's LAN address (so a phone on the same network can reach it). The cloud's tunnel entry is
+   plain HTTP (`deploy/family/install.sh` installs a separate set of forwarding headers when
    `WP_CLOUD=1`), so the session cookie carries no `Secure` flag and the browser keeps it on a
    non-secure origin. Chrome only treats `localhost` as a secure origin, so a `Secure` cookie would be
    dropped on the LAN address.
