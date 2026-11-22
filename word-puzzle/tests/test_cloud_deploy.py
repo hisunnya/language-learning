@@ -6,6 +6,7 @@ import os
 import re
 import stat
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -244,6 +245,78 @@ class TestRenderNginx(unittest.TestCase):
         for bad in ("", "a b", "x;rm -rf /", "a/b"):
             done = self.render(WP_DOMAIN=bad)
             self.assertNotEqual(done.returncode, 0, repr(bad))
+
+
+class TestTunnelEntrance(unittest.TestCase):
+    """SSH 隧道入口（127.0.0.1:8081）：浏览器看到的是明文 http，会话 Cookie 不能带 Secure。
+
+    带 Secure 的 Cookie 浏览器只在「安全来源」（https，或者 localhost）下才保存。
+    用隧道从本机的局域网 IP 打开时（例如 http://192.168.x.x:8081）不是安全来源，
+    浏览器会把 Cookie 丢掉 —— 表现是「登录成功，刷新一下又要求登录」。
+    所以云服务器上这个入口要告诉后端「这条是明文 http」。
+    """
+
+    INSTALL = (FAMILY / "install.sh").read_text(encoding="utf-8")
+    PROXY = (FAMILY / "nginx" / "proxy.inc").read_text(encoding="utf-8")
+
+    def test_the_cloud_tunnel_entry_is_installed_as_plain_http(self):
+        self.assertIn('"${WP_CLOUD:-}" == "1"', self.INSTALL)
+        self.assertIn("TUNNEL_PROXY_INC", self.INSTALL)
+        self.assertIn("proxy_set_header X-Forwarded-Proto http;", self.INSTALL)
+
+    def test_the_home_machine_keeps_https_for_its_funnel(self):
+        """家里这台机器前面是 Funnel（浏览器看到 https），不能跟着改成明文。"""
+        self.assertIn('CONTAINER_PROXY_INC="$PROXY_INC"', self.INSTALL)
+        self.assertIn('CONTAINER_PROXY_INC="$TUNNEL_PROXY_INC"', self.INSTALL)
+        self.assertIn("proxy_set_header X-Forwarded-Proto https;", self.PROXY)
+
+    def test_the_tunnel_forwards_the_real_connection_address(self):
+        """客户端自己写的 X-Forwarded-For 不能算数：nginx 把自己看到的连接地址补在最后。"""
+        self.assertIn("proxy_set_header X-Wp-Edge-Xff $proxy_add_x_forwarded_for;", self.INSTALL)
+
+    def test_the_rendered_tunnel_headers_reach_the_backend_as_plain_http(self):
+        """把安装脚本里那段变换真跑一遍，看看后端会收到什么头。"""
+        tunnel = re.sub(r"(?m)^proxy_set_header X-Forwarded-Proto .*$",
+                        "proxy_set_header X-Forwarded-Proto http;", self.PROXY)
+        tunnel = re.sub(r"(?m)^proxy_set_header X-Wp-Edge-Xff .*$",
+                        "proxy_set_header X-Wp-Edge-Xff $proxy_add_x_forwarded_for;", tunnel)
+        self.assertIn("proxy_set_header X-Forwarded-Proto http;", tunnel)
+        self.assertIn("$proxy_add_x_forwarded_for", tunnel)
+        # 入口标记仍然清空：隧道不是「内网免登录入口」
+        self.assertRegex(tunnel, r'(?m)^proxy_set_header X-Wp-Entry "";$')
+
+    def test_the_backend_then_leaves_the_secure_flag_off(self):
+        """后端看到「明文 http + 本机 nginx」时，会话 Cookie 不带 Secure，浏览器才留得住。
+
+        这里用真实的后端跑一次登录（请求带 X-Forwarded-Proto: http，和隧道进来的一样）。
+        """
+        sys.path.insert(0, str(ROOT))
+        from tests.test_auth import Client, HttpCase
+
+        class TunnelCase(HttpCase):
+            auth_options = {"cookie_secure": True}
+
+            @classmethod
+            def setUpClass(cls):
+                super().setUpClass()
+                cls.svc.create_user("TUNNEL01", "隧道老师", password="Tunnel2026x", role="teacher", must_change=False)
+
+        TunnelCase.setUpClass()
+        try:
+            c = Client(TunnelCase.port)
+            status, _ = c.json("POST", "/api/auth/login",
+                               {"student_no": "TUNNEL01", "password": "Tunnel2026x"},
+                               headers={"X-Forwarded-Proto": "http"})
+            self.assertEqual(status, 200)
+            cookie = c.last.getheader("Set-Cookie")
+            self.assertNotIn("Secure", cookie, "隧道进来的是明文 http，Cookie 不该带 Secure")
+            self.assertIn("HttpOnly", cookie)
+            # 登录态要真的能用：刷新一下还是登录着
+            status, body = c.json("GET", "/api/auth/me", {}, headers={"X-Forwarded-Proto": "http"})
+            self.assertEqual(status, 200)
+            self.assertEqual(body.get("user", {}).get("student_no"), "TUNNEL01")
+        finally:
+            TunnelCase.tearDownClass()
 
 
 class TestGuide(unittest.TestCase):

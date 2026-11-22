@@ -42,6 +42,8 @@ TRUSTED_PROXIES="${WP_TRUSTED_PROXIES:-}"
 # 数据库每日备份（可选）：WP_BACKUP_DIR=备份目录（建议是挂进容器的宿主机目录，且和数据库不在同一块盘上）。
 BACKUP_DIR="${WP_BACKUP_DIR:-}"
 LAN_PROXY_INC=/etc/nginx/word-puzzle-family-proxy-lan.inc
+# 云服务器专用：SSH 隧道入口的转发头（明文 http，见下面安装 nginx 配置那段）
+TUNNEL_PROXY_INC=/etc/nginx/word-puzzle-family-proxy-tunnel.inc
 NGINX_DROPIN=/etc/systemd/system/nginx.service.d/lexica-wait-lan.conf
 LAN_CONF_FILE=/etc/nginx/conf.d/word-puzzle-family-lan.conf
 CONF_FILE=/etc/nginx/conf.d/$SITE_NAME.conf
@@ -236,10 +238,27 @@ fi
 say "安装 nginx 配置（只监听 127.0.0.1:$NGINX_PORT）"
 install -d /etc/nginx/conf.d
 install -m 0644 "$INSTALL_DIR/deploy/family/nginx/proxy.inc" "$PROXY_INC"
+# 云服务器上，这个 127.0.0.1:8081 入口是给 SSH 隧道用的：浏览器看到的是明文 http
+# （家里这台机器前面是 Funnel，浏览器看到的是 https，所以那边不用改）。
+# 会话 Cookie 带 Secure 的话，浏览器只在「安全来源」（https，或 localhost）下才肯保存；
+# 通过隧道用本机的局域网 IP 打开时（比如 http://192.168.x.x:8081）不是安全来源，
+# 浏览器会把 Cookie 直接丢掉，表现为「登录成功但下一���又要求登录」。
+# 所以这里另装一份转发头，告诉后端「这条是明文 http」，后端就不给 Cookie 加 Secure。
+# 和内网入口一样，转发链由 nginx 亲自补上真实连接地址，客户端自己写的那个不作数。
+if [[ "${WP_CLOUD:-}" == "1" ]]; then
+  say "云服务器：SSH 隧道入口按明文 http 处理（会话 Cookie 不带 Secure）"
+  sed -e 's|^proxy_set_header X-Forwarded-Proto .*|proxy_set_header X-Forwarded-Proto http;|' \
+      -e 's|^proxy_set_header X-Wp-Edge-Xff .*|proxy_set_header X-Wp-Edge-Xff $proxy_add_x_forwarded_for;|' \
+      "$PROXY_INC" > "$TUNNEL_PROXY_INC"
+  chmod 0644 "$TUNNEL_PROXY_INC"
+  CONTAINER_PROXY_INC="$TUNNEL_PROXY_INC"
+else
+  CONTAINER_PROXY_INC="$PROXY_INC"
+fi
 TEMP_CONF="$CONF_FILE.tmp.$$"
 trap 'rm -f "$TEMP_CONF"' EXIT
 sed -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@PORT@|$PORT|g" -e "s|@NGINX_PORT@|$NGINX_PORT|g" \
-    -e "s|@PROXY_INC@|$PROXY_INC|g" \
+    -e "s|@PROXY_INC@|$CONTAINER_PROXY_INC|g" \
     "$INSTALL_DIR/deploy/family/nginx/word-puzzle-family.conf" > "$TEMP_CONF"
 had_old=0
 if [[ -e "$CONF_FILE" ]]; then cp -a "$CONF_FILE" "$CONF_FILE.bak"; had_old=1; fi

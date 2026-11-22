@@ -388,12 +388,29 @@ cutover are discarded, the home accounts come over. Live databases are only open
 (a root-owned `-shm` next to a WAL database stops the service from opening it).
 
 - The domain and server address are private values (6): `AGENTS.local.md`, never a tracked file.
-- Before there is a certificate the site is reachable only from the server itself (SSH tunnel): login cookies are
-  `Secure`, and clear text over the public internet is not acceptable. Serving the public before the filing is
-  approved is not done.
+- Before there is a certificate the site is reachable only from the server itself (SSH tunnel): clear text over the
+  public internet is not acceptable. Serving the public before the filing is approved is not done.
 - Never run frp, proxies, VPNs or reverse tunnels on the cloud server (the provider forbids traffic penetration and
   illegal proxying and shuts such instances down), and never put the database back on a home machine.
 - Code is pushed to the server from the workstation (`scp` of a tarball), not pulled from GitHub there (6.4).
+
+**The cloud server is kept in step with the home server at all times** (decided 2026-11-22). Both hold the
+same code and the same data; the cloud is one stage ahead, ready to take over the moment the filing is
+approved. So after every change that reaches the home server:
+
+1. **Code**: pack the same tarball the home server gets (`word-puzzle hub topic-app/topic-app ham-exam
+   chemistry physics backends`) and `scp` it to the cloud, then run `deploy/cloud/install.sh` there.
+   The cloud's own `deploy-all` script does not exist — the cloud is deployed from the workstation.
+2. **Data**: `sync-from-home.sh rehearse --apply` moves the whole database over (the home service keeps
+   running; `cutover` is only for the moment the filing is approved and the cloud takes over).
+   This is real student data on both machines — both are private, neither is public before the filing.
+3. **Check**: open the cloud through an SSH tunnel (`ssh -L 8081:127.0.0.1:8081 <别名>`) and walk the
+   entrances. The tunnel may also be bound to the workstation's own LAN address
+   (`-L <本机IP>:8081:127.0.0.1:8081`) so a phone on the same network can reach it — the cloud's tunnel
+   entry is plain HTTP (`deploy/family/install.sh` installs a separate set of forwarding headers when
+   `WP_CLOUD=1`), so the session cookie carries no `Secure` flag and the browser keeps it on a
+   non-secure origin. Chrome only treats `localhost` as a secure origin, so a `Secure` cookie would be
+   dropped on the LAN address.
 
 **Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
 previous one with `git mv` to the new timestamp (never keep two side by side),
