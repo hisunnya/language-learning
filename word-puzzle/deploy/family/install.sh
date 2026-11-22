@@ -321,9 +321,21 @@ code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http:
 code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT/word-puzzle/login.html")"
 [[ "$code" == "200" ]] || die "登录页打不开（HTTP $code）"
 echo "    OK 登录已启用；未登录访问接口被拒绝（401）；登录页可访问"
+# nginx reload 是异步的：旧 worker 还在应答时会按旧配置回答（刚装完时根路径是 302，不是 200），
+# 所以每个页面都要重试几次，等新 worker 接手。这跟 deploy-all 里的 retry() 是同一个原因。
 for page in / /privacy.html /topics/ /ham/ /chemistry/ /physics/ /shared/site-footer.js; do
-  code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT$page")"
+  code=""
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT$page")"
+    [[ "$code" == "200" ]] && break
+    sleep 1
+  done
   [[ "$code" == "200" ]] || die "主页 / 模块打不开：$page（HTTP $code）"
+done
+# 根路径的内容也要重试：新 worker 接手前，旧 worker 会返回 302 而不是词境主页
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/" 2>/dev/null | grep -q '词境' && break
+  sleep 1
 done
 curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/" | grep -q '词境' || die "根路径不是词境主页"
 echo "    OK 主页、隐私说明和四个模块都能打开"

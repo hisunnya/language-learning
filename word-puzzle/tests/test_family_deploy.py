@@ -255,6 +255,25 @@ class TestInstaller(unittest.TestCase):
         self.assertNotRegex(INSTALL, r"rm\s+-rf?\s+\S*DATA_DIR")
         self.assertIn("不会覆盖已有数据库", INSTALL)
 
+    def test_self_check_waits_for_the_new_nginx_workers(self):
+        """nginx reload 是异步的：旧 worker 还在应答时会按旧配置回答（根路径是 302，不是 200）。
+
+        自检只问一次就会误判失败，把一次成功的部署报成失败（云服务器上就发生过一次：
+        部署其实成功了，自检却报「主页 / 模块打不开：/（HTTP 302）」）。
+        所以每个页面都要重试几次，等新 worker 接手。
+        """
+        block = re.search(r"for page in / /privacy\.html.*?done", INSTALL, re.S)
+        self.assertIsNotNone(block, "找不到自检里检查页面的那段")
+        page_check = block.group(0)
+        self.assertIn('[[ "$code" == "200" ]] && break', page_check)
+        self.assertIn("sleep 1", page_check)
+        # 重试要够多次：旧 worker 收完手上的连接才退出
+        attempts = re.search(r"for _ in ([\d\s]+); do", page_check)
+        self.assertIsNotNone(attempts, "页面检查没有重试循环")
+        self.assertGreaterEqual(len(attempts.group(1).split()), 5, "重试次数太少，等不到新 worker")
+        # 根路径的内容也要重试（grep 不是状态码，要单独等）
+        self.assertRegex(INSTALL, r"grep -q '词境' && break")
+
 
 class TestGuide(unittest.TestCase):
     def test_guide_covers_the_safety_points(self):
