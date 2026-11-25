@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVIDIA 认证 · AI 基础设施模拟考试</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/shared/module-header.css?v=20261125-nx">
+<link rel="stylesheet" href="css/style.css?v=20261125-nx">
+</head>
+<body>
+
+<header class="portal-topbar">
+  <a class="portal-brand" href="/" aria-label="语林 Lingua Grove">
+    <span class="portal-brand-mark" aria-hidden="true">⚡</span>
+    <span class="portal-brand-copy"><strong><span data-i18n="brand.name">NVIDIA 认证</span><em>NVIDIA EXAM</em></strong><small id="bankNote" data-i18n="brand.note">AI 基础设施与运维模拟考试</small></span>
+  </a>
+  <nav class="portal-nav nav" id="nav">
+    <button type="button" class="nav-btn active" data-view="exam"    data-i18n="nav.exam">模拟考试</button>
+    <button type="button" class="nav-btn" data-view="practice" data-i18n="nav.practice">练习</button>
+    <button type="button" class="nav-btn" data-view="browse"   data-i18n="nav.browse">题库</button>
+    <button type="button" class="nav-btn" data-view="stats"    data-i18n="nav.stats">统计</button>
+  </nav>
+  <div class="portal-topbar-right topright">
+    <div class="portal-header-controls" id="portalHeaderControls">
+      <button type="button" class="portal-lang-btn" id="langBtn" data-tooltip-zh="切换到 English" data-tooltip-en="Switch to 中文">
+        <span class="zh">中</span><span class="sep">/</span><span class="en">EN</span>
+      </button>
+      <div class="portal-theme-picker" role="group" aria-label="配色" id="themePicker"></div>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ============ 模拟考试 ============ -->
+  <section class="view" id="view-exam">
+    <div class="panel" id="examSetup">
+      <h2 class="panel-title" data-i18n="exam.title">模拟考试</h2>
+      <p class="panel-desc" data-i18n="exam.desc">按官方大纲三个知识域的比例随机抽题组卷，倒计时、答题卡、及格线（70%）全部照正式考试来。</p>
+      <div class="rule-cards" id="examRuleCards"></div>
+      <div class="field-row">
+        <label class="field">
+          <span data-i18n="exam.length">题量</span>
+          <select id="examLength">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="60">60</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="exam.domain">知识域</span>
+          <select id="examDomain"></select>
+        </label>
+      </div>
+      <div class="row-btns">
+        <button type="button" class="btn btn-primary" id="startExamBtn" data-i18n="exam.start">开始考试</button>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="examRun">
+      <div class="run-head">
+        <span id="examTimer" class="timer" role="timer">--:--</span>
+        <span id="examProgress"></span>
+        <div class="row-btns run-head-btns">
+          <button type="button" class="btn" id="examSheetBtn" data-i18n="exam.sheet">答题卡</button>
+          <button type="button" class="btn btn-danger" id="examSubmitBtn" data-i18n="exam.submit">交卷</button>
+        </div>
+      </div>
+      <div class="qcard">
+        <div class="qmeta" id="examQMeta"></div>
+        <div class="qtext" id="examQText"></div>
+        <div class="opts" id="examOpts"></div>
+        <div class="explain hidden" id="examExplain"></div>
+      </div>
+      <div class="row-btns qnav">
+        <button type="button" class="btn" id="examPrevBtn" data-i18n="q.prev">上一题</button>
+        <button type="button" class="btn" id="examNextBtn" data-i18n="q.next">下一题</button>
+      </div>
+      <div class="sheet hidden" id="examSheet"></div>
+    </div>
+
+    <div class="panel hidden" id="examResult">
+      <h2 class="panel-title" data-i18n="result.title">考试结果</h2>
+      <div class="result-score" id="resultScore"></div>
+      <div class="result-domains" id="resultDomains"></div>
+      <div class="row-btns">
+        <button type="button" class="btn btn-primary" id="resultReviewBtn" data-i18n="result.review">查看错题</button>
+        <button type="button" class="btn" id="resultAgainBtn" data-i18n="result.again">再考一次</button>
+      </div>
+      <div class="review-list" id="resultReview"></div>
+    </div>
+  </section>
+
+  <!-- ============ 练习 ============ -->
+  <section class="view hidden" id="view-practice">
+    <div class="panel" id="practiceSetup">
+      <h2 class="panel-title" data-i18n="practice.title">练习</h2>
+      <p class="panel-desc" data-i18n="practice.desc">按知识域顺序练习，每题即时反馈对错与解析；答错的题自动进入错题本。</p>
+      <div class="field-row">
+        <label class="field">
+          <span data-i18n="practice.domain">知识域</span>
+          <select id="practiceDomain"></select>
+        </label>
+        <label class="field">
+          <span data-i18n="practice.order">顺序</span>
+          <select id="practiceOrder">
+            <option value="seq" data-i18n="practice.seq">顺序</option>
+            <option value="rand" data-i18n="practice.rand">随机</option>
+          </select>
+        </label>
+      </div>
+      <div class="row-btns">
+        <button type="button" class="btn btn-primary" id="startPracticeBtn" data-i18n="practice.start">开始练习</button>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="practiceRun">
+      <div class="run-head">
+        <span id="practiceProgress"></span>
+        <span id="practiceScore"></span>
+        <button type="button" class="btn" id="practiceEndBtn" data-i18n="practice.end">结束练习</button>
+      </div>
+      <div class="qcard">
+        <div class="qmeta" id="practiceQMeta"></div>
+        <div class="qtext" id="practiceQText"></div>
+        <div class="opts" id="practiceOpts"></div>
+        <div class="explain hidden" id="practiceExplain"></div>
+      </div>
+      <div class="row-btns qnav">
+        <button type="button" class="btn" id="practicePrevBtn" data-i18n="q.prev">上一题</button>
+        <button type="button" class="btn" id="practiceCheckBtn" data-i18n="q.check">提交答案</button>
+        <button type="button" class="btn" id="practiceNextBtn" data-i18n="q.next">下一题</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 题库 ============ -->
+  <section class="view hidden" id="view-browse">
+    <div class="panel">
+      <h2 class="panel-title" data-i18n="browse.title">题库</h2>
+      <div class="field-row browse-controls">
+        <label class="field">
+          <span data-i18n="browse.domain">知识域</span>
+          <select id="browseDomain"></select>
+        </label>
+        <label class="field field-grow">
+          <span data-i18n="browse.search">搜索</span>
+          <input type="search" id="browseSearch" data-i18n-ph="browse.searchPh" placeholder="搜索题干关键词…">
+        </label>
+      </div>
+      <div class="browse-list" id="browseList"></div>
+    </div>
+  </section>
+
+  <!-- ============ 统计 ============ -->
+  <section class="view hidden" id="view-stats">
+    <div class="panel">
+      <h2 class="panel-title" data-i18n="stats.title">统计</h2>
+      <div class="stat-grid" id="statOverview"></div>
+      <h3 class="panel-subtitle" data-i18n="stats.domains">分知识域正确率</h3>
+      <div class="stat-domains" id="statDomains"></div>
+      <h3 class="panel-subtitle" data-i18n="stats.history">最近考试</h3>
+      <div class="history-list" id="statHistory"></div>
+    </div>
+    <div class="panel">
+      <h2 class="panel-title" data-i18n="wrong.title">错题本</h2>
+      <p class="panel-desc" id="wrongSummary"></p>
+      <div class="row-btns">
+        <button type="button" class="btn btn-primary" id="wrongPracticeBtn" data-i18n="wrong.practice">错题重练</button>
+        <button type="button" class="btn btn-danger" id="wrongClearBtn" data-i18n="wrong.clear">清空错题本</button>
+      </div>
+      <div class="wrong-list" id="wrongList"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="page-foot">
+  <p data-i18n="footer.note">题库按 NVIDIA 官方公开考试大纲生成，仅用于内网学习自测，可随时扩充。</p>
+</footer>
+
+<script src="data/bank.js?v=20261125-nx"></script>
+<script src="js/store.js?v=20261125-nx"></script>
+<script src="js/app.js?v=20261125-nx"></script>
+</body>
+</html>

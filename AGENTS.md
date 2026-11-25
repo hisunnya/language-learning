@@ -293,7 +293,8 @@ language-learning/
 ├── topic-app/              # 每日话题 Daily Topics —— 初中生家庭讨论
 ├── ham-exam/               # 无线电执照 Ham Exam —— 业余无线电模拟考试
 ├── chemistry/              # 化学探秘 Chem Quest —— 分龄化学练习
-└── physics/                # 物理探秘 Phys Quest —— 分龄物理练习
+├── physics/                # 物理探秘 Phys Quest —— 分龄物理练习
+└── nvidia-exam/            # NVIDIA 认证模拟考试 —— NCA-AIIO 刷题
 ```
 
 - **The deployment directory is not the git working tree.** A `git pull` does
@@ -315,6 +316,7 @@ language-learning/
 | Radio exam | 无线电执照 | Ham Exam | `ham-exam/` |
 | Chemistry learning | 化学探秘 | Chem Quest | `chemistry/` |
 | Physics learning | 物理探秘 | Phys Quest | `physics/` |
+| NVIDIA certification exam | NVIDIA 认证模拟考试 | NVIDIA Exam | `nvidia-exam/` |
 | Vocabulary mini program | 词境 · 单词消消乐 | Lexica (WeChat) | `miniprogram/` |
 | Site / homepage (hub) | 词境 | Lexica | `hub/` |
 

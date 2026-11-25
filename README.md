@@ -12,6 +12,7 @@
 | [`topic-app/`](topic-app/) | **每日话题 Daily Topics**：适合初中水平的家庭话题讨论，随机抽题 + 参考方向 + 历史记录 | 纯前端，零依赖，localStorage |
 | [`ham-exam/`](ham-exam/) | **无线电执照 Ham Exam**：业余无线电台操作技术能力验证 · 模拟考试系统（1375 道真题题库） | 纯前端，零依赖，localStorage |
 | [`chemistry/`](chemistry/) | **化学探秘 Chem Quest**：初中元素配对、高中反应配平、大学溶液推理；选择、数值填空、配对、排序、找错七种题型 | 纯前端，零依赖，localStorage |
+| [`nvidia-exam/`](nvidia-exam/) | **NVIDIA 认证模拟考试 NVIDIA Exam**：NCA-AIIO（AI 基础设施与运维）模拟考试，按官方大纲三知识域比例组卷、计时答题卡、错题本；中英双语题库 | 纯前端，零依赖，localStorage |
 | [`physics/`](physics/) | **物理探秘 Phys Quest**：初中量与单位、高中公式速算、大学概念辨析；公式题参数化出题，错误选项来自典型错误；选择、数值填空、配对、量级排序、找错七种题型，答完附解题步骤 | 纯前端，零依赖，localStorage |
 
 > 产品现在叫**词境 Lexica**，目录名 `word-puzzle/` 保持不变（改了会打断服务器上
@@ -36,6 +37,7 @@ cd ham-exam && ./start.sh                 # → http://127.0.0.1:8080
 
 cd chemistry && python3 -m http.server 8082 # → http://127.0.0.1:8082
 cd physics   && python3 -m http.server 8083 # → http://127.0.0.1:8083
+cd nvidia-exam && python3 -m http.server 8084 # → http://127.0.0.1:8084
 ```
 
 ---
@@ -102,7 +104,8 @@ language-learning/
     ├── images/                             # 53 张电路附图
     └── tools/                              # 题库生成脚本（从官方 PDF 生成 bank.json）
   ├── chemistry/                              # 化学探秘 Chem Quest（纯静态分龄练习）
-  └── physics/                                # 物理探秘 Phys Quest（纯静态分龄练习）
+  ├── physics/                                # 物理探秘 Phys Quest（纯静态分龄练习）
+  └── nvidia-exam/                            # NVIDIA 认证模拟考试（NCA-AIIO，纯静态）
 ```
 
 ---
@@ -242,10 +245,37 @@ game-adapter-*.js   存储适配：online 走后端 / offline 写 localStorage
 数据全部在**自己浏览器的 localStorage**，键名 `ham_exam_data_v1`。不上传、不联网、无服务端。
 
 完整文档见 [`ham-exam/README.md`](ham-exam/README.md)。
+---
+
+# 五、nvidia-exam · NVIDIA 认证模拟考试
+
+## 是什么
+
+NCA-AIIO（NVIDIA Certified Associate: AI Infrastructure and Operations）模拟考试，纯本地刷题网站。题库按 NVIDIA 官方公开考试大纲生成（当前 60 道种子题，可随时补充，**不是真题**），三个知识域按权重出题：
+
+| 知识域 | 权重 | 种子题量 |
+|---|---:|---:|
+| Essential AI Knowledge | 38% | 23 |
+| AI Infrastructure | 40% | 24 |
+| AI Operations | 22% | 13 |
+
+四个模块：**模拟考试**（10/20/60 题可选，倒计时、答题卡、及格线 70%、逐题复盘）、**练习**（即时反馈 + 解析）、**题库**（筛选 + 搜索）、**统计**（分知识域正确率 + 错题本）。题目中英双语，语言与配色偏好和 hub 全站共享。
+
+数据在自己浏览器的 localStorage（`nx_state`），不上传、无服务端。
+
+完整文档见 [`nvidia-exam/README.md`](nvidia-exam/README.md)。
 
 ---
 
 ## 维护记录
+
+### 2026-11-25 — 新增 nvidia-exam
+
+* 新增 `nvidia-exam/`：NCA-AIIO 模拟考试，60 道按官方大纲生成的双语种子题，
+  模拟考试 / 练习 / 题库 / 统计四模块，错题本与考试历史存 localStorage；
+* 中英双语 + 五套配色（与 hub 同键），色块取色器沿用 house style；
+* `nvidia-exam/tests/test_nvidia_exam.py` 守住 §3 约定与题库完整性，
+  `word-puzzle/tools/check_js.py` 纳入 `nvidia-exam/js` 与 `nvidia-exam/data`。
 
 ### 2026-11-04 — 加了总主页，改了名字
 

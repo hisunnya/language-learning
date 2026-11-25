@@ -36,6 +36,8 @@ JS_DIRS = [
     REPO / "topic-app" / "topic-app",
     REPO / "ham-exam" / "js",
     REPO / "ham-exam" / "data",
+    REPO / "nvidia-exam" / "js",
+    REPO / "nvidia-exam" / "data",
     REPO / "chemistry" / "js",
     REPO / "physics" / "js",
     REPO / "miniprogram",

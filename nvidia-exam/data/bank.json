@@ -1,0 +1,620 @@
+{
+  "version": "2026-11-25",
+  "note": "种子题库。题目按 NVIDIA 官方考试大纲（public blueprint）生成，用于内网学习自测，可随时扩充。",
+  "exams": [
+    {
+      "id": "nca-aiio",
+      "name": "NCA-AIIO",
+      "nameZh": "NVIDIA 认证助理：AI 基础设施与运维",
+      "durationMinPerQuestion": 1.2,
+      "passPct": 70,
+      "domains": [
+        { "id": "ai-knowledge", "zh": "AI 基础知识", "en": "Essential AI Knowledge", "weight": 38 },
+        { "id": "ai-infrastructure", "zh": "AI 基础设施", "en": "AI Infrastructure", "weight": 40 },
+        { "id": "ai-operations", "zh": "AI 运维", "en": "AI Operations", "weight": 22 }
+      ],
+      "questions": [
+        {
+          "id": 1, "domain": "ai-knowledge",
+          "q": "What is CUDA?",
+          "qZh": "CUDA 是什么？",
+          "o": ["A deep learning framework", "NVIDIA's parallel computing platform and programming model", "A network protocol for GPU clusters", "An operating system for GPUs"],
+          "oZh": ["一个深度学习框架", "NVIDIA 的并行计算平台与编程模型", "GPU 集群的网络协议", "GPU 专用的操作系统"],
+          "a": [1], "multi": false,
+          "e": "CUDA is the foundational parallel computing platform and programming model on which the NVIDIA AI software stack is built.",
+          "eZh": "CUDA 是 NVIDIA AI 软件栈的底层并行计算平台与编程模型。"
+        },
+        {
+          "id": 2, "domain": "ai-knowledge",
+          "q": "What is the role of cuDNN?",
+          "qZh": "cuDNN 的作用是什么？",
+          "o": ["A library of GPU-accelerated primitives for deep learning frameworks", "A GPU monitoring agent", "A storage system for training data", "A model serving server"],
+          "oZh": ["为深度学习框架提供 GPU 加速的基础运算原语", "GPU 监控代理程序", "训练数据存储系统", "模型推理服务服务器"],
+          "a": [0], "multi": false,
+          "e": "cuDNN provides highly tuned primitives (convolutions, pooling, etc.) that deep learning frameworks such as PyTorch and TensorFlow call on GPUs.",
+          "eZh": "cuDNN 提供高度优化的卷积、池化等原语，PyTorch、TensorFlow 等框架在 GPU 上直接调用。"
+        },
+        {
+          "id": 3, "domain": "ai-knowledge",
+          "q": "What does TensorRT do?",
+          "qZh": "TensorRT 的作用是什么？",
+          "o": ["Trains large language models", "Optimizes trained models for high-performance inference", "Manages GPU drivers", "Schedules cluster jobs"],
+          "oZh": ["训练大语言模型", "对训练好的模型做优化以实现高性能推理", "管理 GPU 驱动", "调度集群作业"],
+          "a": [1], "multi": false,
+          "e": "TensorRT takes a trained network and optimizes it (layer fusion, precision calibration, kernels) into an inference engine.",
+          "eZh": "TensorRT 对训练好的网络做算子融合、精度校准、内核优化，生成高性能推理引擎。"
+        },
+        {
+          "id": 4, "domain": "ai-knowledge",
+          "q": "Which product serves trained models in production regardless of framework?",
+          "qZh": "哪个产品可以跨框架地在生产环境中部署（服务）训练好的模型？",
+          "o": ["NVIDIA Triton Inference Server", "cuDNN", "NVLink", "DCGM"],
+          "oZh": ["NVIDIA Triton 推理服务器", "cuDNN", "NVLink", "DCGM"],
+          "a": [0], "multi": false,
+          "e": "Triton Inference Server serves models from TensorFlow, PyTorch, TensorRT, ONNX and other backends behind a single API.",
+          "eZh": "Triton 推理服务器通过统一 API 服务 TensorFlow、PyTorch、TensorRT、ONNX 等多种后端模型。"
+        },
+        {
+          "id": 5, "domain": "ai-knowledge",
+          "q": "What is RAPIDS?",
+          "qZh": "RAPIDS 是什么？",
+          "o": ["A suite of GPU-accelerated data science libraries (e.g. cuDF, cuML)", "An inference microservice", "A rack-scale liquid cooling design", "A storage protocol"],
+          "oZh": ["一套 GPU 加速的数据科学库（如 cuDF、cuML）", "一种推理微服务", "机柜级液冷设计方案", "一种存储协议"],
+          "a": [0], "multi": false,
+          "e": "RAPIDS brings pandas-like and scikit-learn-like workflows to GPUs via cuDF, cuML and related libraries.",
+          "eZh": "RAPIDS 通过 cuDF、cuML 等库把 pandas、scikit-learn 风格的数据科学工作流搬到 GPU 上。"
+        },
+        {
+          "id": 6, "domain": "ai-knowledge",
+          "q": "NeMo is best described as:",
+          "qZh": "NeMo 最准确的描述是：",
+          "o": ["A framework for building and fine-tuning generative AI models", "A GPU virtualization product", "An InfiniBand fabric manager", "A power monitoring tool"],
+          "oZh": ["用于构建和微调生成式 AI 模型的框架", "GPU 虚拟化产品", "InfiniBand 网络管理器", "功耗监控工具"],
+          "a": [0], "multi": false,
+          "e": "NeMo is NVIDIA's framework for training and fine-tuning LLMs, multimodal and speech models.",
+          "eZh": "NeMo 是 NVIDIA 用于训练和微调大语言模型、多模态与语音模型的框架。"
+        },
+        {
+          "id": 7, "domain": "ai-knowledge",
+          "q": "What are NVIDIA NIM microservices?",
+          "qZh": "NVIDIA NIM 微服务是什么？",
+          "o": ["Optimized inference microservices packaged for standardized deployment", "Networking microsegments for DPU security", "Micro partitions of a GPU provided by MIG", "Small batch sizes for training"],
+          "oZh": ["打包成标准化部署形式的优化推理微服务", "用于 DPU 安全的网络微分段", "MIG 提供的 GPU 微型分区", "训练中的小批量（batch size）"],
+          "a": [0], "multi": false,
+          "e": "NIM packages optimized inference engines (TensorRT-LLM etc.) as containerized microservices with standard APIs.",
+          "eZh": "NIM 把优化好的推理引擎（如 TensorRT-LLM）打包成带标准 API 的容器化微服务。"
+        },
+        {
+          "id": 8, "domain": "ai-knowledge",
+          "q": "Which hardware characteristic matters most for large-model distributed training?",
+          "qZh": "对大模型分布式训练而言，哪项硬件特性最关键？",
+          "o": ["Many tightly coupled GPUs with high interconnect bandwidth", "A single powerful CPU", "Large spinning-disk storage", "High-resolution video output"],
+          "oZh": ["大量紧耦合、互连带宽高的 GPU", "一颗高性能 CPU", "大容量机械硬盘", "高分辨率视频输出"],
+          "a": [0], "multi": false,
+          "e": "Distributed training synchronizes gradients across GPUs constantly, so GPU count and inter-GPU/inter-node bandwidth dominate performance.",
+          "eZh": "分布式训练需要 GPU 之间持续同步梯度，因此 GPU 数量和互连带宽是性能决定因素。"
+        },
+        {
+          "id": 9, "domain": "ai-knowledge",
+          "q": "Supervised learning is characterized by:",
+          "qZh": "监督学习的特点是：",
+          "o": ["Learning from labeled examples", "Finding structure in unlabeled data", "Learning from rewards in an environment", "Training without any data"],
+          "oZh": ["从带标签的数据中学习", "在无标签数据中发现结构", "通过环境奖励学习", "不需要数据即可训练"],
+          "a": [0], "multi": false,
+          "e": "In supervised learning the model learns a mapping from inputs to known labels (classification, regression).",
+          "eZh": "监督学习让模型学习输入到已知标签的映射，如分类和回归任务。"
+        },
+        {
+          "id": 10, "domain": "ai-knowledge",
+          "q": "Clustering a dataset without labels is an example of:",
+          "qZh": "对无标签数据集做聚类属于：",
+          "o": ["Supervised learning", "Unsupervised learning", "Reinforcement learning", "Transfer learning"],
+          "oZh": ["监督学习", "无监督学习", "强化学习", "迁移学习"],
+          "a": [1], "multi": false,
+          "e": "Unsupervised learning finds structure (clusters, latent factors) in unlabeled data.",
+          "eZh": "无监督学习在没有标签的数据中挖掘结构，例如聚类和降维。"
+        },
+        {
+          "id": 11, "domain": "ai-knowledge",
+          "q": "In reinforcement learning, the model learns:",
+          "qZh": "强化学习中，模型通过什么学习？",
+          "o": ["From labeled pairs", "Through actions and rewards from an environment", "Only from precomputed gradients", "By copying another model's weights"],
+          "oZh": ["通过带标签的样本对", "通过与环境交互获得动作和奖励", "只靠预先算好的梯度", "直接复制另一个模型的权重"],
+          "a": [1], "multi": false,
+          "e": "An agent takes actions in an environment and learns a policy that maximizes cumulative reward.",
+          "eZh": "智能体在环境中执行动作，通过最大化累计奖励来学习最优策略。"
+        },
+        {
+          "id": 12, "domain": "ai-knowledge",
+          "q": "How do GPU and CPU architectures fundamentally differ?",
+          "qZh": "GPU 与 CPU 的架构本质区别是什么？",
+          "o": ["GPUs have thousands of simple cores optimized for parallel throughput; CPUs have few powerful cores for serial code", "GPUs only run graphics; CPUs run AI", "CPUs have more memory bandwidth than GPUs", "There is no significant difference"],
+          "oZh": ["GPU 拥有数千个面向并行吞吐的简单核心，CPU 只有少量复杂核心适合串行逻辑", "GPU 只能跑图形，CPU 才能跑 AI", "CPU 的内存带宽比 GPU 高", "两者没有本质区别"],
+          "a": [0], "multi": false,
+          "e": "GPUs trade per-core complexity for massive parallelism; CPUs keep few complex cores with big caches and branch prediction.",
+          "eZh": "GPU 用大量简单核心换取并行吞吐；CPU 用少量复杂核心（大缓存、分支预测）处理串行逻辑。"
+        },
+        {
+          "id": 13, "domain": "ai-knowledge",
+          "q": "What do Tensor Cores do?",
+          "qZh": "Tensor Core 的作用是什么？",
+          "o": ["Render 3D triangles", "Accelerate matrix multiply-accumulate operations in mixed precision", "Manage fabric routing", "Store model checkpoints"],
+          "oZh": ["渲染 3D 三角形", "以混合精度加速矩阵乘加运算", "管理网络路由", "存储模型检查点"],
+          "a": [1], "multi": false,
+          "e": "Tensor Cores are dedicated hardware units that accelerate matrix operations in FP16/BF16/FP8/FP4 precision, the core compute of AI.",
+          "eZh": "Tensor Core 是专用硬件单元，以 FP16/BF16/FP8/FP4 精度加速矩阵运算，是 AI 计算的核心。"
+        },
+        {
+          "id": 14, "domain": "ai-knowledge",
+          "q": "The main benefit of mixed-precision training is:",
+          "qZh": "混合精度训练的主要好处是：",
+          "o": ["Higher accuracy by definition", "Faster training and lower memory use with minimal accuracy loss", "It removes the need for GPUs", "It compresses the dataset"],
+          "oZh": ["定义上精度更高", "训练更快、显存占用更低，精度损失可忽略", "不再需要 GPU", "压缩数据集"],
+          "a": [1], "multi": false,
+          "e": "Using FP16/BF16 for most math (with FP32 master weights) speeds up Tensor Core compute and halves memory traffic.",
+          "eZh": "大部分计算用 FP16/BF16（配合 FP32 主权重），可加速 Tensor Core 计算并大幅降低显存占用。"
+        },
+        {
+          "id": 15, "domain": "ai-knowledge",
+          "q": "Which mechanism is central to the Transformer architecture?",
+          "qZh": "Transformer 架构的核心机制是什么？",
+          "o": ["Convolution", "Self-attention", "Decision trees", "Kalman filters"],
+          "oZh": ["卷积", "自注意力（self-attention）", "决策树", "卡尔曼滤波"],
+          "a": [1], "multi": false,
+          "e": "Self-attention lets every token weigh its relationship to every other token and parallelizes far better than recurrence.",
+          "eZh": "自注意力让每个 token 都能衡量与其他 token 的关系，且远比循环结构易于并行。"
+        },
+        {
+          "id": 16, "domain": "ai-knowledge",
+          "q": "Compared to traditional machine learning, deep learning:",
+          "qZh": "与传统机器学习相比，深度学习：",
+          "o": ["Requires manual feature engineering", "Automatically learns feature representations from raw data", "Cannot run on GPUs", "Only works on tabular data"],
+          "oZh": ["需要人工设计特征", "自动从原始数据中学习特征表示", "不能在 GPU 上运行", "只能处理表格数据"],
+          "a": [1], "multi": false,
+          "e": "Deep neural networks learn hierarchical features end-to-end, removing much of the manual feature engineering.",
+          "eZh": "深度神经网络端到端地学习层级特征，大幅减少人工特征工程。"
+        },
+        {
+          "id": 17, "domain": "ai-knowledge",
+          "q": "How does fine-tuning differ from prompt engineering?",
+          "qZh": "微调（fine-tuning）与提示工程（prompt engineering）的区别是？",
+          "o": ["Fine-tuning updates model weights; prompting does not", "Prompting updates model weights", "Fine-tuning only works on small models", "They are identical"],
+          "oZh": ["微调会更新模型权重，提示工程不会", "提示工程会更新权重", "微调只适用于小模型", "两者完全相同"],
+          "a": [0], "multi": false,
+          "e": "Fine-tuning continues training on task data to change weights; prompt engineering only conditions the frozen model at inference time.",
+          "eZh": "微调在任务数据上继续训练从而改变权重；提示工程只是在使用时引导冻结的模型。"
+        },
+        {
+          "id": 18, "domain": "ai-knowledge",
+          "q": "LLM inference is often limited by:",
+          "qZh": "大模型推理（LLM inference）通常受限于：",
+          "o": ["GPU memory bandwidth (HBM)", "Screen refresh rate", "Disk seek time", "Ethernet cable length"],
+          "oZh": ["GPU 显存带宽（HBM）", "屏幕刷新率", "磁盘寻道时间", "网线长度"],
+          "a": [0], "multi": false,
+          "e": "Autoregressive decoding streams model weights for each token, making HBM bandwidth a primary bottleneck.",
+          "eZh": "自回归解码时每个 token 都要搬运模型权重，HBM 显存带宽往往成为首要瓶颈。"
+        },
+        {
+          "id": 19, "domain": "ai-knowledge",
+          "q": "What is the effect of quantization (e.g. INT8/FP8/FP4) on inference?",
+          "qZh": "量化（如 INT8/FP8/FP4）对推理的影响是什么？",
+          "o": ["Larger memory footprint", "Lower memory use and faster inference with a small accuracy risk", "Slower inference", "It only affects training"],
+          "oZh": ["显存占用变大", "显存更省、推理更快，精度损失风险较小", "推理变慢", "只影响训练"],
+          "a": [1], "multi": false,
+          "e": "Quantized weights and activations shrink memory traffic and allow faster low-precision kernels, trading a small accuracy risk.",
+          "eZh": "量化后权重和激活更省显存、可用低精度算子加速，代价是可能带来少量精度损失。"
+        },
+        {
+          "id": 20, "domain": "ai-knowledge",
+          "q": "What is NGC (NVIDIA GPU Cloud)?",
+          "qZh": "NGC（NVIDIA GPU Cloud）是什么？",
+          "o": ["A catalog of GPU-optimized containers, pretrained models and SDKs", "A public cloud region", "A GPU rental marketplace", "A network backbone"],
+          "oZh": ["GPU 优化容器、预训练模型和 SDK 的目录/仓库", "一个公有云区域", "GPU 租赁市场", "网络骨干网"],
+          "a": [0], "multi": false,
+          "e": "NGC hosts validated, GPU-optimized software containers and models that run across on-prem and cloud environments.",
+          "eZh": "NGC 提供经过验证的 GPU 优化容器与模型，可在本地和云端环境一致运行。"
+        },
+        {
+          "id": 21, "domain": "ai-knowledge",
+          "q": "Which layer is the foundation of the NVIDIA AI software stack?",
+          "qZh": "NVIDIA AI 软件栈的最底层基础是：",
+          "o": ["Triton", "CUDA", "NeMo", "RAPIDS"],
+          "oZh": ["Triton", "CUDA", "NeMo", "RAPIDS"],
+          "a": [1], "multi": false,
+          "e": "Libraries like cuDNN, TensorRT and RAPIDS all build on the CUDA platform.",
+          "eZh": "cuDNN、TensorRT、RAPIDS 等库都构建在 CUDA 平台之上。"
+        },
+        {
+          "id": 22, "domain": "ai-knowledge",
+          "q": "What is the relationship between TensorRT and Triton?",
+          "qZh": "TensorRT 与 Triton 的关系是？",
+          "o": ["TensorRT optimizes a model into an engine; Triton serves models in production", "They compete as two serving servers", "Triton compiles models; TensorRT serves them", "TensorRT is a storage format"],
+          "oZh": ["TensorRT 把模型优化成引擎，Triton 在生产环境提供服务", "两者是相互竞争的推理服务器", "Triton 编译模型，TensorRT 做服务", "TensorRT 是一种存储格式"],
+          "a": [0], "multi": false,
+          "e": "TensorRT is an inference optimizer/runtime; Triton is a serving layer that can host TensorRT engines among other backends.",
+          "eZh": "TensorRT 是推理优化器和运行时；Triton 是服务层，可承载 TensorRT 引擎等多种后端。"
+        },
+        {
+          "id": 23, "domain": "ai-knowledge",
+          "q": "A model that jointly processes text and images is called:",
+          "qZh": "能同时处理文本和图像的模型称为：",
+          "o": ["Unimodal", "Multimodal", "Monolithic", "Deterministic"],
+          "oZh": ["单模态", "多模态", "单体式", "确定性"],
+          "a": [1], "multi": false,
+          "e": "Multimodal models learn across modalities such as text, image and audio.",
+          "eZh": "多模态模型能跨文本、图像、音频等模态联合学习。"
+        },
+        {
+          "id": 24, "domain": "ai-infrastructure",
+          "q": "What is NVLink?",
+          "qZh": "NVLink 是什么？",
+          "o": ["NVIDIA's high-bandwidth direct GPU-to-GPU interconnect", "A storage interface", "A kernel scheduler", "A cloud management portal"],
+          "oZh": ["NVIDIA 的高带宽 GPU 直连互连技术", "一种存储接口", "内核调度器", "云管理门户"],
+          "a": [0], "multi": false,
+          "e": "NVLink provides point-to-point GPU interconnect bandwidth far beyond PCIe, enabling fast multi-GPU communication.",
+          "eZh": "NVLink 提供远超 PCIe 的点对点 GPU 互连带宽，支撑多 GPU 高速通信。"
+        },
+        {
+          "id": 25, "domain": "ai-infrastructure",
+          "q": "What does NVSwitch add inside a DGX/HGX node?",
+          "qZh": "NVSwitch 在 DGX/HGX 节点内的作用是？",
+          "o": ["Full-bandwidth all-to-all connectivity among all GPUs", "Wireless management", "Power distribution", "Disk caching"],
+          "oZh": ["让节点内所有 GPU 之间实现全带宽全互联", "无线管理", "供电分配", "磁盘缓存"],
+          "a": [0], "multi": false,
+          "e": "NVSwitch lets every GPU talk to every other GPU at NVLink speed, so a node behaves like one large GPU pool.",
+          "eZh": "NVSwitch 让任意两块 GPU 都能以 NVLink 速度互访，节点如同一个整体 GPU 池。"
+        },
+        {
+          "id": 26, "domain": "ai-infrastructure",
+          "q": "Why is InfiniBand commonly chosen for multi-node AI training clusters?",
+          "qZh": "多节点 AI 训练集群为什么常选 InfiniBand？",
+          "o": ["Low-latency RDMA networking that speeds gradient synchronization", "It is cheaper than any Ethernet switch", "It replaces the need for GPUs", "It carries power to racks"],
+          "oZh": ["低延迟 RDMA 网络可加速梯度同步", "比任何以太网交换机都便宜", "可以替代 GPU", "可以为机柜供电"],
+          "a": [0], "multi": false,
+          "e": "InfiniBand offers low latency, high throughput and RDMA, reducing time lost to allreduce and other collectives.",
+          "eZh": "InfiniBand 提供低延迟、高吞吐和 RDMA，显著减少 allreduce 等集合通信的等待时间。"
+        },
+        {
+          "id": 27, "domain": "ai-infrastructure",
+          "q": "What is RoCE?",
+          "qZh": "RoCE 是什么？",
+          "o": ["RDMA over Converged Ethernet", "A GPU cooling method", "A model compression technique", "NVIDIA's rack power standard"],
+          "oZh": ["基于融合以太网的 RDMA", "一种 GPU 散热方式", "一种模型压缩技术", "NVIDIA 的机柜供电标准"],
+          "a": [0], "multi": false,
+          "e": "RoCE delivers RDMA semantics over standard Ethernet, an alternative fabric to InfiniBand for AI clusters.",
+          "eZh": "RoCE 在标准以太网上实现 RDMA 语义，是 AI 集群里 InfiniBand 的以太网替代方案。"
+        },
+        {
+          "id": 28, "domain": "ai-infrastructure",
+          "q": "What is the primary benefit of a BlueField DPU in an AI data center?",
+          "qZh": "BlueField DPU 在 AI 数据中心的主要价值是？",
+          "o": ["Offloading networking, storage and security tasks from host CPUs", "Adding GPU compute", "Replacing NVSwitch", "Cooling the server"],
+          "oZh": ["把网络、存储和安全任务从主机 CPU 卸载", "增加 GPU 算力", "替代 NVSwitch", "为服务器散热"],
+          "a": [0], "multi": false,
+          "e": "A DPU offloads infrastructure services to dedicated silicon, freeing host CPUs for application work and improving isolation.",
+          "eZh": "DPU 用专用芯片承担基础设施服务，释放主机 CPU 给业务负载，并提升隔离性。"
+        },
+        {
+          "id": 29, "domain": "ai-infrastructure",
+          "q": "What best describes an NVIDIA DGX system?",
+          "qZh": "对 NVIDIA DGX 系统最准确的描述是：",
+          "o": ["An integrated AI system with GPUs, interconnect and software, ready to run", "A GPU-only bare baseboard", "A software license", "A monitoring dashboard"],
+          "oZh": ["集成 GPU、互连与软件、开箱即用的整体 AI 系统", "仅含 GPU 的裸基板", "一种软件许可", "监控仪表盘"],
+          "a": [0], "multi": false,
+          "e": "DGX is NVIDIA's turnkey AI supercomputer: servers, networking, and the full software stack integrated and supported.",
+          "eZh": "DGX 是 NVIDIA 的交钥匙 AI 超算：服务器、网络与完整软件栈集成交付并提供支持。"
+        },
+        {
+          "id": 30, "domain": "ai-infrastructure",
+          "q": "How do HGX and DGX differ?",
+          "qZh": "HGX 与 DGX 的区别是？",
+          "o": ["HGX is a GPU baseboard that OEM partners integrate; DGX is NVIDIA's complete system", "HGX is a cloud service; DGX is a GPU", "They are the same product", "DGX is a baseboard; HGX is a complete system"],
+          "oZh": ["HGX 是供 OEM 厂商集成的 GPU 基板，DGX 是 NVIDIA 的完整系统", "HGX 是云服务，DGX 是 GPU", "两者是同一产品", "DGX 是基板，HGX 是完整系统"],
+          "a": [0], "multi": false,
+          "e": "HGX boards ship to server manufacturers to build their own systems; DGX is NVIDIA's own branded, integrated platform.",
+          "eZh": "HGX 基板交给服务器厂商自行集成；DGX 是 NVIDIA 自有品牌的一体化平台。"
+        },
+        {
+          "id": 31, "domain": "ai-infrastructure",
+          "q": "Which statement about the Blackwell architecture is correct?",
+          "qZh": "关于 Blackwell 架构，下列哪项正确？",
+          "o": ["It succeeds Hopper and adds low-precision (FP4) support and larger NVLink domains such as GB200 NVL72", "It is older than Hopper", "It removes NVLink entirely", "It is a CPU architecture"],
+          "oZh": ["它是 Hopper 的后继架构，新增 FP4 等低精度支持，并支持 GB200 NVL72 等更大 NVLink 域", "比 Hopper 更老", "完全移除了 NVLink", "是 CPU 架构"],
+          "a": [0], "multi": false,
+          "e": "Blackwell follows Hopper, adds FP4/FP2-precision Tensor Cores, and scales to 72-GPU NVLink domains (GB200 NVL72).",
+          "eZh": "Blackwell 接替 Hopper，新增 FP4/FP2 精度 Tensor Core，并把 NVLink 域扩展到 72 卡（GB200 NVL72）。"
+        },
+        {
+          "id": 32, "domain": "ai-infrastructure",
+          "q": "What is the key difference between SXM and PCIe GPUs?",
+          "qZh": "SXM GPU 与 PCIe GPU 的关键区别是？",
+          "o": ["SXM GPUs socket directly to the baseboard with NVLink; PCIe GPUs use slots with limited inter-GPU bandwidth", "PCIe GPUs are always faster", "SXM GPUs have no memory", "PCIe GPUs cannot be used for AI"],
+          "oZh": ["SXM GPU 直接插在基板上并支持 NVLink；PCIe GPU 用插槽，GPU 间带宽有限", "PCIe GPU 总是更快", "SXM GPU 没有显存", "PCIe GPU 不能用于 AI"],
+          "a": [0], "multi": false,
+          "e": "SXM form factor enables dense NVLink topologies; PCIe cards are modular but inter-GPU traffic goes over PCIe.",
+          "eZh": "SXM 形态支持高密度 NVLink 拓扑；PCIe 卡更灵活但 GPU 间流量要走 PCIe 总线。"
+        },
+        {
+          "id": 33, "domain": "ai-infrastructure",
+          "q": "What is a rail-optimized network design?",
+          "qZh": "什么是 rail-optimized（轨道优化）网络设计？",
+          "o": ["Each GPU's NIC connects to a dedicated switch rail so all GPUs get uniform bandwidth", "All NICs connect to one switch", "Networks are wired in a ring", "Switches are replaced with hubs"],
+          "oZh": ["每块 GPU 的网卡分别连到专用交换机轨道，保证所有 GPU 带宽一致", "所有网卡连到一台交换机", "网络以环形布线", "用集线器替换交换机"],
+          "a": [0], "multi": false,
+          "e": "In rail optimization, GPU i connects to rail switch i, giving deterministic, uniform bandwidth for collective patterns.",
+          "eZh": "轨道优化中第 i 块 GPU 连到第 i 台轨道交换机，为集合通信提供确定且均匀的带宽。"
+        },
+        {
+          "id": 34, "domain": "ai-infrastructure",
+          "q": "Why do AI clusters use spine-leaf / fat-tree topologies?",
+          "qZh": "AI 集群为什么采用 spine-leaf / fat-tree 拓扑？",
+          "o": ["To provide predictable, non-blocking east-west bandwidth at scale", "To save on cabling only", "Because they require fewer switches and nothing else", "To connect printers"],
+          "oZh": ["在大规模下提供可预期的无阻塞东西向带宽", "只是为了省线缆", "因为交换机数量最少", "用于连接打印机"],
+          "a": [0], "multi": false,
+          "e": "Fat-tree style topologies give every-to-every bandwidth so many GPUs can allreduce simultaneously without hotspots.",
+          "eZh": "fat-tree 类拓扑保证任意节点间带宽，让大量 GPU 同时做 allreduce 而不产生拥塞热点。"
+        },
+        {
+          "id": 35, "domain": "ai-infrastructure",
+          "q": "What does GPUDirect RDMA enable?",
+          "qZh": "GPUDirect RDMA 实现了什么？",
+          "o": ["A NIC writes data directly into GPU memory without a host CPU bounce buffer", "GPUs write to disk directly", "CPUs access GPU memory over the network", "GPUs communicate over USB"],
+          "oZh": ["网卡把数据直接写入 GPU 显存，无需主机 CPU 中转缓冲", "GPU 直接写磁盘", "CPU 通过网络访问 GPU 显存", "GPU 通过 USB 通信"],
+          "a": [0], "multi": false,
+          "e": "GPUDirect RDMA lets a NIC DMA straight to GPU memory, cutting latency and CPU overhead for collectives.",
+          "eZh": "GPUDirect RDMA 让网卡以 DMA 方式直达显存，降低集合通信的延迟与 CPU 开销。"
+        },
+        {
+          "id": 36, "domain": "ai-infrastructure",
+          "q": "Why do GB200-class rack systems require direct liquid cooling?",
+          "qZh": "GB200 级机柜系统为什么必须采用直接液冷？",
+          "o": ["Power density exceeds what air cooling can remove", "Liquid is cheaper than air", "Fans are banned in data centers", "To reduce Ethernet latency"],
+          "oZh": ["功率密度超出风冷所能带走的热量", "液体比空气便宜", "数据中心禁止使用风扇", "为了降低以太网延迟"],
+          "a": [0], "multi": false,
+          "e": "At ~100kW+ per rack, air cooling cannot extract enough heat; direct-to-chip liquid loops become mandatory.",
+          "eZh": "单柜功率超过 100kW 时风冷无法带走热量，必须使用芯片级直接液冷回路。"
+        },
+        {
+          "id": 37, "domain": "ai-infrastructure",
+          "q": "When planning an AI data center, rack power density means:",
+          "qZh": "在 AI 数据中心规划中，机柜功率密度指的是：",
+          "o": ["Kilowatts per rack, which drives PDU, busway, power and cooling provisioning", "Number of users per rack", "GPU model numbers", "Bytes stored per rack"],
+          "oZh": ["单机柜的千瓦数，决定 PDU、母线、供电和散热的配置", "每机柜用户数", "GPU 型号", "每机柜存储字节数"],
+          "a": [0], "multi": false,
+          "e": "AI racks draw tens of kW or more, far above traditional IT racks, so facility power and cooling must be planned around it.",
+          "eZh": "AI 机柜功耗达数十千瓦以上，远超传统机柜，设施供电与散热必须围绕功率密度规划。"
+        },
+        {
+          "id": 38, "domain": "ai-infrastructure",
+          "q": "What storage characteristic matters most for training dataloaders?",
+          "qZh": "对训练数据加载（dataloader）而言，存储最重要的特性是？",
+          "o": ["High aggregate throughput and many small-read performance (parallel file systems)", "Tape archival capacity", "Windows compatibility", "Backup tape rotation"],
+          "oZh": ["高聚合吞吐和大量小文件读性能（并行文件系统）", "磁带归档容量", "Windows 兼容性", "磁带轮换备份"],
+          "a": [0], "multi": false,
+          "e": "GPUs starve if storage cannot feed them; parallel FS like Lustre/GPFS/WEKA provide the needed aggregate bandwidth.",
+          "eZh": "存储喂不饱 GPU 就会使其空转；Lustre/GPFS/WEKA 等并行文件系统提供所需的聚合带宽。"
+        },
+        {
+          "id": 39, "domain": "ai-infrastructure",
+          "q": "What is DGX Cloud?",
+          "qZh": "DGX Cloud 是什么？",
+          "o": ["DGX-class instances hosted by cloud providers with the NVIDIA software stack", "A backup service", "A free public GPU pool", "An NVIDIA online store"],
+          "oZh": ["由云厂商托管、带 NVIDIA 软件栈的 DGX 级实例", "一种备份服务", "免费的公共 GPU 池", "NVIDIA 在线商店"],
+          "a": [0], "multi": false,
+          "e": "DGX Cloud rents DGX-class capacity on partner clouds with the same software stack as on-prem DGX.",
+          "eZh": "DGX Cloud 在合作云上出租 DGX 级算力，软件栈与本地 DGX 一致。"
+        },
+        {
+          "id": 40, "domain": "ai-infrastructure",
+          "q": "Which factor most strongly favors on-premises deployment over cloud?",
+          "qZh": "哪一因素最能支持选择本地部署而非云部署？",
+          "o": ["Data control/compliance plus steady, high utilization of the hardware", "Occasional short experiments", "No in-house IT staff", "Wanting zero upfront cost"],
+          "oZh": ["数据管控/合规要求，加上硬件长期高利用率", "偶尔做短期实验", "没有内部 IT 团队", "希望零前期投入"],
+          "a": [0], "multi": false,
+          "e": "Steady workloads amortize on-prem capex and keep sensitive data in-house; bursty or exploratory use favors cloud.",
+          "eZh": "长期稳定的负载可摊薄本地建设成本并留住敏感数据；突发或探索性负载更适合云。"
+        },
+        {
+          "id": 41, "domain": "ai-infrastructure",
+          "q": "What is the NVIDIA Grace CPU?",
+          "qZh": "NVIDIA Grace CPU 是什么？",
+          "o": ["An ARM-based NVIDIA CPU that attaches tightly to GPUs via NVLink-C2C", "A legacy x86 server CPU", "A DPU firmware", "A storage controller"],
+          "oZh": ["基于 ARM 的 NVIDIA CPU，通过 NVLink-C2C 与 GPU 紧密耦合", "老旧的 x86 服务器 CPU", "DPU 固件", "存储控制器"],
+          "a": [0], "multi": false,
+          "e": "Grace pairs with GPUs using NVLink-C2C for coherent memory access at very high bandwidth (e.g. Grace Hopper / Grace Blackwell).",
+          "eZh": "Grace 通过 NVLink-C2C 与 GPU 实现超高带宽的一致性内存访问（如 Grace Hopper / Grace Blackwell）。"
+        },
+        {
+          "id": 42, "domain": "ai-infrastructure",
+          "q": "What is HBM and why does it matter?",
+          "qZh": "HBM 是什么，为什么重要？",
+          "o": ["High Bandwidth Memory stacked close to the GPU, feeding data-hungry compute", "A hybrid bus manager", "A host-based monitoring tool", "A high-bit modulation codec"],
+          "oZh": ["堆叠在 GPU 旁边的高带宽显存，为 hungry 计算供数", "混合总线管理器", "基于主机的监控工具", "高比特调制编码"],
+          "a": [0], "multi": false,
+          "e": "HBM provides terabytes-per-second bandwidth on the GPU package; without it Tensor Cores would starve.",
+          "eZh": "HBM 在 GPU 封装内提供每秒 TB 级带宽，否则 Tensor Core 将因供数不足而空转。"
+        },
+        {
+          "id": 43, "domain": "ai-infrastructure",
+          "q": "What does MIG (Multi-Instance GPU) do?",
+          "qZh": "MIG（多实例 GPU）的作用是？",
+          "o": ["Hardware-partitions one GPU into isolated instances with dedicated SMs and memory", "Connects GPUs into clusters", "Mirrors one GPU to another", "Increases GPU clock speed"],
+          "oZh": ["在硬件层把一块 GPU 划分成带独立 SM 和显存的隔离实例", "把多块 GPU 组成集群", "把一块 GPU 镜像到另一块", "提升 GPU 频率"],
+          "a": [0], "multi": false,
+          "e": "MIG creates up to 7 isolated GPU instances with their own SMs, memory and bandwidth for safe sharing.",
+          "eZh": "MIG 最多把一块 GPU 分成 7 个拥有独立 SM、显存和带宽的隔离实例，便于安全共享。"
+        },
+        {
+          "id": 44, "domain": "ai-infrastructure",
+          "q": "Besides latency, which InfiniBand feature reduces time spent on collective operations?",
+          "qZh": "除低延迟外，InfiniBand 的哪项特性能减少集合通信耗时？",
+          "o": ["SHARP in-network aggregation on the switches", "Web dashboard", "Faster fans", "Larger MTU only"],
+          "oZh": ["交换机上的 SHARP 在网聚合", "Web 管理界面", "更快的风扇", "仅更大的 MTU"],
+          "a": [0], "multi": false,
+          "e": "SHARP performs reductions (e.g. allreduce) inside the switch fabric, cutting data each endpoint must send.",
+          "eZh": "SHARP 在交换网络内部完成归约（如 allreduce），减少每个端点需要发送的数据量。"
+        },
+        {
+          "id": 45, "domain": "ai-infrastructure",
+          "q": "What does GPUDirect Storage do?",
+          "qZh": "GPUDirect Storage 的作用是？",
+          "o": ["Moves data from storage directly into GPU memory, bypassing a CPU staging copy", "Replicates GPU memory to cloud storage", "Encrypts storage volumes", "Replaces the file system"],
+          "oZh": ["把数据从存储直接搬进 GPU 显存，跳过 CPU 中转拷贝", "把显存复制到云存储", "加密存储卷", "替代文件系统"],
+          "a": [0], "multi": false,
+          "e": "GDS provides a direct storage-to-GPU data path so dataloaders avoid extra CPU copies.",
+          "eZh": "GDS 提供存储到 GPU 的直通数据路径，dataloader 无需额外的 CPU 拷贝。"
+        },
+        {
+          "id": 46, "domain": "ai-infrastructure",
+          "q": "Which traffic pattern dominates an AI training cluster network?",
+          "qZh": "AI 训练集群网络中占主导的流量模式是？",
+          "o": ["East-west GPU-to-GPU synchronization traffic (gradients/activations)", "North-south client traffic", "Backup traffic", "Video streaming"],
+          "oZh": ["东西向的 GPU 间同步流量（梯度/激活）", "南北向的客户端流量", "备份流量", "视频流"],
+          "a": [0], "multi": false,
+          "e": "Distributed training is GPU-to-GPU allreduce heavy, unlike traditional data centers dominated by client-server traffic.",
+          "eZh": "分布式训练以 GPU 间 allreduce 为主，不同于传统数据中心以客户端-服务器流量为主。"
+        },
+        {
+          "id": 47, "domain": "ai-infrastructure",
+          "q": "What is NCCL?",
+          "qZh": "NCCL 是什么？",
+          "o": ["NVIDIA's topology-aware library for collective communication across GPUs and nodes", "A network cable standard", "A cooling control loop", "A container registry"],
+          "oZh": ["NVIDIA 面向 GPU/多节点集合通信的拓扑感知通信库", "一种网线标准", "散热控制回路", "容器镜像仓库"],
+          "a": [0], "multi": false,
+          "e": "NCCL implements allreduce, broadcast, etc., detecting NVLink/PCIe/IB topology for near-peak collectives.",
+          "eZh": "NCCL 实现 allreduce、broadcast 等集合通信，自动感知 NVLink/PCIe/IB 拓扑以逼近峰值性能。"
+        },
+        {
+          "id": 48, "domain": "ai-operations",
+          "q": "What is DCGM used for?",
+          "qZh": "DCGM 用于做什么？",
+          "o": ["GPU monitoring, diagnostics, health checks and policy enforcement in the data center", "Model training", "Writing CUDA kernels", "Designing cooling loops"],
+          "oZh": ["数据中心内 GPU 的监控、诊断、健康检查与策略管理", "模型训练", "编写 CUDA kernel", "设计散热回路"],
+          "a": [0], "multi": false,
+          "e": "Data Center GPU Manager provides telemetry, active health diagnostics and policy/alerting for GPU fleets.",
+          "eZh": "数据中心 GPU 管理器（DCGM）为 GPU 集群提供遥测、主动健康诊断和策略告警。"
+        },
+        {
+          "id": 49, "domain": "ai-operations",
+          "q": "Which metrics does a typical DCGM monitoring field group include?",
+          "qZh": "典型的 DCGM 监控指标组包含哪些指标？",
+          "o": ["Utilization, memory, temperature, power, ECC errors and NVLink status", "Only fan speed", "Only job queue length", "Only disk IOPS"],
+          "oZh": ["利用率、显存、温度、功耗、ECC 错误和 NVLink 状态", "只有风扇转速", "只有作业队列长度", "只有磁盘 IOPS"],
+          "a": [0], "multi": false,
+          "e": "DCGM-XPC exposes GPU util, memory, power, thermals, ECC and NVLink health as Prometheus-ready metrics.",
+          "eZh": "DCGM 导出 GPU 利用率、显存、功耗、温度、ECC 与 NVLink 健康等指标，可直接接入 Prometheus。"
+        },
+        {
+          "id": 50, "domain": "ai-operations",
+          "q": "What does the NVIDIA GPU Operator do in Kubernetes?",
+          "qZh": "NVIDIA GPU Operator 在 Kubernetes 中做什么？",
+          "o": ["Automates the deployment and lifecycle of GPU drivers, device plugins and monitoring", "Sells GPU instances", "Compiles CUDA code for pods", "Balances network traffic"],
+          "oZh": ["自动化部署和管理 GPU 驱动、设备插件与监控组件的生命周期", "出售 GPU 实例", "为 Pod 编译 CUDA 代码", "均衡网络流量"],
+          "a": [0], "multi": false,
+          "e": "The operator packages driver, device plugin, DCGM exporter and other components as managed Kubernetes resources.",
+          "eZh": "GPU Operator 把驱动、设备插件、DCGM exporter 等打包成可管理的 Kubernetes 资源并自动化其生命周期。"
+        },
+        {
+          "id": 51, "domain": "ai-operations",
+          "q": "Which workload type fits Slurm best?",
+          "qZh": "哪类工作负载最适合用 Slurm？",
+          "o": ["Batch HPC jobs with partitions and queues", "Long-running web services", "Serverless functions", "Static website hosting"],
+          "oZh": ["带分区和队列的 HPC 批处理作业", "长期运行的 Web 服务", "Serverless 函数", "静态网站托管"],
+          "a": [0], "multi": false,
+          "e": "Slurm excels at batch scheduling of HPC/AI jobs; Kubernetes is preferred for services and stateful platforms.",
+          "eZh": "Slurm 擅长 HPC/AI 作业的批处理调度；服务和有状态平台更适合 Kubernetes。"
+        },
+        {
+          "id": 52, "domain": "ai-operations",
+          "q": "What is NVIDIA Base Command Manager?",
+          "qZh": "NVIDIA Base Command Manager 是什么？",
+          "o": ["Cluster management software for scheduling, monitoring and reporting across DGX fleets", "A GPU benchmark", "A code editor", "A storage quota tool"],
+          "oZh": ["跨 DGX 集群做调度、监控和报告的集群管理软件", "GPU 跑分工具", "代码编辑器", "存储配额工具"],
+          "a": [0], "multi": false,
+          "e": "Base Command Manager (formerly BCM) provides workload scheduling, monitoring and cluster provisioning for DGX environments.",
+          "eZh": "Base Command Manager（原 BCM）为 DGX 环境提供作业调度、监控与集群供给管理。"
+        },
+        {
+          "id": 53, "domain": "ai-operations",
+          "q": "In a multi-tenant cluster, what operational problem does MIG solve?",
+          "qZh": "在多租户集群中，MIG 解决的运维问题是什么？",
+          "o": ["Multiple tenants safely share one physical GPU with isolation and fair allocation", "Tenants need more storage", "Tenants cannot access the network", "Tenants must share one CPU"],
+          "oZh": ["多个租户安全共享同一块物理 GPU，且相互隔离、分配公平", "租户需要更多存储", "租户无法访问网络", "租户必须共用一个 CPU"],
+          "a": [0], "multi": false,
+          "e": "MIG partitions provide fault isolation and quality-of-service boundaries, letting one GPU serve several tenants.",
+          "eZh": "MIG 分区提供故障隔离与服务质量边界，让一块 GPU 能服务多个租户。"
+        },
+        {
+          "id": 54, "domain": "ai-operations",
+          "q": "What is a key consideration when virtualizing GPUs with vGPU?",
+          "qZh": "用 vGPU 虚拟化 GPU 时需要注意什么？",
+          "o": ["Licensing and some performance overhead versus dedicated GPUs", "vGPU removes the need for a driver", "vGPU doubles GPU memory", "vGPU works only on laptops"],
+          "oZh": ["需要许可授权，且相对独占 GPU 有一定性能开销", "vGPU 不需要驱动", "vGPU 会让显存翻倍", "vGPU 只能用在笔记本上"],
+          "a": [0], "multi": false,
+          "e": "vGPU shares one GPU across VMs; plan licenses, profile sizes and accept an overhead versus passthrough.",
+          "eZh": "vGPU 让一块 GPU 被多台虚拟机共享；需规划许可证和配置规格，并接受相对直通的性能开销。"
+        },
+        {
+          "id": 55, "domain": "ai-operations",
+          "q": "Why must driver and CUDA versions be managed together?",
+          "qZh": "为什么驱动与 CUDA 版本必须配套管理？",
+          "o": ["The driver determines the maximum supported CUDA runtime version", "They never interact", "CUDA includes the driver", "Drivers are only for networking"],
+          "oZh": ["驱动版本决定了可支持的 CUDA 运行时上限", "两者互不影响", "CUDA 包含驱动", "驱动只与网络有关"],
+          "a": [0], "multi": false,
+          "e": "Each CUDA release pairs with a minimum driver; lifecycle planning (and compatible-driver packages) avoids breakage during upgrades.",
+          "eZh": "每个 CUDA 版本都有最低驱动要求；生命周期规划与兼容驱动包可避免升级时出现故障。"
+        },
+        {
+          "id": 56, "domain": "ai-operations",
+          "q": "How does backfill scheduling improve cluster utilization?",
+          "qZh": "回填（backfill）调度如何提高集群利用率？",
+          "o": ["Small jobs fill idle gaps behind large queued jobs without delaying them", "It deletes long jobs", "It always runs jobs in alphabetical order", "It forces all jobs to run at once"],
+          "oZh": ["让小作业利用大队列作业留下的空闲片段，且不推迟大作业", "删除长作业", "按字母序运行作业", "强制所有作业同时运行"],
+          "a": [0], "multi": false,
+          "e": "Backfill lets later jobs use nodes reserved-but-idle for a pending big job, raising overall utilization.",
+          "eZh": "回填让后续小作业利用为等待中的大作业预留但暂时空闲的节点，从而提升整体利用率。"
+        },
+        {
+          "id": 57, "domain": "ai-operations",
+          "q": "GPUs in a training job show high CPU load but low GPU utilization. What is the most likely cause?",
+          "qZh": "训练作业中 CPU 负载很高但 GPU 利用率很低，最可能的原因是？",
+          "o": ["A CPU-side data pipeline (preprocessing/IO) starving the GPU", "GPU is broken", "Power supply failure", "NVLink is down"],
+          "oZh": ["CPU 侧数据管线（预处理/IO）喂不饱 GPU", "GPU 损坏", "电源故障", "NVLink 中断"],
+          "a": [0], "multi": false,
+          "e": "When the dataloader cannot keep up, GPUs idle waiting for batches; profile the data pipeline before blaming hardware.",
+          "eZh": "dataloader 跟不上时 GPU 只能空等数据；先分析数据管线，而不是先怀疑硬件。"
+        },
+        {
+          "id": 58, "domain": "ai-operations",
+          "q": "A GPU shows a rising trend of ECC errors. What is the recommended operational response?",
+          "qZh": "某 GPU 的 ECC 错误呈上升趋势，建议的运维处置是？",
+          "o": ["Monitor closely and proactively plan replacement before hard failure", "Ignore until the GPU dies", "Reinstall the OS", "Lower the network MTU"],
+          "oZh": ["密切监控并在硬故障前主动安排更换", "无视直到 GPU 坏掉", "重装操作系统", "调低网络 MTU"],
+          "a": [0], "multi": false,
+          "e": "Increasing correctable ECC errors are a leading indicator of failing memory; trending them enables predictive maintenance.",
+          "eZh": "可纠正 ECC 错误增多是显存故障的前兆；对趋势做监控可实现预测性维护。"
+        },
+        {
+          "id": 59, "domain": "ai-operations",
+          "q": "Before expanding an AI cluster, which facility items must be validated?",
+          "qZh": "扩容 AI 集群前，必须先核实哪些设施条件？",
+          "o": ["Power, cooling, floor space, network ports and storage bandwidth", "Only the budget", "Only the GPU model", "Only the OS version"],
+          "oZh": ["供电、散热、地板空间、网络端口和存储带宽", "只有预算", "只有 GPU 型号", "只有操作系统版本"],
+          "a": [0], "multi": false,
+          "e": "Capacity planning spans facility (power/cooling/space) and infrastructure (network ports, storage throughput), not just hardware purchase.",
+          "eZh": "容量规划覆盖设施（供电/散热/空间）与基础设施（网络端口、存储吞吐），不只是买硬件。"
+        },
+        {
+          "id": 60, "domain": "ai-operations",
+          "q": "In Kubernetes, how does a pod request GPU resources?",
+          "qZh": "在 Kubernetes 中，Pod 如何申请 GPU 资源？",
+          "o": ["Requesting nvidia.com/gpu in the pod's resource limits", "Mounting the GPU as a volume by default", "Using the CPU resource field", "Nothing; GPUs are always visible"],
+          "oZh": ["在 Pod 的 resources.limits 中申请 nvidia.com/gpu", "默认把 GPU 挂载为卷", "使用 CPU 资源字段", "无需申请，GPU 天然可见"],
+          "a": [0], "multi": false,
+          "e": "The NVIDIA device plugin exposes GPUs as the extended resource nvidia.com/gpu, which pods request in limits.",
+          "eZh": "NVIDIA 设备插件把 GPU 暴露为扩展资源 nvidia.com/gpu，Pod 在 limits 中按数量申请。"
+        }
+      ]
+    }
+  ]
+}

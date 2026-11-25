@@ -12,6 +12,7 @@ TOPICS_ROOT=/var/www/topic-app
 HAM_ROOT=/var/www/ham-exam
 CHEM_ROOT=/var/www/chemistry
 PHYS_ROOT=/var/www/physics
+NX_ROOT=/var/www/nvidia-exam
 CONF_DIR=/etc/nginx/conf.d
 CONF_FILE=$CONF_DIR/lingua-grove.conf
 LEGACY_HUB_ENABLED=/etc/nginx/sites-enabled/lingua-grove
@@ -44,7 +45,7 @@ fi
 say "部署五个前端项目"
 [[ -f "$REPO_DIR/chemistry/index.html" ]] || die "缺少化学探秘页面"
 [[ -f "$REPO_DIR/physics/index.html" ]] || die "缺少物理探秘页面"
-install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT"
+install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT" "$NX_ROOT"
 cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/privacy.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$HUB_ROOT/"
 cp -a "$REPO_DIR/hub/shared/." "$HUB_ROOT/shared/"
 # 每次部署给 css/js 链接打上新版本号，浏览器一定会重新取。
@@ -57,7 +58,9 @@ cp -a "$REPO_DIR/chemistry/index.html" "$REPO_DIR/chemistry/css" \
   "$REPO_DIR/chemistry/data" "$REPO_DIR/chemistry/js" "$CHEM_ROOT/"
 cp -a "$REPO_DIR/physics/index.html" "$REPO_DIR/physics/css" \
   "$REPO_DIR/physics/data" "$REPO_DIR/physics/js" "$PHYS_ROOT/"
-chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT"
+cp -a "$REPO_DIR/nvidia-exam/index.html" "$REPO_DIR/nvidia-exam/css" \
+  "$REPO_DIR/nvidia-exam/data" "$REPO_DIR/nvidia-exam/js" "$NX_ROOT/"
+chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT" "$NX_ROOT"
 
 say "写入 conf.d 总入口并将词境挂到 /word-puzzle/"
 install -d "$CONF_DIR"
