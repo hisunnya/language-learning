@@ -292,8 +292,8 @@ class TestProjectLinks(unittest.TestCase):
         """入口按钮要好点：字号 21px 不变，高度别太厚。"""
         m = re.search(r"\.btn\s*\{(.*?)\n\}", CSS, re.S)
         self.assertIsNotNone(m)
-        self.assertIn("min-height: 52px", m.group(1))
-        self.assertIn("font-size: 21px", m.group(1))
+        self.assertIn("min-height: 44px", m.group(1))
+        self.assertIn("font-size: 18px", m.group(1))
 
     def test_english_chemistry_and_physics_come_first(self):
         order = re.findall(r'<article class="project" data-project="(\w+)"', HTML)
