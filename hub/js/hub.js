@@ -83,6 +83,16 @@
       "physics.f4": "每题附解题步骤",
       "physics.cta": "开始挑战",
 
+      "nvidia.name": "NVIDIA 认证",
+      "nvidia.en": "NVIDIA Exam",
+      "nvidia.tagline": "AI 基础设施与运维",
+      "nvidia.desc": "按 NVIDIA 官方公开大纲的三个知识域比例组卷，倒计时、答题卡、及格线 70% 都照正式考试来，答完附中英双语解析。",
+      "nvidia.f1": "NCA-AIIO 大纲",
+      "nvidia.f2": "三知识域组卷",
+      "nvidia.f3": "计时与答题卡",
+      "nvidia.f4": "中英双语解析",
+      "nvidia.cta": "进入模拟考试",
+
       "notes.a.title": "内容来自课本",
       "notes.a.body": "英语词汇按人教版教材的学段、年级、册别和单元整理；化学、物理按初中、高中、大学分级出题。",
       "notes.b.title": "玩着学",
@@ -161,6 +171,16 @@
       "physics.f3": "University · Concepts",
       "physics.f4": "Worked answers",
       "physics.cta": "Start the challenge",
+
+      "nvidia.name": "NVIDIA Exam",
+      "nvidia.en": "NVIDIA 认证",
+      "nvidia.tagline": "AI infrastructure and operations",
+      "nvidia.desc": "Papers are drawn in the proportions of the three official NVIDIA blueprint domains, with countdown, answer sheet and the 70% pass line. Every answer comes with an explanation in both languages.",
+      "nvidia.f1": "NCA-AIIO blueprint",
+      "nvidia.f2": "Three domains",
+      "nvidia.f3": "Timer and answer sheet",
+      "nvidia.f4": "Bilingual explanations",
+      "nvidia.cta": "Open the mock exam",
 
       "notes.a.title": "From the textbook",
       "notes.a.body": "English words follow the PEP textbooks by stage, grade, volume and unit; chemistry and physics are graded from middle school to university.",

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261122_143048.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261126_082249.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
 #   LINGUA_SERVER_NAME  这台机器的地址（必填）
 #   LEXICA_UPSTREAM     词境后端的 主机:端口（必填；写 none = 用本机后端 127.0.0.1:8765）
 #   LEXICA_CTID         学生版容器的编号（选填）。写了，这个脚本就连容器里的词境一起更新
-#                       （把仓库里的整站——词境、主页、四个模块——推进容器并重跑 family/install.sh）；不写就只更新宿主机。
+#                       （把仓库里的整站——词境、主页、五个模块——推进容器并重跑 family/install.sh）；不写就只更新宿主机。
 #   LEXICA_PUBLIC_URL   学生版的对外网址（写了 LEXICA_CTID 就必填），例如 Funnel 网址，不带斜杠
 set -euo pipefail
 
@@ -96,6 +96,12 @@ for path in \
   physics/index.html \
   physics/js/physics.js \
   physics/data/physics.json \
+  nvidia-exam/index.html \
+  nvidia-exam/css/style.css \
+  nvidia-exam/js/app.js \
+  nvidia-exam/js/store.js \
+  nvidia-exam/data/bank.js \
+  nvidia-exam/data/bank.json \
   backends/index.html \
   backends/js/backends.js \
   backends/css/backends.css; do
@@ -119,11 +125,11 @@ if [[ -n "$LEXICA_CTID" ]]; then
   say "更新学生版容器 $LEXICA_CTID 里的词境（代码来自当前仓库）"
   SRC_TGZ="$(mktemp /tmp/lexica-src.XXXXXX.tgz)"
   trap 'rm -f "$SRC_TGZ"' EXIT
-  # 整站：词境 + 主页 + 四个模块（容器的 nginx 在根路径提供主页）；测试、原始资料、工具脚本不进网站
+  # 整站：词境 + 主页 + 五个模块（容器的 nginx 在根路径提供主页）；测试、原始资料、工具脚本不进网站
   (cd "$REPO_DIR" && COPYFILE_DISABLE=1 tar czf "$SRC_TGZ" \
     --exclude='word-puzzle/var' --exclude='__pycache__' --exclude='.DS_Store' --exclude='*/tests' \
     --exclude='ham-exam/raw-files' --exclude='ham-exam/tools' \
-    word-puzzle hub topic-app/topic-app ham-exam chemistry physics backends)
+    word-puzzle hub topic-app/topic-app ham-exam chemistry physics nvidia-exam backends)
   pct push "$LEXICA_CTID" "$SRC_TGZ" /root/lexica-src.tgz
   # 解到一个新目录再整个换上去：仓库里删掉的文件，容器里也跟着没有（直接解到旧目录上会把它们留下来）
   pct exec "$LEXICA_CTID" -- bash -lc "rm -rf /root/language-learning.new && mkdir -p /root/language-learning.new \
@@ -168,7 +174,7 @@ WP_SERVER_NAME="$SERVER_NAME" \
 WP_SKIP_NGINX=1 \
   bash "$REPO_DIR/word-puzzle/deploy/install.sh"
 
-say "部署主页（词境）、每日话题、无线电执照、化学探秘、物理探秘和统一 nginx 入口"
+say "部署主页（词境）、每日话题、无线电执照、化学探秘、物理探秘、NVIDIA 认证模拟考试和统一 nginx 入口"
 LINGUA_SERVER_NAME="$SERVER_NAME" LEXICA_UPSTREAM="$LEXICA_UPSTREAM" bash "$REPO_DIR/hub/deploy/install.sh"
 
 say "执行整站冒烟检查"
@@ -203,6 +209,11 @@ check_path /physics/
 check_path /physics/data/physics.json
 check_path /physics/js/physics-core.js
 check_path /physics/js/physics.js
+check_path /nvidia-exam/
+check_path /nvidia-exam/data/bank.json
+check_path /nvidia-exam/data/bank.js
+check_path /nvidia-exam/js/app.js
+check_path /nvidia-exam/css/style.css
 check_path /backends/
 check_path /backends/js/backends.js
 check_path /backends/css/backends.css
@@ -236,6 +247,7 @@ cat <<EOF
   无线电执照：http://$SERVER_NAME/ham/
   化学探秘：http://$SERVER_NAME/chemistry/
   物理探秘：http://$SERVER_NAME/physics/
+  NVIDIA 认证模拟考试：http://$SERVER_NAME/nvidia-exam/
   总后台：http://$SERVER_NAME/backends/   （要老师账号，不放在主页上）
   词境学生版：http://$SERVER_NAME/word-puzzle/   （要登录，不放在主页上）
 

@@ -7,8 +7,8 @@
    三种常见部署方式，选一种，把对应的路径填上：
 
    A) 同一台服务器（默认）
-      hub 在 80 端口，五个项目分别挂在 /word-puzzle/、
-      /topics/、/ham/、/chemistry/ 和 /physics/ 下。
+      hub 在 80 端口，六个项目分别挂在 /word-puzzle/、/topics/、/ham/、/chemistry/、
+      /physics/ 和 /nvidia-exam/ 下。
 
    B) 不同端口
       把 href 改成完整地址，例如 http://服务器地址:8765/
@@ -31,4 +31,7 @@ window.LINGUA_PROJECTS = {
 
    // 物理探秘 Phys Quest —— 纯前端
    physics: "/physics/",
+
+   // NVIDIA 认证模拟考试 NVIDIA Exam —— 纯前端
+   nvidia: "/nvidia-exam/",
 };

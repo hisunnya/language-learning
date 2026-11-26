@@ -35,7 +35,7 @@ BANK_JSON = json.loads((BASE / "data" / "bank.json").read_text(encoding="utf-8")
 TEXT_TAGS = {"button", "h1", "h2", "h3", "p", "span", "b", "em", "label", "small"}
 
 # 语言无关的特例：品牌图形、语言切换按钮自身的标签、运行时占位符
-I18N_ALLOWLIST = {"⚡", "NVIDIA EXAM", "中", "EN", "/", "--:--"}
+I18N_ALLOWLIST = {"NVIDIA EXAM", "中", "EN", "/", "--:--"}
 
 # 每套配色都必须定义的完整变量集（少一个都不算配色）
 REQUIRED_VARS = {
@@ -223,9 +223,14 @@ class TestI18N(unittest.TestCase):
 class TestPalettes(unittest.TestCase):
     """§3.2 配色变量集。"""
 
-    def test_at_least_three_palettes(self) -> None:
+    def test_the_five_house_palettes(self) -> None:
+        """全站就是这五套配色（AGENTS.md §3.2）：靛蓝 / 墨绿 / 琥珀 / 绯红 / 鎏金。"""
         blocks = re.findall(r'html\[data-theme="([a-z]+)"\]\s*\{([^}]*)\}', CSS)
-        self.assertGreaterEqual(len(blocks), 3, "至少要三套配色")
+        self.assertEqual(
+            sorted(k for k, _ in blocks),
+            ["amber", "indigo", "ink", "lotus", "obsidian"],
+            "配色必须是全站统一的这五套",
+        )
 
     def test_complete_identical_var_sets(self) -> None:
         blocks = re.findall(r'html\[data-theme="([a-z]+)"\]\s*\{([^}]*)\}', CSS)
@@ -250,10 +255,87 @@ class TestPalettes(unittest.TestCase):
 
     def test_palette_keys_match_hub(self) -> None:
         """与 hub 共用同一组配色键，全站切换偏好才能互通。"""
-        shared = open(ROOT / "hub" / "shared" / "module-header.js", encoding="utf-8").read()
+        shared = (ROOT / "hub" / "shared" / "module-header.js").read_text(encoding="utf-8")
         hub_keys = set(re.findall(r"key:\s*'([a-z]+)'", shared))
         ours = set(re.findall(r'\{ key: "([a-z]+)"', JS))
         self.assertEqual(ours, hub_keys, f"配色键与 hub 不一致: {sorted(ours ^ hub_keys)}")
+
+    def test_palette_colours_match_the_shared_header(self) -> None:
+        """连主色和底色都要一样：两个取色器显示不同的颜色，用户会以为换了一个配色。"""
+        shared = (ROOT / "hub" / "shared" / "module-header.js").read_text(encoding="utf-8")
+        theirs = {
+            key: (zh, en, main.lower(), bg.lower())
+            for key, zh, en, main, bg in re.findall(
+                r"\{ key: '([a-z]+)', zh: '([^']+)', en: '([^']+)', main: '(#[0-9A-Fa-f]+)', bg: '(#[0-9A-Fa-f]+)'",
+                shared,
+            )
+        }
+        ours = {
+            key: (zh, en, main.lower(), bg.lower())
+            for key, zh, en, main, bg in re.findall(
+                r'\{ key: "([a-z]+)",\s*zh: "([^"]+)",\s*en: "([^"]+)",\s*main: "(#[0-9A-Fa-f]+)",\s*bg: "(#[0-9A-Fa-f]+)"',
+                JS,
+            )
+        }
+        self.assertEqual(ours, theirs, "配色表与共享页眉不一致")
+        for key, (_, _, main, _) in ours.items():
+            self.assertRegex(main, r"^#[0-9a-f]{6}$", f"配色 {key} 的主色不是合法的六位十六进制")
+
+
+class TestHouseStyle(unittest.TestCase):
+    """§3 与 §9.6：页脚、共享页眉、主页入口和部署路径。"""
+
+    def test_the_page_loads_the_site_footer(self) -> None:
+        self.assertRegex(
+            HTML, r'<script src="/shared/site-footer\.js\?v=[0-9a-f]{8}"></script>',
+            "每个对外页面都要有全站页脚（备案号 + 隐私说明）",
+        )
+
+    def test_the_page_uses_the_shared_header_stylesheet(self) -> None:
+        self.assertRegex(HTML, r'<link rel="stylesheet" href="/shared/module-header\.css\?v=[0-9a-f]{8}">')
+
+    def test_the_brand_mark_is_a_drawn_icon_and_names_the_site(self) -> None:
+        """§9.6：模块页眉的图标是画出来的线稿图标，不是表情符号；品牌名是「词境 Lexica」。"""
+        mark = re.search(r'<span class="portal-brand-mark"[^>]*>(.*?)</span>', HTML, re.S)
+        self.assertIsNotNone(mark, "缺少 .portal-brand-mark")
+        self.assertIn("<svg", mark.group(1), "品牌图标必须是画出来的 SVG，不是表情符号")
+        self.assertNotRegex(mark.group(1), r"[⚡🚀🎯]", "不要用表情符号当图标")
+        self.assertRegex(HTML, r'<a class="portal-brand" href="/" aria-label="词境 Lexica">')
+
+    def test_the_module_is_on_the_homepage(self) -> None:
+        hub_html = (ROOT / "hub" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('data-project-link="nvidia"', hub_html, "主页上要有 NVIDIA 认证模拟考试的入口")
+        config = (ROOT / "hub" / "js" / "config.js").read_text(encoding="utf-8")
+        self.assertRegex(config, r"nvidia\s*:\s*[\"']/nvidia-exam/[\"']", "config.js 里少了 nvidia 的地址")
+
+    def test_the_module_is_served_by_the_live_container(self) -> None:
+        """真正上线的是容器里的 family 配置，不是宿主机那份旧安装脚本。"""
+        conf = (ROOT / "word-puzzle" / "deploy" / "family" / "nginx" / "word-puzzle-family.conf").read_text(encoding="utf-8")
+        self.assertIn("location ^~ /nvidia-exam/", conf)
+        self.assertIn("alias @INSTALL_DIR@/site/nvidia-exam/;", conf)
+        install = (ROOT / "word-puzzle" / "deploy" / "family" / "install.sh").read_text(encoding="utf-8")
+        self.assertIn("$SITE_NEW/nvidia-exam", install)
+        self.assertIn("nvidia-exam/index.html", install, "缺文件时安装脚本要停，不要上线一个残缺的网站")
+
+    def test_the_module_is_registered_for_the_back_office(self) -> None:
+        modules = (ROOT / "word-puzzle" / "server" / "modules.py").read_text(encoding="utf-8")
+        self.assertIn('"id": "nvidia"', modules, "总后台要知道这个模块，成绩才有地方显示")
+
+    def test_the_reporting_script_comes_before_the_page_script(self) -> None:
+        """/shared/module-progress.js 定义 window.WPModule：它要排在 app.js 前面，
+        否则 app.js 初始化时这个对象还不存在，上报的小结永远注册不上。"""
+        self.assertLess(
+            HTML.index("/shared/module-progress.js"),
+            HTML.index("js/app.js"),
+            "module-progress.js 必须排在 app.js 前面",
+        )
+
+    def test_every_asset_carries_a_computed_version(self) -> None:
+        """§4：版本号是文件内容的哈希，不是手打的日期。"""
+        for url, version in re.findall(r'(?:src|href)="([^"?#]+\.(?:js|css))(?:\?v=([^"]*))?"', HTML):
+            if url.startswith("data:"):
+                continue
+            self.assertRegex(version, r"^[0-9a-f]{8}$", f"{url} 的 ?v= 不是内容哈希")
 
 
 class TestPalettePicker(unittest.TestCase):
@@ -269,7 +351,7 @@ class TestPalettePicker(unittest.TestCase):
         self.assertIn('id="themePicker"', HTML)
 
     def test_hard_stop_diagonal(self) -> None:
-        shared = open(ROOT / "hub" / "shared" / "module-header.css", encoding="utf-8").read()
+        shared = (ROOT / "hub" / "shared" / "module-header.css").read_text(encoding="utf-8")
         self.assertIn(
             "linear-gradient(to top right, var(--swatch-bg) 0 50%, var(--swatch-main) 50% 100%)",
             shared,

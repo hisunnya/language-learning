@@ -293,14 +293,14 @@ class TestProjectLinks(unittest.TestCase):
     def test_english_chemistry_and_physics_come_first(self):
         order = re.findall(r'<article class="project" data-project="(\w+)"', HTML)
         self.assertEqual(order[:3], ["lexica", "chemistry", "physics"])
-        self.assertEqual(sorted(order), sorted(["lexica", "topics", "ham", "chemistry", "physics"]))
+        self.assertEqual(sorted(order), sorted(["lexica", "topics", "ham", "chemistry", "physics", "nvidia"]))
 
-    def test_five_projects_present(self):
-        for key in ("lexica", "topics", "ham", "chemistry", "physics"):
+    def test_six_projects_present(self):
+        for key in ("lexica", "topics", "ham", "chemistry", "physics", "nvidia"):
             self.assertIn('data-project-link="%s"' % key, HTML)
 
-    def test_config_has_all_five(self):
-        for key in ("lexica", "topics", "ham", "chemistry", "physics"):
+    def test_config_has_all_six(self):
+        for key in ("lexica", "topics", "ham", "chemistry", "physics", "nvidia"):
             self.assertRegex(CONFIG, r"%s\s*:" % key,
                              "config.js 里少了 %s 的地址" % key)
 
@@ -358,9 +358,11 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("alias /var/www/chemistry/;", NGINX)
         self.assertIn("location ^~ /physics/", NGINX)
         self.assertIn("alias /var/www/physics/;", NGINX)
+        self.assertIn("location ^~ /nvidia-exam/", NGINX)
+        self.assertIn("alias /var/www/nvidia-exam/;", NGINX)
 
     def test_mounts_without_trailing_slash_redirect(self):
-        for name in ("topics", "ham", "chemistry", "physics", "word-puzzle"):
+        for name in ("topics", "ham", "chemistry", "physics", "nvidia-exam", "word-puzzle"):
             self.assertIn("location = /%s {\n        return 301 /%s/;" % (name, name), NGINX)
 
     def test_whole_site_script_retries_smoke_checks_and_covers_every_module(self):
@@ -370,14 +372,15 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("retry ", text)   # nginx reload 是异步的，冒烟检查要重试
         for path in ("/chemistry/", "/chemistry/data/chemistry.json", "/physics/",
                      "/physics/data/physics.json", "/physics/js/physics-core.js", "/ham/",
-                     "/topics/", "/word-puzzle/api/health"):
+                     "/topics/", "/nvidia-exam/", "/nvidia-exam/data/bank.json",
+                     "/word-puzzle/api/health"):
             self.assertIn(path, text)
 
     def test_assets_are_not_cached_for_days(self):
         """改了样式部署后必须立刻看得到：不能再缓存 7 天。"""
         self.assertNotIn("expires 7d", NGINX)
         self.assertNotIn("max-age=604800", NGINX)
-        for mount in ("/topics/", "/ham/", "/chemistry/", "/physics/", "/shared/"):
+        for mount in ("/topics/", "/ham/", "/chemistry/", "/physics/", "/nvidia-exam/", "/shared/"):
             block = re.search(r"location \^~ %s \{(.*?)\n    \}" % re.escape(mount), NGINX, re.S)
             self.assertIsNotNone(block, mount)
             self.assertIn('Cache-Control "no-cache"', block.group(1), mount)
@@ -437,7 +440,7 @@ class TestDeployment(unittest.TestCase):
 
     def test_deploy_all_reads_private_targets_from_the_untracked_env_file(self):
         import glob, subprocess, tempfile
-        script = open(glob.glob(str(HUB.parent / "deploy-all-*.sh"))[0], encoding="utf-8").read()
+        script = Path(glob.glob(str(HUB.parent / "deploy-all-*.sh"))[0]).read_text(encoding="utf-8")
         start = script.index('if [[ -f "$REPO_DIR/deploy.local.env" ]]')
         end = script.index("LEXICA_UPSTREAM=\"${LEXICA_UPSTREAM:-}\"") + len("LEXICA_UPSTREAM=\"${LEXICA_UPSTREAM:-}\"")
         snippet = script[start:end]

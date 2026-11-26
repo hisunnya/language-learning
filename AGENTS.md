@@ -166,6 +166,7 @@ page in the repository that implements all of §3 today, and the hub test
 | `word-puzzle/web/*.html` | `data-module-zh/en` + `WPI18N` | 5 (shared header) | top-right, square swatches (shared header) | ✅ every page, including the game and the offline page |
 | `topic-app/topic-app/index.html` | — | 3 (different picker) | — | ⚠️ to be brought up to §3 |
 | `ham-exam/index.html` | — | — | — | ⚠️ to be brought up to §3 |
+| `nvidia-exam/index.html` | `data-i18n` + own table | 5 (same keys as the hub) | top-right, square swatches | ✅ |
 | `word-puzzle/web/{login,change-password,admin,tenants,leaderboard}.html` | `data-module-zh/en` | 5 (shared header) | top-right, square swatches (shared header) | ✅ new pages follow §3 |
 | `hub/privacy.html` | `data-module-zh/en` (shared header) | 5 (shared header) | top-right, square swatches (shared header) | ✅ |
 | `miniprogram/` (WeChat) | `utils/i18n.js` | 5 (same names) | top-right, square swatches (tap, name shown below) | ✅ adapted, see 3.4.1 |
@@ -277,6 +278,7 @@ cd hub        && python3 -m unittest discover -s tests -v   # 样式规范用例
 cd word-puzzle && python3 tools/check_js.py                  # JS 语法体检
 cd chemistry  && python3 -m unittest discover -s tests -v   # 化学探秘
 cd physics    && python3 -m unittest discover -s tests -v   # 物理探秘
+cd nvidia-exam && python3 -m unittest discover -s tests -v # NVIDIA 认证模拟考试
 cd miniprogram && python3 -m unittest discover -s tests -v  # 小程序
 ```
 
@@ -288,7 +290,7 @@ cd miniprogram && python3 -m unittest discover -s tests -v  # 小程序
 language-learning/
 ├── AGENTS.md               # 本文件
 ├── README.md               # 仓库总说明（中文）
-├── hub/                    # 网站主页「词境 Lexica」（原「语林」）—— 五个模块的入口、隐私说明、全站页脚
+├── hub/                    # 网站主页「词境 Lexica」（原「语林」）—— 六个模块的入口、隐私说明、全站页脚
 ├── word-puzzle/            # 词境 Lexica —— 英语词汇游戏（网站版）
 ├── topic-app/              # 每日话题 Daily Topics —— 初中生家庭讨论
 ├── ham-exam/               # 无线电执照 Ham Exam —— 业余无线电模拟考试
@@ -337,19 +339,19 @@ titles, headers, README and the hub.
 |---|---|
 | `word-puzzle-family` (systemd) | the one Lexica backend (`word-puzzle/server`, Python stdlib, SQLite), `127.0.0.1:8766` |
 | nginx `127.0.0.1:8081` | the site entrance (`word-puzzle/deploy/family/nginx/word-puzzle-family.conf`) |
-| `/srv/word-puzzle-family` | backend code and the static trees (`web/`, `web-public/`, `hub/`, `topics/`, `ham/`, `chemistry/`, `physics/`) |
+| `/srv/word-puzzle-family` | backend code and the static trees (`web/`, `web-public/`, `hub/`, `topics/`, `ham/`, `chemistry/`, `physics/`, `nvidia-exam/`) |
 | `/var/lib/word-puzzle-family` | SQLite database (`app.db`, WAL), offline pages, recordings (`recordings/YYYYMM/*.mp3`), TTS cache — a **bind mount from the host**, so the container itself is stateless |
 | backup directory | daily at 03:00 Beijing time, `lexica-backup.timer` → `backup.py`: consistent database copies (30 kept) and a mirror of the recordings; also a bind mount, on another disk |
 | `/opt/word-puzzle-family/asr-venv` | separate venv with faster-whisper and the `base.en` model for speech recognition (offline at run time) |
 
 URL map of the one nginx entrance: `/` homepage (`hub/`), `/privacy.html`, `/topics/`, `/ham/`, `/chemistry/`,
-`/physics/` (static, no login), `/word-puzzle/` (Lexica, login required for everything), `/words/` (public Lexica,
+`/physics/`, `/nvidia-exam/` (static, no login), `/word-puzzle/` (Lexica, login required for everything), `/words/` (public Lexica,
 no login, see 9.2). Public access goes Tailscale Funnel → `127.0.0.1:8081`; the host's port 80 forwards everything
 to the container too (`hub/deploy/site-proxy.conf`), so the LAN sees exactly the same site.
 
 **Deploying** (on the PVE host, as root): `bash pre-deploy.sh` (database and code snapshot into the backup disk,
 the 10 newest kept) → `git pull` → `bash deploy-all-<timestamp>.sh`. With `LEXICA_CTID` and `LEXICA_PUBLIC_URL`
-in `deploy.local.env`, deploy-all packs `word-puzzle hub topic-app/topic-app ham-exam chemistry physics` into a
+in `deploy.local.env`, deploy-all packs `word-puzzle hub topic-app/topic-app ham-exam chemistry physics nvidia-exam` into a
 tarball, `pct push`es it into the container, unpacks it next to the old checkout, swaps it in and runs
 `word-puzzle/deploy/family/install.sh` there (dependencies, code sync, systemd units, nginx config, health check).
 It then updates the host's forwarding (`hub/deploy/install.sh`). The database is never touched by a deploy; schema
@@ -401,7 +403,7 @@ same code and the same data; the cloud is one stage ahead, ready to take over th
 approved. So after every change that reaches the home server:
 
 1. **Code**: pack the same tarball the home server gets (`word-puzzle hub topic-app/topic-app ham-exam
-   chemistry physics backends`) and `scp` it to the cloud, then run `deploy/cloud/install.sh` there.
+   chemistry physics nvidia-exam backends`) and `scp` it to the cloud, then run `deploy/cloud/install.sh` there.
    The cloud's own `deploy-all` script does not exist — the cloud is deployed from the workstation.
 2. **Data**: `sync-from-home.sh rehearse --apply` moves the whole database over (the home service keeps
    running; `cutover` is only for the moment the filing is approved and the cloud takes over).
@@ -696,8 +698,9 @@ numbers, blank rows included).
 ### 9.6 Module logos and the site footer
 
 Each module header uses the same simplified line icon as its homepage card (flask, atom,
-speech bubble, and for the ham exam a handheld radio with signal waves), drawn in `.portal-brand-mark`
-(`hub/shared/module-header.css`); Lexica keeps its image logo. In chemistry and physics a question whose `visual`
+speech bubble, and for the ham exam a handheld radio with signal waves, and for the NVIDIA exam a
+medal with a check mark), drawn in `.portal-brand-mark` (`hub/shared/module-header.css`); Lexica keeps
+its image logo. The icon is a drawn SVG, never an emoji. In chemistry and physics a question whose `visual`
 is empty hides the big stage box (`formulaStage.hidden`) — never put a decorative glyph there; only content that
 helps answering (symbol, formula, equation, pH) belongs in it.
 

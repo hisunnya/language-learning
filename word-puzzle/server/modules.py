@@ -19,6 +19,7 @@ MODULES = [
     {"id": "ham", "zh": "无线电执照", "en": "Ham Exam", "path": "/ham/", "enabled": True},
     {"id": "chemistry", "zh": "化学探秘", "en": "Chem Quest", "path": "/chemistry/", "enabled": True},
     {"id": "physics", "zh": "物理探秘", "en": "Phys Quest", "path": "/physics/", "enabled": True},
+    {"id": "nvidia", "zh": "NVIDIA 认证", "en": "NVIDIA Exam", "path": "/nvidia-exam/", "enabled": True},
 ]
 
 

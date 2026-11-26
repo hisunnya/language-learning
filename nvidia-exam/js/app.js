@@ -215,6 +215,8 @@
     }
     store(LANG_KEY, lang);
     renderDynamic();
+    /* 共享页眉里的身份条（/shared/module-progress.js 放的）靠这个事件重画 */
+    window.dispatchEvent(new CustomEvent("portal-lang-change", { detail: { lang: lang } }));
   }
 
   function applyTheme(theme) {
@@ -456,6 +458,7 @@
     var pct = Math.round(right / examState.qs.length * 100);
     var pass = pct >= EXAM.passPct;
     window.NXStore.addHistory({ ts: Date.now(), mode: "exam", score: right, total: examState.qs.length, pct: pct, pass: pass });
+    if (window.WPModule) window.WPModule.reportNow();
 
     $("examRun").classList.add("hidden");
     $("examResult").classList.remove("hidden");
@@ -541,6 +544,7 @@
     practiceState = null;
     $("practiceRun").classList.add("hidden");
     $("practiceSetup").classList.remove("hidden");
+    if (window.WPModule) window.WPModule.reportNow();
   }
 
   /* ---------------- 题库浏览 ---------------- */
@@ -641,11 +645,38 @@
     if (currentView === "stats" && !$("view-stats").classList.contains("hidden")) renderStats();
   }
 
+  /* ---------------- 向总后台上报练习小结 ---------------- */
+  /* 没登录就不报：这个模块不要求登录，报不上去也不该影响练习本身。 */
+  function practiceSummary() {
+    var st = window.NXStore.getState();
+    var r = 0, n = 0;
+    Object.keys(st.answered).forEach(function (id) {
+      var a = st.answered[id];
+      r += a.r; n += a.r + a.w;
+    });
+    var best = 0;
+    st.history.forEach(function (h) { if (h.pct > best) best = h.pct; });
+    return {
+      answered: n,
+      accuracy: n ? Math.round(r / n * 100) : 0,
+      exams: st.history.length,
+      best: best,
+      wrong: window.NXStore.wrongIds().length
+    };
+  }
+
+  function startReporting() {
+    if (!window.WPModule) return;
+    window.WPModule.setSummary(practiceSummary);
+    window.WPModule.reportNow();
+  }
+
   /* ---------------- 事件绑定与初始化 ---------------- */
   function init() {
     buildPicker();
     applyTheme(store(THEME_KEY) || "indigo");
     applyLanguage(store(LANG_KEY) || "zh");
+    startReporting();
 
     document.querySelectorAll(".nav-btn").forEach(function (btn) {
       btn.addEventListener("click", function () { switchView(btn.dataset.view); });

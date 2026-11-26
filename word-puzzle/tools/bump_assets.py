@@ -18,9 +18,14 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent
-PAGES_ADD = sorted((REPO / "word-puzzle" / "web").glob("*.html")) + [REPO / "backends" / "index.html"]   # 这里缺 ?v= 的也补上
+# 缺 ?v= 的也补上
+PAGES_ADD = sorted((REPO / "word-puzzle" / "web").glob("*.html")) + [
+    REPO / "backends" / "index.html",
+    REPO / "nvidia-exam" / "index.html",
+]
+# 只改已有的 ?v=
 PAGES_UPDATE = [REPO / p for p in ("hub/index.html", "hub/privacy.html", "chemistry/index.html", "physics/index.html",
-                                   "topic-app/topic-app/index.html", "ham-exam/index.html")]   # 只改已有的 ?v=
+                                   "topic-app/topic-app/index.html", "ham-exam/index.html")]
 REF = re.compile(r'(?P<attr>src|href)="(?P<url>(?:/(?:word-puzzle|shared)/)?[^"?#\s]+\.(?:js|css))(?:\?v=(?P<v>[^"]*))?"')
 # JS 里自己拼的引用（module-header.js 在微信里才去加载 wechat.js）：(含引用的文件, 被引用的文件名, 被引用文件的路径)
 EMBEDDED = [("hub/shared/module-header.js", "wechat.js", "hub/shared/wechat.js")]

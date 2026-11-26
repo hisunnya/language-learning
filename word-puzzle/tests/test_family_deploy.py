@@ -537,7 +537,8 @@ class TestDeployAllUpdatesTheContainer(unittest.TestCase):
     def test_script_pushes_the_repo_into_the_container_and_verifies(self):
         script = next(ROOT.parent.glob("deploy-all-*.sh")).read_text(encoding="utf-8")
         for needle in ("LEXICA_CTID", "LEXICA_PUBLIC_URL", "pct push", "family/install.sh", "sha256sum",
-                       "WP_TRUSTED_PROXIES", "word-puzzle hub topic-app/topic-app ham-exam chemistry physics"):
+                       "WP_TRUSTED_PROXIES",
+                       "word-puzzle hub topic-app/topic-app ham-exam chemistry physics nvidia-exam backends"):
             self.assertIn(needle, script, needle)
         self.assertLess(script.index("pct push"), script.index("部署词境后端"), "先更新容器")
         env = (ROOT.parent / "deploy.local.env.example").read_text(encoding="utf-8")
@@ -550,7 +551,7 @@ class TestSiteFooterAndPrivacy(unittest.TestCase):
 
     PAGES = (sorted((ROOT / "web").glob("*.html")) +
              [ROOT.parent / p for p in ("hub/index.html", "hub/privacy.html", "chemistry/index.html", "physics/index.html",
-                                        "topic-app/topic-app/index.html", "ham-exam/index.html")])
+                                        "topic-app/topic-app/index.html", "ham-exam/index.html", "nvidia-exam/index.html")])
 
     def test_every_page_loads_the_footer(self):
         for page in self.PAGES:

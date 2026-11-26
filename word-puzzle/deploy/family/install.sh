@@ -9,7 +9,7 @@
 # 做的事：
 #   1. 建系统用户 wpfamily，代码放 /srv/word-puzzle-family，数据库放 /var/lib/word-puzzle-family
 #   2. 装 systemd 服务（WP_AUTH=1，后端只监听 127.0.0.1）
-#   3. 装 nginx 配置：整站（主页、四个模块、公开版 /words/、要登录的 /word-puzzle/），只监听 127.0.0.1:8081，
+#   3. 装 nginx 配置：整站（主页、五个模块、公开版 /words/、要登录的 /word-puzzle/），只监听 127.0.0.1:8081，
 #      由 Tailscale Funnel 或云服务器的公网 nginx 转进来；可选再开一个内网入口（WP_LAN_ADDR）
 #   4. 装管理命令 wp-family-admin（创建管理员、导入名单、重置密码）
 #   5. 自检：未登录访问接口必须被拒绝
@@ -66,8 +66,9 @@ LAN_GUEST="${WP_LAN_GUEST:-0}"
 [[ -f "$REPO_DIR/hub/shared/module-header.js" ]] || die "找不到 hub/shared（页眉和配色切换用）：请在完整的仓库里运行"
 # 主页和不用登录的模块也由这里提供（网站根路径 / 就是主页），缺一个就不装，免得上线一个残缺的网站
 for f in hub/index.html hub/privacy.html hub/css hub/js topic-app/topic-app/index.html ham-exam/index.html \
-         chemistry/index.html chemistry/data physics/index.html physics/data; do
-  [[ -e "$REPO_DIR/$f" ]] || die "缺少 $f：主页和模块要一起部署（打包时带上 hub topic-app ham-exam chemistry physics）"
+         chemistry/index.html chemistry/data physics/index.html physics/data \
+         nvidia-exam/index.html nvidia-exam/css nvidia-exam/data nvidia-exam/js; do
+  [[ -e "$REPO_DIR/$f" ]] || die "缺少 $f：主页和模块要一起部署（打包时带上 hub topic-app ham-exam chemistry physics nvidia-exam）"
 done
 
 say "检查并安装系统依赖"
@@ -160,13 +161,13 @@ say "同步主页和不用登录的模块到 $INSTALL_DIR/site"
 # 先在旁边拼好一份完整的，再整体换上去：换的那一瞬间之外，网站上永远是一份完整的旧版或新版
 SITE_NEW="$INSTALL_DIR/site.new.$$"
 rm -rf "$SITE_NEW"
-install -d "$SITE_NEW/hub" "$SITE_NEW/topics" "$SITE_NEW/ham" "$SITE_NEW/chemistry" "$SITE_NEW/physics" "$SITE_NEW/backends"
+install -d "$SITE_NEW/hub" "$SITE_NEW/topics" "$SITE_NEW/ham" "$SITE_NEW/chemistry" "$SITE_NEW/physics" "$SITE_NEW/nvidia-exam" "$SITE_NEW/backends"
 cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/privacy.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$SITE_NEW/hub/"
 cp -a "$REPO_DIR/backends/." "$SITE_NEW/backends/"
 sed -i "s/__ASSET_VERSION__/$(date +%Y%m%d%H%M%S)/g" "$SITE_NEW/hub/index.html"
 cp -a "$REPO_DIR/topic-app/topic-app/." "$SITE_NEW/topics/"
 for f in index.html css data images js; do cp -a "$REPO_DIR/ham-exam/$f" "$SITE_NEW/ham/"; done
-for m in chemistry physics; do
+for m in chemistry physics nvidia-exam; do
   for f in index.html css data js; do cp -a "$REPO_DIR/$m/$f" "$SITE_NEW/$m/"; done
 done
 find "$SITE_NEW" -name '.*' -prune -exec rm -rf {} +
@@ -343,7 +344,7 @@ code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http:
 echo "    OK 登录已启用；未登录访问接口被拒绝（401）；登录页可访问"
 # nginx reload 是异步的：旧 worker 还在应答时会按旧配置回答（刚装完时根路径是 302，不是 200），
 # 所以每个页面都要重试几次，等新 worker 接手。这跟 deploy-all 里的 retry() 是同一个原因。
-for page in / /privacy.html /topics/ /ham/ /chemistry/ /physics/ /shared/site-footer.js; do
+for page in / /privacy.html /topics/ /ham/ /chemistry/ /physics/ /nvidia-exam/ /shared/site-footer.js; do
   code=""
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     code="$(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$NGINX_PORT$page")"
@@ -362,7 +363,7 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 1
 done
 [[ "$home_body" == *词境* ]] || die "根路径不是词境主页"
-echo "    OK 主页、隐私说明和四个模块都能打开"
+echo "    OK 主页、隐私说明和五个模块都能打开"
 # 公开版：不登录能拿到题库，而且只有初中、高中；管理页、管理接口、离线页都打不开
 pub="$(curl --noproxy '*' -fsS --max-time 5 "http://127.0.0.1:$NGINX_PORT/words/api/banks")" || die "公开版 /words/api/banks 打不开"
 python3 -c 'import json,sys; b=json.load(sys.stdin)["banks"]; sys.exit(0 if b and all(x["level1"] in ("初中","高中") for x in b) else 1)' <<<"$pub" \

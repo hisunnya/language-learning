@@ -44,6 +44,22 @@ python3 -m http.server 8084
 数据全部存在**自己浏览器的 localStorage**（键 `nx_state`），不上传、无服务端。
 语言（中/英）与配色偏好与 hub 全站共享（`lg_lang` / `lg_theme`）。
 
+## 二之二、在网站上的样子
+
+这个模块是「词境 Lexica」整站的一个模块，和其他模块一样遵守 `AGENTS.md` §3：
+
+- 挂在 `/nvidia-exam/`（容器里的 nginx，`word-puzzle/deploy/family/nginx/word-puzzle-family.conf`）；
+- 主页 `hub/` 上有一张卡片，入口在 `hub/js/config.js` 的 `LINGUA_PROJECTS.nvidia`；
+- 页面最下面有全站页脚 `/shared/site-footer.js`（备案号 + 隐私说明）；
+- 右上角有语言切换和取色器（对角切两半的小方块，五套配色与 hub 同键同色）；
+- 登录后老师能在总后台 `/backends/` 看到这个模块的成绩小结（`/shared/module-progress.js`）。
+
+改动这个目录里的 JS / CSS 之后要重新算版本号：
+
+```bash
+python3 word-puzzle/tools/bump_assets.py
+```
+
 ## 三、怎么补题
 
 编辑 `data/bank.json`，在 `questions` 数组里追加：
@@ -88,6 +104,8 @@ cd nvidia-exam && python3 -m unittest discover -s tests -v
 cd nvidia-exam && python3 -m unittest discover -s tests -v
 ```
 
-覆盖：中英键一致、无硬编码文案、配色变量集完整一致、对角色块取色器、
+覆盖：中英键一致、无硬编码文案、配色变量集完整一致、对角切色块取色器、
 localStorage 持久化、题库数据完整性、bank.json / bank.js 一致、JS 语法体检
-（复用 `word-puzzle/tools/check_js.py`）。
+（复用 `word-puzzle/tools/check_js.py`），以及 `AGENTS.md` §3 / §9.6 的硬性要求：
+全站页脚、共享页眉样式、画出来的品牌图标（不是表情符号）、主页入口、
+容器里的 nginx 挂载点、版本号必须是文件内容哈希而不是手打的日期。

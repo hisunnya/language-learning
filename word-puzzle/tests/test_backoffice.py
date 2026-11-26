@@ -1,4 +1,4 @@
-"""总后台接口 /api/backoffice：老师在一个请求里看全五个模块的名下成绩。
+"""总后台接口 /api/backoffice：老师在一个请求里看全六个模块的名下成绩。
 
 要守住的三件事：
 * 只有老师和超级管理员能用（学生 403、没登录 401）；
@@ -64,7 +64,7 @@ class TestBackofficeAccess(BackOfficeCase):
             self.assertEqual(status, 200, body)
             self.assertTrue(body["ok"])
             self.assertEqual(body["me"]["student_no"], no)
-            self.assertEqual(len(body["modules"]), 5, "五个模块都要在")
+            self.assertEqual(len(body["modules"]), 6, "六个模块都要在")
 
 
 class TestBackofficeScope(BackOfficeCase):
