@@ -100,8 +100,12 @@ language and missing in the other is a bug, and the hub test enforces it.
 
 ### 3.2 Multiple colour palettes
 
-- At least **three** palettes, each a named set of CSS custom properties on
+- **Five** palettes, each a named set of CSS custom properties on
   `[data-theme="…"]`, not hard-coded colours scattered through the stylesheet.
+  The house set is 靛蓝 · 雪白 / 墨绿 · 玄夜 / 琥珀 · 米白 / 绯红 · 藕白 /
+  鎏金 · 曜黑 (`indigo` / `ink` / `amber` / `lotus` / `obsidian`) — the same
+  keys and the same colours everywhere, so the choice follows the visitor from
+  one module to the next.
 - The palette is remembered across reloads (`localStorage`).
 - The active palette is marked in the picker (`aria-pressed` / `.active`).
 - Every palette needs a name in both languages, and the name should read as
@@ -205,7 +209,7 @@ list in order:
 
 1. **Pick the bilingual mechanism** (§3.1) and put the strings in both
    languages. No hard-coded user-visible text in the markup.
-2. **Define at least three palettes** on `[data-theme="…"]` (§3.2), each with
+2. **Define the five palettes** on `[data-theme="…"]` (§3.2), each with
    its own complete `--bg` / `--accent` / `--line` / … set. Move every
    hard-coded colour out of the stylesheet and into a variable.
 3. **Build the picker** (§3.3): small squares in the top-right of the header,

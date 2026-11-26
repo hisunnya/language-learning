@@ -32,6 +32,9 @@ CONFIG = (HUB / "js" / "config.js").read_text(encoding="utf-8")
 NGINX = (HUB / "deploy" / "lingua-grove.conf").read_text(encoding="utf-8")
 INSTALL_SCRIPT = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
 
+# 全站统一的五套配色（AGENTS.md §3.2）：靛蓝 / 墨绿 / 琥珀 / 绯红 / 鎏金
+HOUSE_PALETTES = ("indigo", "ink", "amber", "lotus", "obsidian")
+
 # i18n 表在 JS 里，形如  "key": "value",
 _I18N_ENTRY_RE = re.compile(r'"([A-Za-z0-9_.]+)"\s*:\s*"((?:[^"\\]|\\.)*)"')
 
@@ -187,10 +190,11 @@ class TestPalettes(unittest.TestCase):
             out[m.group(1)] = m.group(2)
         return out
 
-    def test_at_least_three_palettes(self):
+    def test_the_five_house_palettes(self):
+        """全站就是这五套配色（AGENTS.md §3.2）：靛蓝 / 墨绿 / 琥珀 / 绯红 / 鎏金。"""
         blocks = self._theme_blocks()
-        self.assertGreaterEqual(len(blocks), 3,
-                                "至少要有三套配色，现在只有 %d 套" % len(blocks))
+        self.assertEqual(sorted(blocks), sorted(HOUSE_PALETTES),
+                         "配色必须是全站统一的这五套，现在只有 %s" % sorted(blocks))
 
     def test_every_palette_defines_the_same_variable_set(self):
         """每套配色都必须有完整的一套变量，缺一个就不算一套配色。"""
@@ -284,10 +288,11 @@ class TestProjectLinks(unittest.TestCase):
     def test_homepage_hides_explanatory_notes(self):
         self.assertNotIn('<section class="notes">', HTML)
 
-    def test_project_entry_buttons_are_large(self):
+    def test_project_entry_buttons_are_tappable(self):
+        """入口按钮要好点：字号 21px 不变，高度别太厚。"""
         m = re.search(r"\.btn\s*\{(.*?)\n\}", CSS, re.S)
         self.assertIsNotNone(m)
-        self.assertIn("min-height: 72px", m.group(1))
+        self.assertIn("min-height: 52px", m.group(1))
         self.assertIn("font-size: 21px", m.group(1))
 
     def test_english_chemistry_and_physics_come_first(self):
