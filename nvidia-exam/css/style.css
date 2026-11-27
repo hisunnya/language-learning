@@ -288,6 +288,54 @@ html[lang^="en"] .portal-lang-btn::after { content: attr(data-tooltip-en); }
 .page-foot { color: var(--ink-faint); font-size: 12px; text-align: center; }
 .page-foot p { margin: 6px 0 0; }
 
+/* ---------- 头部：考试科目切换 ---------- */
+.exam-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+.exam-picker select {
+  min-height: 32px;
+  max-width: 240px;
+  padding: 4px 8px;
+  color: var(--ink);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+/* ---------- 学习指南 ---------- */
+.guide-list { display: flex; flex-direction: column; gap: 14px; }
+.guide-group { border-top: 1px solid var(--line-soft); padding-top: 4px; }
+.guide-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  font-size: 13.5px;
+}
+.gi-title { font-weight: 700; }
+.gi-meta { margin-top: 3px; color: var(--ink-faint); font-size: 12px; word-break: break-all; }
+.gi-links { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 12px; font-size: 12.5px; }
+.gi-links a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.gi-links a:hover { text-decoration: underline; }
+
+/* ---------- 来源与标签 ---------- */
+.browse-item summary .b-tag.alt,
+.guide-item .b-tag.alt {
+  color: var(--ink-soft);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+}
+.review-item .rv-line.src { font-size: 12.5px; color: var(--ink-faint); }
+.review-item .rv-line.src a { color: var(--accent); }
+
 @media (max-width: 640px) {
   body { padding: 8px 10px 30px; }
   .panel { padding: 14px; }

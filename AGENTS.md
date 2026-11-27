@@ -712,3 +712,31 @@ Every page carries the site footer `/shared/site-footer.js` (ICP filing number, 
 an optional public-security filing number, and the link to `/privacy.html`, plus a one-time notice); the number
 is set in one place at the top of that file. Login-required pages and the coming site back office (`/backends/`)
 are not linked from the homepage.
+
+### 9.7 The NVIDIA certification module (`nvidia-exam/`)
+
+The module is a static site with its own question bank: eight NVIDIA certifications
+(NCA-AIIO, NCA-GENL, NCA-GENM, NCP-AAI, NCP-AII, NCP-AIN, NCP-AIO, NCP-OUSD), 1284 questions
+and 570 study guides. The rules live in the module itself, not in the shared backend:
+
+- **Where the data comes from.** `nvidia-exam/raw-files/` holds the collected material
+  (the raw JSON, the study-guide compilation, the Excel export, the offline study hub and the
+  collection notes). `nvidia-exam/tools/build_data.py` turns it into `data/bank.json` /
+  `data/bank.js` (questions), `data/guides.json` / `data/guides.js` (guide index) and
+  `docs/guides/<CODE>.md` (the guide text, split per certification). The questions come from
+  **public free question banks** (ExamTopics and friends) and from open-source study repos —
+  they are *not* official exam questions, and the page says so.
+- **Never edit `data/bank.json` by hand.** It is generated; change `raw-files/` or
+  `data/seed.json` (the self-written questions) and re-run the build script. The test suite
+  rebuilds and compares, so a hand edit breaks the build.
+- **Sources must stay documented.** Every question keeps its source label and the link back to
+  the original page; the collection record lives in `nvidia-exam/docs/采集说明.md`. When new
+  material is collected, add it to the collection notes (sources, counts, what was *not*
+  collected) — the numbers there are what the README and the homepage card quote.
+- **The repository is public.** Redact e-mail addresses (and phone numbers) from anything
+  that goes into the repository — the build script does it for the guide text, but new raw
+  files have to be redacted by hand before they are committed.
+- **The module follows §3 like every other page**: bilingual, five palettes, the diagonal
+  swatch picker, the site footer. The page keeps the per-exam state in `localStorage`
+  (`nx_state`, `nx_exam`); question ids are namespaced per exam (`<exam id>:<question id>`)
+  because every certification numbers its questions from 1.

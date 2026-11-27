@@ -219,6 +219,15 @@ class TestI18N(unittest.TestCase):
         self.assertIn("document.documentElement.lang", JS)
         self.assertIn('lang === "en" ? "en" : "zh-CN"', JS)
 
+    def test_every_key_used_in_javascript_exists(self) -> None:
+        """脚本里 t("…") 用到的键，两种语言都得有：漏一个，页面上就会出现键名本身。"""
+        tables = _extract_i18n(JS)
+        used = set(re.findall(r'\bt\(\s*"([A-Za-z0-9_.]+)"', JS))
+        self.assertTrue(used, "没在脚本里找到任何 t() 调用")
+        for lang in ("zh", "en"):
+            missing = used - set(tables[lang])
+            self.assertFalse(missing, f"{lang} 缺这些 i18n 键: {sorted(missing)}")
+
 
 class TestPalettes(unittest.TestCase):
     """§3.2 配色变量集。"""
@@ -372,7 +381,7 @@ class TestBankData(unittest.TestCase):
     """题库数据完整性，以及 bank.json / bank.js 一致。"""
 
     def setUp(self) -> None:
-        self.exam = BANK_JSON["exams"][0]
+        self.exams = BANK_JSON["exams"]
         js = (BASE / "data" / "bank.js").read_text(encoding="utf-8")
         self.assertIn("window.NVIDIA_BANK", js, "bank.js 必须定义 window.NVIDIA_BANK")
         start = js.index("{")
@@ -382,27 +391,172 @@ class TestBankData(unittest.TestCase):
     def test_bank_js_equals_json(self) -> None:
         self.assertEqual(self.bank_js, BANK_JSON, "bank.js 与 bank.json 内容不一致")
 
-    def test_weights_sum_to_100(self) -> None:
+    def test_all_eight_certifications_are_there(self) -> None:
+        """采集到的 8 项认证都要在题库里，不能只剩一门。"""
+        codes = [e["code"] for e in self.exams]
         self.assertEqual(
-            sum(d["weight"] for d in self.exam["domains"]), 100,
-            "知识域权重合计必须是 100%",
+            sorted(codes),
+            ["NCA-AIIO", "NCA-GENL", "NCA-GENM", "NCP-AAI", "NCP-AII",
+             "NCP-AIN", "NCP-AIO", "NCP-OUSD"],
+            "认证科目不对",
         )
+        for exam in self.exams:
+            for field in ("id", "code", "name", "nameZh", "shortZh", "shortEn", "level"):
+                self.assertTrue(exam.get(field), f"{exam.get('code')} 缺字段 {field}")
+            self.assertTrue(exam.get("official"), f"{exam['code']} 缺官方考试信息")
+            self.assertGreater(exam["official"].get("questions", 0), 0)
+            self.assertGreater(exam["official"].get("durationMin", 0), 0)
+            self.assertEqual(exam["passPct"], exam["official"]["passPct"])
+
+    def test_weights_sum_to_100(self) -> None:
+        for exam in self.exams:
+            self.assertEqual(
+                sum(d["weight"] for d in exam["domains"]), 100,
+                f"{exam['code']} 的知识域权重合计必须是 100%",
+            )
 
     def test_question_integrity(self) -> None:
-        domain_ids = {d["id"] for d in self.exam["domains"]}
-        ids = set()
-        for q in self.exam["questions"]:
-            self.assertNotIn(q["id"], ids, f"题目 id 重复: {q['id']}")
-            ids.add(q["id"])
-            self.assertIn(q["domain"], domain_ids, f"未知知识域: {q['domain']}")
-            n = len(q["o"])
-            self.assertEqual(len(q["oZh"]), n, f"题 {q['id']} 选项中英文数量不一致")
-            self.assertTrue(0 < len(q["a"]) <= n, f"题 {q['id']} 答案下标越界")
-            for a in q["a"]:
-                self.assertTrue(0 <= a < n, f"题 {q['id']} 答案下标越界: {a}")
-            self.assertEqual(bool(q["multi"]), len(q["a"]) > 1, f"题 {q['id']} multi 标记与答案数不符")
-            for field in ("q", "qZh", "e", "eZh"):
-                self.assertTrue(q.get(field), f"题 {q['id']} 缺字段 {field}")
+        for exam in self.exams:
+            domain_ids = {d["id"] for d in exam["domains"]}
+            ids = set()
+            for q in exam["questions"]:
+                self.assertNotIn(q["id"], ids, f"{exam['code']} 题目 id 重复: {q['id']}")
+                ids.add(q["id"])
+                self.assertIn(q["domain"], domain_ids, f"{exam['code']} 未知知识域: {q['domain']}")
+                n = len(q["o"])
+                self.assertEqual(len(q["oZh"]), n, f"{exam['code']} 题 {q['id']} 选项中英文数量不一致")
+                self.assertTrue(0 < len(q["a"]) <= n, f"{exam['code']} 题 {q['id']} 答案下标越界")
+                for a in q["a"]:
+                    self.assertTrue(0 <= a < n, f"{exam['code']} 题 {q['id']} 答案下标越界: {a}")
+                self.assertEqual(bool(q["multi"]), len(q["a"]) > 1,
+                                 f"{exam['code']} 题 {q['id']} multi 标记与答案数不符")
+                for field in ("q", "qZh", "e", "eZh"):
+                    self.assertTrue(q.get(field), f"{exam['code']} 题 {q['id']} 缺字段 {field}")
+                self.assertTrue(q.get("src"), f"{exam['code']} 题 {q['id']} 缺来源")
+
+    def test_every_source_has_a_bilingual_name(self) -> None:
+        """题目上的来源标签是界面文案，两种语言都要有。"""
+        sources = {s["id"]: s for s in BANK_JSON["sources"]}
+        used = {q["src"] for exam in self.exams for q in exam["questions"]}
+        for src in used:
+            self.assertIn(src, sources, f"来源 {src} 没有在 sources 表里")
+            self.assertTrue(sources[src].get("zh") and sources[src].get("en"),
+                            f"来源 {src} 的名字没有中英双语")
+
+    def test_the_collected_bank_is_big_enough(self) -> None:
+        """采集到的题目量（1224 道）不能因为整理脚本出错而缩水。"""
+        total = sum(len(e["questions"]) for e in self.exams)
+        self.assertGreaterEqual(total, 1200, f"题库只有 {total} 道题")
+        for exam in self.exams:
+            self.assertGreaterEqual(len(exam["questions"]), 80, f"{exam['code']} 题量太少")
+
+
+class TestStudyGuides(unittest.TestCase):
+    """学习指南：索引数据、按科目拆分的正文，以及页面上的指南视图。"""
+
+    def setUp(self) -> None:
+        self.guides = json.loads((BASE / "data" / "guides.json").read_text(encoding="utf-8"))
+
+    def test_guides_js_equals_json(self) -> None:
+        js = (BASE / "data" / "guides.js").read_text(encoding="utf-8")
+        self.assertIn("window.NVIDIA_GUIDES", js)
+        start = js.index("{")
+        end = js.rindex("}")
+        self.assertEqual(json.loads(js[start:end + 1]), self.guides)
+
+    def test_every_certification_has_guides(self) -> None:
+        codes = {c["code"] for c in self.guides["certs"]}
+        self.assertEqual(len(codes), 8, "指南索引里的科目数不对")
+        total = 0
+        for cert in self.guides["certs"]:
+            self.assertTrue(cert["guides"], f"{cert['code']} 没有指南")
+            total += len(cert["guides"])
+            for g in cert["guides"]:
+                self.assertTrue(g["title"], f"{cert['code']} 有指南没有标题")
+                self.assertTrue(g["repo"], f"{cert['code']} 的指南《{g['title']}》没有来源仓库")
+                self.assertTrue(g["url"].startswith("https://"), "指南原文链接不是 https")
+        self.assertGreaterEqual(total, 500, f"只有 {total} 篇指南")
+
+    def test_the_split_documents_exist(self) -> None:
+        """按科目拆开的正文要在仓库里，页面上的「读正文」链接才不会点空。"""
+        for cert in self.guides["certs"]:
+            path = BASE / "docs" / "guides" / f"{cert['code']}.md"
+            self.assertTrue(path.is_file(), f"缺少 {path.name}")
+            text = path.read_text(encoding="utf-8")
+            self.assertIn(cert["code"], text, f"{path.name} 里没有科目代码")
+            self.assertGreater(len(text), 1000, f"{path.name} 太短了")
+
+    def test_the_page_has_a_guide_view(self) -> None:
+        self.assertIn('id="view-guides"', HTML, "页面缺少指南视图")
+        self.assertIn('id="guideList"', HTML, "页面缺少指南列表")
+        self.assertIn("data/guides.js", HTML, "页面没有加载指南数据")
+        self.assertIn("renderGuides", JS, "app.js 里没有渲染指南的函数")
+
+    def test_the_collection_notes_are_shipped(self) -> None:
+        """采集过程与口径要留在仓库里，别人才知道这些题是从哪来的。"""
+        notes = BASE / "docs" / "采集说明.md"
+        self.assertTrue(notes.is_file(), "缺少 docs/采集说明.md")
+        text = notes.read_text(encoding="utf-8")
+        self.assertIn("ExamTopics", text)
+        self.assertNotRegex(text, r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-]+",
+                            "采集说明里有邮箱地址：仓库是公开的")
+
+
+class TestRawFiles(unittest.TestCase):
+    """原始采集产物：留着才能重跑整理脚本，也能核对出处。"""
+
+    def test_the_collected_files_are_in_the_repository(self) -> None:
+        for name in ("nvidia_cert_data.json", "学习指南汇总.md", "采集说明.md",
+                     "NVIDIA认证备考资料.xlsx", "nvidia-cert-study-hub.html"):
+            path = BASE / "raw-files" / name
+            self.assertTrue(path.is_file(), f"raw-files/{name} 不在仓库里")
+            self.assertGreater(path.stat().st_size, 1000, f"raw-files/{name} 是空的")
+
+    def test_no_email_addresses_in_the_raw_copies(self) -> None:
+        """仓库在 GitHub 上是公开的：正文里的私人邮箱要抹掉。"""
+        for name in ("学习指南汇总.md", "采集说明.md"):
+            text = (BASE / "raw-files" / name).read_text(encoding="utf-8")
+            self.assertNotRegex(text, r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-]+",
+                                f"raw-files/{name} 里有邮箱地址")
+
+
+class TestBuildScript(unittest.TestCase):
+    """整理脚本要能重跑，而且重跑的结果与仓库里的一样。"""
+
+    def test_rebuilding_reproduces_the_bank(self) -> None:
+        import subprocess
+        before = {
+            name: (BASE / "data" / name).read_text(encoding="utf-8")
+            for name in ("bank.json", "bank.js", "guides.json", "guides.js")
+        }
+        proc = subprocess.run(
+            ["python3", str(BASE / "tools" / "build_data.py")],
+            capture_output=True, text=True, cwd=BASE, timeout=300,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        for name, text in before.items():
+            self.assertEqual((BASE / "data" / name).read_text(encoding="utf-8"), text,
+                             f"重跑 tools/build_data.py 后 {name} 变了")
+
+
+class TestMultiExamUi(unittest.TestCase):
+    """页面上的科目切换与本地存储的隔离。"""
+
+    def test_the_page_has_an_exam_picker(self) -> None:
+        self.assertIn('id="examPicker"', HTML, "页面缺少科目切换")
+        self.assertIn("exam.pick", JS, "app.js 里没有科目切换的文案")
+
+    def test_question_ids_are_namespaced_by_exam(self) -> None:
+        """不同科目的题号会重复，本地存储的键必须带上科目。"""
+        self.assertIn('EXAM.id + ":" + q.id', JS, "作答记录的键没有带上科目")
+
+    def test_the_chosen_exam_is_remembered(self) -> None:
+        self.assertIn("nx_exam", JS, "选中的科目没有记在 localStorage 里")
+
+    def test_the_browse_view_shows_the_source(self) -> None:
+        """题目来自公开题库，答完要能点回原页核对。"""
+        self.assertIn("sourceLabel", JS)
+        self.assertIn("q.source", JS)
 
 
 class TestPersistenceAndLint(unittest.TestCase):

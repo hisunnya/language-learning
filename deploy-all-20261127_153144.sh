@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261126_082249.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261127_153144.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -102,6 +102,11 @@ for path in \
   nvidia-exam/js/store.js \
   nvidia-exam/data/bank.js \
   nvidia-exam/data/bank.json \
+  nvidia-exam/data/guides.js \
+  nvidia-exam/data/guides.json \
+  nvidia-exam/docs/采集说明.md \
+  nvidia-exam/docs/guides/NCA-AIIO.md \
+  nvidia-exam/docs/guides/NCP-OUSD.md \
   backends/index.html \
   backends/js/backends.js \
   backends/css/backends.css; do
@@ -129,6 +134,7 @@ if [[ -n "$LEXICA_CTID" ]]; then
   (cd "$REPO_DIR" && COPYFILE_DISABLE=1 tar czf "$SRC_TGZ" \
     --exclude='word-puzzle/var' --exclude='__pycache__' --exclude='.DS_Store' --exclude='*/tests' \
     --exclude='ham-exam/raw-files' --exclude='ham-exam/tools' \
+    --exclude='nvidia-exam/raw-files' --exclude='nvidia-exam/tools' \
     word-puzzle hub topic-app/topic-app ham-exam chemistry physics nvidia-exam backends)
   pct push "$LEXICA_CTID" "$SRC_TGZ" /root/lexica-src.tgz
   # 解到一个新目录再整个换上去：仓库里删掉的文件，容器里也跟着没有（直接解到旧目录上会把它们留下来）
@@ -212,6 +218,8 @@ check_path /physics/js/physics.js
 check_path /nvidia-exam/
 check_path /nvidia-exam/data/bank.json
 check_path /nvidia-exam/data/bank.js
+check_path /nvidia-exam/data/guides.js
+check_path /nvidia-exam/docs/guides/NCA-AIIO.md
 check_path /nvidia-exam/js/app.js
 check_path /nvidia-exam/css/style.css
 check_path /backends/

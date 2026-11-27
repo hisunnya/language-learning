@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="wp-base" content="/word-puzzle">
 <meta name="wp-module" content="nvidia">
-<title>NVIDIA 认证 · AI 基础设施模拟考试</title>
+<title>NVIDIA 认证模拟考试 · NVIDIA Exam</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/shared/module-header.css?v=c2f015ff">
-<link rel="stylesheet" href="css/style.css?v=ef321443">
+<link rel="stylesheet" href="css/style.css?v=218f7e5a">
 </head>
 <body>
 
@@ -21,10 +21,15 @@
     <button type="button" class="nav-btn active" data-view="exam"    data-i18n="nav.exam">模拟考试</button>
     <button type="button" class="nav-btn" data-view="practice" data-i18n="nav.practice">练习</button>
     <button type="button" class="nav-btn" data-view="browse"   data-i18n="nav.browse">题库</button>
+    <button type="button" class="nav-btn" data-view="guides"   data-i18n="nav.guides">指南</button>
     <button type="button" class="nav-btn" data-view="stats"    data-i18n="nav.stats">统计</button>
   </nav>
   <div class="portal-topbar-right topright">
     <div class="portal-header-controls" id="portalHeaderControls">
+      <label class="exam-picker">
+        <span data-i18n="exam.pick">考试科目</span>
+        <select id="examPicker" aria-label="考试科目"></select>
+      </label>
       <button type="button" class="portal-lang-btn" id="langBtn" data-tooltip-zh="切换到 English" data-tooltip-en="Switch to 中文">
         <span class="zh">中</span><span class="sep">/</span><span class="en">EN</span>
       </button>
@@ -155,6 +160,15 @@
     </div>
   </section>
 
+  <!-- ============ 学习指南 ============ -->
+  <section class="view hidden" id="view-guides">
+    <div class="panel">
+      <h2 class="panel-title" data-i18n="guides.title">学习指南</h2>
+      <p class="panel-desc" data-i18n="guides.desc">来自 GitHub 公开备考仓库的速查表、记忆卡、实操手册与考纲要点，按科目整理；正文在仓库的 docs/guides/ 目录里。</p>
+      <div class="guide-list" id="guideList"></div>
+    </div>
+  </section>
+
   <!-- ============ 统计 ============ -->
   <section class="view hidden" id="view-stats">
     <div class="panel">
@@ -185,9 +199,10 @@
 <!-- 顺序跟其他模块一样：上报脚本先加载，app.js 初始化时才有 window.WPModule 可用 -->
 <script src="/word-puzzle/js/tracker.js?v=72afc496"></script>
 <script src="/shared/module-progress.js?v=39535ddd"></script>
-<script src="data/bank.js?v=354d2e17"></script>
+<script src="data/bank.js?v=0a0f4805"></script>
+<script src="data/guides.js?v=86193b32"></script>
 <script src="js/store.js?v=1db5cc9a"></script>
-<script src="js/app.js?v=aa82219d"></script>
+<script src="js/app.js?v=3b5eaf75"></script>
 <script src="/shared/site-footer.js?v=9d9c1f36"></script>
 </body>
 </html>

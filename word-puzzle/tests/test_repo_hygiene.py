@@ -19,7 +19,12 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
 EMAIL_ALLOWED_DOMAINS = {"users.noreply.github.com", "example.com", "example.org", "anthropic.com"}
 # 私有网段的地址（家里的内网、服务器、虚拟机）不能出现；下面是文档和测试里用的、明显是举例的几个
 PRIVATE_IP = re.compile(r"(?<![0-9.])(10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|172\.(?:1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3})(?![0-9])")
-IP_EXAMPLES = re.compile(r"192\.168\.1\.[0-9]{1,3}|192\.168\.0\.[0-9]{1,3}|10\.20\.30\.[0-9]{1,3}|172\.16\.0\.9|172\.31\.1\.1")
+IP_EXAMPLES = re.compile(
+    r"192\.168\.1\.[0-9]{1,3}|192\.168\.0\.[0-9]{1,3}|10\.20\.30\.[0-9]{1,3}|172\.16\.0\.9|172\.31\.1\.1"
+    # NVIDIA 自家课程与 Kubernetes 文档里的示例地址（nvidia-exam/docs/guides/ 里）：
+    # Cumulus Linux 的交换机接口、NetQ 排障命令、kubeadm 的默认 Pod 网段、BCM 加节点的例子
+    r"|10\.0\.0\.1|10\.0\.1\.10|10\.0\.1\.101|10\.0\.2\.20|10\.244\.0\.0"
+)
 # Tailscale 的网址：真实的 tailnet 名（默认形如 tailXXXXXX）一律不能出现；示例用 example-net
 TAILNET = re.compile(r"\b[a-z0-9-]+\.([a-z0-9-]+)\.ts\.net\b|\btail[0-9a-f]{6}\b")
 TAILNET_EXAMPLES = {"example-net", "example", "cat-crocodile"}

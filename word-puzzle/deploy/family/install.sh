@@ -67,7 +67,7 @@ LAN_GUEST="${WP_LAN_GUEST:-0}"
 # 主页和不用登录的模块也由这里提供（网站根路径 / 就是主页），缺一个就不装，免得上线一个残缺的网站
 for f in hub/index.html hub/privacy.html hub/css hub/js topic-app/topic-app/index.html ham-exam/index.html \
          chemistry/index.html chemistry/data physics/index.html physics/data \
-         nvidia-exam/index.html nvidia-exam/css nvidia-exam/data nvidia-exam/js; do
+         nvidia-exam/index.html nvidia-exam/css nvidia-exam/data nvidia-exam/js nvidia-exam/docs; do
   [[ -e "$REPO_DIR/$f" ]] || die "缺少 $f：主页和模块要一起部署（打包时带上 hub topic-app ham-exam chemistry physics nvidia-exam）"
 done
 
@@ -170,6 +170,8 @@ for f in index.html css data images js; do cp -a "$REPO_DIR/ham-exam/$f" "$SITE_
 for m in chemistry physics nvidia-exam; do
   for f in index.html css data js; do cp -a "$REPO_DIR/$m/$f" "$SITE_NEW/$m/"; done
 done
+# NVIDIA 模块的学习指南正文在 docs/guides/ 里：页面上的「读正文」链接指向它，缺了就点不开
+cp -a "$REPO_DIR/nvidia-exam/docs" "$SITE_NEW/nvidia-exam/"
 find "$SITE_NEW" -name '.*' -prune -exec rm -rf {} +
 chmod -R a+rX "$SITE_NEW"
 rm -rf "$INSTALL_DIR/site.old"
