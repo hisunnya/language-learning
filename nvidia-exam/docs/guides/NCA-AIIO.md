@@ -9241,7 +9241,6 @@ NVIDIA 官方为 NCA-AIIO 仅指定唯一资源：**考前学习指南（Study G
 
 ## 联系与反馈
 
-- 官方考试咨询邮箱：[邮箱已隐去]
 - NVIDIA 认证总览：[ nvidia.cn/training/certification](https://www.nvidia.cn/training/certification/)
 
 ---
@@ -11133,7 +11132,7 @@ ssh -i /path/to/your-key.pem ubuntu@EC2_PUBLIC_IP
 
 **示例：**
 ```bash
-ssh -i ~/.ssh/my-gpu-key.pem [邮箱已隐去]
+ssh -i ~/.ssh/my-gpu-key.pem gpu-node
 ```
 
 **预期输出：**

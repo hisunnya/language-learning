@@ -83,7 +83,7 @@ raw-files/                     采集到的原始资料（2026-11-27）
 data/bank.json / bank.js       网站用的题库（8 项认证 / 1284 道题）
 data/guides.json / guides.js   学习指南索引（570 篇）
 data/seed.json                 按官方考纲自编的补充题（手写，60 道）
-docs/采集说明.md                采集记录（从 raw-files 复制，抹掉了邮箱）
+docs/采集说明.md                采集记录（从 raw-files 复制，删除个人联系方式）
 docs/guides/<代码>.md           按科目拆开的学习指南正文
 ```
 
@@ -104,8 +104,7 @@ cd nvidia-exam && python3 tools/build_data.py
 3. 生成 `data/bank.js`、`data/guides.js`（`bank.json` / `guides.json` 的 JS 版本，
    两份内容必须一致，测试会校验）。
 
-> 仓库在 GitHub 上是公开的：脚本会把正文里的邮箱地址抹成 `[邮箱已隐去]`，
-> `raw-files/` 里的副本也是抹过邮箱的。
+整理脚本会直接删除输出文档里的邮箱和手机号，不留下占位文字；题目与指南保留必要的来源信息。
 
 ### 自己加题
 

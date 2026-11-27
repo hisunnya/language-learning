@@ -12,14 +12,13 @@
 * ``data/bank.json`` / ``data/bank.js`` —— 网站用的题库（两种格式内容必须一致，tests 会校验）；
 * ``data/guides.json`` / ``data/guides.js`` —— 学习指南索引；
 * ``docs/guides/<CODE>.md`` —— 按认证拆开的学习指南正文，方便只读自己考的那一科；
-* ``docs/采集说明.md`` —— 采集过程与口径说明（从 raw-files 复制，抹掉邮箱）。
+* ``docs/采集说明.md`` —— 采集过程与口径说明（从 raw-files 复制，删除个人联系方式）。
 
 跑法：
 
     cd nvidia-exam && python3 tools/build_data.py
 
-仓库是公开的：脚本里会把正文里的邮箱地址抹掉（`[邮箱已隐去]`），
-免得把第三方的私人邮箱带进 git 历史。
+仓库是公开的：输出文档会直接删除邮箱与手机号，不插入占位文字。
 """
 from __future__ import annotations
 
@@ -269,10 +268,13 @@ EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
 PHONE_RE = re.compile(r"(?<![0-9])1[3-9][0-9]{9}(?![0-9])")
 
 
-def redact(text: str) -> str:
-    """抹掉正文里的邮箱与手机号：仓库在 GitHub 上是公开的。"""
-    text = EMAIL_RE.sub("[邮箱已隐去]", text)
-    return PHONE_RE.sub("[号码已隐去]", text)
+def remove_personal_contacts(text: str) -> str:
+    """直接删除邮箱与手机号，不在正文中留下占位文字。"""
+    text = re.sub(r"\[\[([^\]]*)\]\]\(mailto:[^)]+\)", "", text)
+    text = re.sub(r"\[([^\]]*)\]\(mailto:[^)]+\)", "", text)
+    text = EMAIL_RE.sub("", text)
+    text = PHONE_RE.sub("", text)
+    return re.sub(r"\[(?:邮箱|号码)已隐去\]", "", text)
 
 
 # ---------------------------------------------------------------- 题目整理
@@ -638,7 +640,7 @@ def main() -> None:
                 body_parts.extend(g["body"])
                 body_parts.append("")
             body_parts.append("")
-        text = redact("\n".join(body_parts))
+        text = remove_personal_contacts("\n".join(body_parts))
         (guide_dir / ("%s.md" % code)).write_text(text, encoding="utf-8")
         guides.append({
             "code": code,
@@ -661,7 +663,7 @@ def main() -> None:
     # ---- 采集说明
     DOCS.mkdir(parents=True, exist_ok=True)
     notes = (RAW / "采集说明.md").read_text(encoding="utf-8")
-    (DOCS / "采集说明.md").write_text(redact(notes), encoding="utf-8")
+    (DOCS / "采集说明.md").write_text(remove_personal_contacts(notes), encoding="utf-8")
 
     total_q = sum(len(e["questions"]) for e in exams)
     total_g = sum(g["count"] for g in guides)

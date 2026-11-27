@@ -485,6 +485,8 @@ class TestStudyGuides(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             self.assertIn(cert["code"], text, f"{path.name} 里没有科目代码")
             self.assertGreater(len(text), 1000, f"{path.name} 太短了")
+            self.assertNotIn("[邮箱已隐去]", text, f"{path.name} 留有邮箱占位文字")
+            self.assertNotIn("[号码已隐去]", text, f"{path.name} 留有号码占位文字")
 
     def test_the_page_has_a_guide_view(self) -> None:
         self.assertIn('id="view-guides"', HTML, "页面缺少指南视图")
@@ -513,11 +515,13 @@ class TestRawFiles(unittest.TestCase):
             self.assertGreater(path.stat().st_size, 1000, f"raw-files/{name} 是空的")
 
     def test_no_email_addresses_in_the_raw_copies(self) -> None:
-        """仓库在 GitHub 上是公开的：正文里的私人邮箱要抹掉。"""
+        """原始副本不含邮箱地址或替代占位文字。"""
         for name in ("学习指南汇总.md", "采集说明.md"):
             text = (BASE / "raw-files" / name).read_text(encoding="utf-8")
             self.assertNotRegex(text, r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-]+",
                                 f"raw-files/{name} 里有邮箱地址")
+            self.assertNotIn("[邮箱已隐去]", text, f"raw-files/{name} 留有邮箱占位文字")
+            self.assertNotIn("[号码已隐去]", text, f"raw-files/{name} 留有号码占位文字")
 
 
 class TestBuildScript(unittest.TestCase):

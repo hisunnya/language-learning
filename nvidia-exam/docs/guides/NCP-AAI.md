@@ -5494,8 +5494,6 @@ NVIDIA-Certified Professional: Agentic AI (NCP-AAI) 认证，用于验证设计�
   请提交一个 [GitHub Issue](../../issues)。这是主要渠道，也是获得响应最快的方式。
 * **关于如何使用本材料的一般性问题？** 目前也请使用
   [GitHub Issues](../../issues)。本仓库当前尚未启用 GitHub Discussions；如果将来有需求，可能会启用，但不要假定它今天就可用。
-* **其他任何事情**（包括你不想公开提出的问题，或与某个具体 issue/PR 无关的事项）可以发送给 GSA
-  项目联系人 [[邮箱已隐去]](mailto:[邮箱已隐去])。
 * **安全方面的问题** 应按 [SECURITY.md](SECURITY.md) 中的流程处理，而不是提交普通 issue。
 
 ## 响应时间
