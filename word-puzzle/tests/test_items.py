@@ -4,6 +4,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -52,6 +53,7 @@ ORDER_DOC = docx([
     "Hangzhou,", [(" ", ""), ("known as", "yellow"), (" “Paradise on Earth”,", "")], " is ", "a popular tourist attraction.",
     [("Hangzhou, known as “Paradise on Earth”, is a popular tourist attraction.", "green")],
 ])
+VERB_FILE = ROOT / "seed-data" / "Unit3 - verb hunter.docx"
 
 
 class TestParsing(unittest.TestCase):
@@ -85,6 +87,18 @@ class TestParsing(unittest.TestCase):
         found, problems, _ = items.parse("order", bad)
         self.assertEqual(found, [])
         self.assertIn("不一样", problems[0])
+
+    def test_verb_hunter_source_has_ten_questions_and_two_five_question_levels(self):
+        found, problems, _ = items.parse("verb", VERB_FILE.read_bytes())
+        self.assertEqual(problems, [])
+        self.assertEqual(len(found), 10)
+        self.assertEqual(len(items.levels("verb", found)), 2)
+        self.assertEqual([len(g["items"]) for g in items.levels("verb", found)], [5, 5])
+        choices = found[0]["choices"]
+        self.assertEqual(len(choices), 14)
+        self.assertEqual(len({items.answer_key(word) for word in choices}), 14)
+        self.assertTrue(all(item["choices"] == choices for item in found))
+        self.assertTrue(all(items.answer_key(item["answer"]) in {items.answer_key(w) for w in choices} for item in found))
 
     def test_soft_line_breaks_split_fragments_and_punctuation_may_start_a_fragment(self):
         """Shift+Enter（<w:br/>）在 Word 里看起来是另起一行，就当一个新片段；片段以逗号开头时，拼起来和答案比较不受空格影响。"""
@@ -161,6 +175,27 @@ class TestImportTool(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(import_items.main(["--type", "order", "--file", str(src), "--db", str(Path(tmp) / "a.db")]), 1)
 
+    def test_category_from_copies_only_category_for_verb_bank(self):
+        sys.path.insert(0, (ROOT / "tools").as_posix())
+        import import_items
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = str(Path(tmp) / "a.db")
+            db = Database(db_path)
+            db.execute("INSERT INTO users(student_no, name, role, pw_hash, created_at) VALUES ('T9','孙老师','admin','x','0')")
+            tid = db.one("SELECT id FROM users WHERE student_no='T9'")["id"]
+            source = db.insert_bank({"title": "Spell source", "level1": "大学", "level2": "", "level3": "", "level4": "",
+                                     "source": "seed"}, [])
+            db.set_bank_meta(source, "同一本书", ["原有班级"], teacher_id=tid)
+            db.close()
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(import_items.main(["--type", "verb", "--file", str(VERB_FILE), "--db", db_path,
+                                                    "--title", "U3 Verb", "--category-from", str(source)]), 0)
+            db = Database(db_path)
+            imported = db.one("SELECT * FROM banks WHERE title='U3 Verb'")
+            self.assertEqual((imported["game_type"], imported["category"]), ("verb", "同一本书"))
+            self.assertEqual(db.bank_tags(imported["id"]), [], "标签不从分类来源复制")
+            db.close()
+
 
 class ItemsCase(HttpCase):
     @classmethod
@@ -174,7 +209,10 @@ class ItemsCase(HttpCase):
         cls.order = db.insert_item_bank({"title": "U3 排", "level1": "大学", "level2": "大一", "level3": "上册", "level4": "Unit 3",
                                          "source": "import", "game_type": "order", "owner_id": cls.admin_user["id"]},
                                         items.parse("order", ORDER_DOC)[0])
-        for bid in (cls.spell, cls.order):
+        cls.verb = db.insert_item_bank({"title": "U3 动词", "level1": "大学", "level2": "大一", "level3": "上册", "level4": "Unit 3",
+                                        "source": "import", "game_type": "verb", "owner_id": cls.admin_user["id"]},
+                                       items.parse("verb", VERB_FILE.read_bytes())[0])
+        for bid in (cls.spell, cls.order, cls.verb):
             db.execute("INSERT INTO bank_tags(bank_id, tag, teacher_id) VALUES (?, '一班', ?)", (bid, cls.admin_user["id"]))
         cls.rec_dir = tempfile.TemporaryDirectory()
         cls.env = mock.patch.dict("os.environ", {"WP_RECORDINGS_DIR": cls.rec_dir.name})
@@ -213,20 +251,26 @@ class TestItemBanksOverHttp(ItemsCase):
     def test_banks_carry_their_type_and_items_come_in_levels(self):
         _, c = self.student()
         banks = {b["id"]: b for b in c.json("GET", "/api/banks")[1]["banks"]}
-        self.assertEqual((banks[self.spell]["game_type"], banks[self.order]["game_type"]), ("spell", "order"))
+        self.assertEqual((banks[self.spell]["game_type"], banks[self.order]["game_type"], banks[self.verb]["game_type"]),
+                         ("spell", "order", "verb"))
         body = c.json("GET", "/api/banks/%d" % self.order)[1]
         self.assertEqual(body["bank"]["game_type"], "order")
         self.assertEqual(len(body["groups"]), 1)
         self.assertEqual(body["groups"][0]["items"][1]["answer"], "Hangzhou, known as “Paradise on Earth”, is a popular tourist attraction.")
+        verb = c.json("GET", "/api/banks/%d" % self.verb)[1]
+        self.assertEqual([len(g["items"]) for g in verb["groups"]], [5, 5])
+        self.assertEqual(len(verb["groups"][0]["items"][0]["choices"]), 14)
 
     def test_item_audio_reads_the_text_of_the_bank_only(self):
         _, c = self.student()
         with mock.patch("server.tts.synth", return_value=b"ID3audio") as synth:
             self.assertEqual(c.request("GET", "/api/banks/%d/items/1/audio" % self.order)[0], 200)
             self.assertEqual(c.request("GET", "/api/banks/%d/items/0/audio" % self.spell)[0], 200)
+            self.assertEqual(c.request("GET", "/api/banks/%d/items/0/audio" % self.verb)[0], 200)
             self.assertEqual(c.request("GET", "/api/banks/%d/items/9/audio" % self.order)[0], 404)
         self.assertEqual(synth.call_args_list[0].args[0], "Hangzhou, known as “Paradise on Earth”, is a popular tourist attraction.")
         self.assertEqual(synth.call_args_list[1].args[0], "domestic economy")
+        self.assertEqual(synth.call_args_list[2].args[0], items.speech_text("verb", self.db.bank_items(self.verb)[0]))
         _, other = self.student(tag="二班")
         self.assertEqual(other.request("GET", "/api/banks/%d/items/0/audio" % self.order)[0], 404, "没开放给他的题库听不到")
 
@@ -236,6 +280,13 @@ class TestItemBanksOverHttp(ItemsCase):
                                                      "total_pairs": 5, "level_count": 1, "detail": []})
         self.assertEqual(status, 201, body)
         self.assertEqual(self.db.one("SELECT game_type, score FROM scores WHERE id=?", (body["id"],))["game_type"], "spell")
+
+    def test_verb_score_takes_its_type_from_the_bank(self):
+        _, c = self.student()
+        status, body = c.json("POST", "/api/scores", {"bank_id": self.verb, "game_type": "match", "score": 17,
+                                                     "matched": 5, "total_pairs": 5, "level_count": 1, "detail": []})
+        self.assertEqual(status, 201, body)
+        self.assertEqual(self.db.one("SELECT game_type FROM scores WHERE id=?", (body["id"],))["game_type"], "verb")
 
 
 class TestRecordings(ItemsCase):
@@ -272,7 +323,7 @@ class TestRecordings(ItemsCase):
     def test_upload_checks(self):
         _, c = self.student()
         body, headers = multipart({"bank_id": str(self.spell), "item_ord": "0"}, {"file": ("r.webm", b"0" * 3000)})
-        self.assertEqual(c.json("POST", "/api/recordings", raw=body, headers=headers)[0], 404, "只有排排坐能交录音")
+        self.assertEqual(c.json("POST", "/api/recordings", raw=body, headers=headers)[0], 404, "只有翻译排排坐能交录音")
         self.assertEqual(self.upload(c, ordinal=7)[0], 404)
         self.assertEqual(self.upload(c, data=b"x")[0], 400)
         self.assertEqual(Client(self.port).request("POST", "/api/recordings", raw=b"", headers={"Content-Type": "multipart/form-data; boundary=x"})[0], 401)
@@ -359,12 +410,22 @@ class TestItemCoreJs(unittest.TestCase):
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertIn("全部通过", proc.stdout)
 
+    def test_verb_ui_drag_and_scoring(self):
+        proc = subprocess.run([NODE, str(ROOT / "tests" / "js" / "verb_ui.test.js")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("全部通过", proc.stdout)
+
+    def test_page_items_starts_verb_game_without_other_game_uis(self):
+        proc = subprocess.run([NODE, str(ROOT / "tests" / "js" / "page_items.test.js")], capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertIn("全部通过", proc.stdout)
+
 
 class TestPages(unittest.TestCase):
     WEB = ROOT / "web"
 
     def test_pages_exist_and_load_what_they_need(self):
-        for page, ui in (("spell.html", "spell-ui.js"), ("order.html", "order-ui.js")):
+        for page, ui in (("spell.html", "spell-ui.js"), ("order.html", "order-ui.js"), ("verb.html", "verb-ui.js")):
             html = (self.WEB / page).read_text(encoding="utf-8")
             for needle in ("item-core.js", ui, "page-items.js", "items.css", "site-footer.js", 'id="portalHeaderControls"',
                            'data-game="%s"' % page[:-5]):
@@ -378,6 +439,25 @@ class TestPages(unittest.TestCase):
         self.assertIn("touch-action: none", css, "手指拖片段时页面不跟着滚")
         for needle in (".ig-ghost", ".ig-hole"):
             self.assertIn(needle, css)
+
+    def test_verb_prompts_stack_and_prioritize_english(self):
+        css = (self.WEB / "css" / "items.css").read_text(encoding="utf-8")
+        layout = re.search(r"\.verb-bilingual\s*\{([^}]*)\}", css)
+        english = re.search(r"\.verb-phrase\s*\{([^}]*)\}", css)
+        chinese = re.search(r"\.verb-cn\s*\{([^}]*)\}", css)
+        self.assertIsNotNone(layout)
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", layout.group(1))
+        self.assertIn("border: 1px solid var(--blue)", layout.group(1))
+        self.assertNotIn(".verb-prompt", css, "中英文共用外框，不再各自分框")
+        self.assertIsNotNone(english)
+        self.assertIsNotNone(chinese)
+        english_size = re.search(r"font-size:\s*(\d+(?:\.\d+)?)px", english.group(1))
+        chinese_size = re.search(r"font-size:\s*(\d+(?:\.\d+)?)px", chinese.group(1))
+        self.assertIsNotNone(english_size)
+        self.assertIsNotNone(chinese_size)
+        self.assertGreater(float(english_size.group(1)), float(chinese_size.group(1)))
+        ui = (self.WEB / "js" / "verb-ui.js").read_text(encoding="utf-8")
+        self.assertLess(ui.index('lang="en"'), ui.index('lang="zh-CN"'))
 
     def test_spell_input_does_not_let_the_phone_autocorrect(self):
         ui = (self.WEB / "js" / "spell-ui.js").read_text(encoding="utf-8")
@@ -394,18 +474,26 @@ class TestPages(unittest.TestCase):
         home = (self.WEB / "js" / "page-home.js").read_text(encoding="utf-8")
         self.assertIn("renderTypes()", home)
         self.assertIn("'#type=' + chosen", home)
-        self.assertIn("if (AuthUI.info().public) return TYPES.filter", home, "登录的学生三种玩法都看得到，公开版只显示有题库的")
+        self.assertIn("if (AuthUI.info().public) return TYPES.filter", home, "登录的学生四种玩法都看得到，公开版只显示有题库的")
         self.assertIn("type_none", home, "没开放题库的玩法也能点，提示暂未开放")
         index = (self.WEB / "index.html").read_text(encoding="utf-8")
         self.assertIn('id="typeCards"', index)
         self.assertLess(index.index('id="bankList"'), index.index('id="recentCard"'), "最近玩过放在最下面")
         self.assertNotIn("练习英语词汇，听美式发音并完成中英配对", index)
         css = (self.WEB / "css" / "items.css").read_text(encoding="utf-8")
-        for needle in (".type-card.t-spell { --tc: var(--orange); }", ".type-card.t-order { --tc: var(--green); }", ".tc-go",
+        for needle in (".type-card.t-spell { --tc: var(--orange); }", ".type-card.t-order { --tc: var(--green); }",
+                       ".type-card.t-verb { --tc: var(--red); }", ".tc-go",
                        "order: var(--after, 99);", ".type-cards > .in-types"):
             self.assertIn(needle, css)
         self.assertIn("(on ? ' <span class=\"tc-arrow\"", home, "向下的箭头只在选中的那张上出现")
         self.assertIn("box.appendChild(list)", home, "题库列表放进卡片网格，手机上紧跟在选中的卡片下面")
+
+    def test_order_game_uses_its_formal_bilingual_name(self):
+        page = (self.WEB / "order.html").read_text(encoding="utf-8")
+        lexica = (self.WEB / "js" / "i18n-lexica.js").read_text(encoding="utf-8")
+        for value in ("翻译排排坐", "Translation Line-Up"):
+            self.assertIn(value, page)
+            self.assertIn(value, lexica)
 
     def test_the_notice_follows_the_palette(self):
         js = (ROOT.parent / "hub" / "shared" / "site-footer.js").read_text(encoding="utf-8")
@@ -421,14 +509,20 @@ if __name__ == "__main__":
 class TestOfflineAndDeployment(unittest.TestCase):
     def test_offline_pages_embed_items_audio_and_the_shared_ui(self):
         from server import offline
-        for game, doc, ui_name in (("spell", SPELL_DOC, "WPSpellUI"), ("order", ORDER_DOC, "WPOrderUI")):
+        for game, doc, ui_name in (("spell", SPELL_DOC, "WPSpellUI"), ("order", ORDER_DOC, "WPOrderUI"),
+                                   ("verb", VERB_FILE.read_bytes(), "WPVerbUI")):
             found = items.parse(game, doc)[0]
             bank = {"id": 7, "title": "U3", "level1": "大学", "level2": "大一", "level3": "上册", "level4": "Unit 3", "game_type": game}
             name, html = offline.build_items_html(bank, items.levels(game, found, "Unit 3"), audio={0: b"ID3fake", 1: b"ID3more"})
-            self.assertIn({"spell": "单词大比拼", "order": "排排坐"}[game], name)
+            self.assertIn({"spell": "单词大比拼", "order": "翻译排排坐", "verb": "动词猎手"}[game], name)
             for needle in (ui_name, "WPItemCore", "WPAdapter", "WPI18N", "WPTheme", "data:audio/mpeg;base64,", '"game":"%s"' % game):
                 self.assertIn(needle, html, game + " " + needle)
             self.assertNotIn("/api/", html.split("var WP_DATA")[1].split("</script>")[0], "离线页的数据里不能有接口地址")
+            if game == "verb":
+                for needle in ("cfg.items = cfg.items.concat(level.items)", "cfg.ords = cfg.ords.concat(level.ords)",
+                               "cfg.levelCount = WP_DATA.groups.length", "vh_startInfo", "WPVerbUI.start"):
+                    self.assertIn(needle, html)
+                self.assertNotIn("choicesByLevel", html, "离线动词猎手不应再分关发题")
         with self.assertRaises(ValueError):
             offline.build_items_html({"game_type": "match"}, [])
 

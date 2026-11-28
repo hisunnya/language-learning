@@ -1,6 +1,6 @@
-"""新题型的题目：单词大比拼（spell，短语填空）和排排坐（order，把英文片段排成句子再朗读）。
+"""新题型的题目：单词大比拼（spell，短语填空）、排排坐（order，把英文片段排成句子再朗读）和动词猎手（verb，拖词填空）。
 
-题库表 banks 多一个 ``game_type``（match = 原来的中英配对，spell，order）；新题型的每道题是 bank_items 里的一行，
+题库表 banks 多一个 ``game_type``（match = 原来的中英配对，spell，order，verb）；新题型的每道题是 bank_items 里的一行，
 ``data`` 是 JSON：
 
 * spell：``{"before": "", "answer": "domestic", "after": "economy", "cn": "国内经济", "text": "domestic economy"}``
@@ -8,6 +8,7 @@
 * order：``{"cn": "…", "fragments": [{"segs": [["you should ", 0], ["keep on", 1]]}, …], "answer": "…"}``
   —— ``segs`` 是这个片段的文字，第二项 1 = 重点短语（资料里的黄色高亮），页面上照样高亮；片段按正确顺序存，
   游戏里打乱；``answer`` 是整句（资料里的绿色参考答案），朗读和识别都以它为准。
+* verb：spell 的短语题干，加上整套题的 ``choices`` 词库；每题随机抽四个错误选项。网站和离线页都把所有分组展平为限时 2 分钟的一局，题序也会随机；下一题自动判分，无单题提交或朗读按钮。答错留在本题，第五次尝试才答对得 0 分；全部答对自动交卷。末题有空题可选补答，补答期间显示交卷按钮；超时立即交卷，未判分答对的题目计 0 分。
 
 资料是老师写的 Word 文档（.docx），格式见 parse_spell / parse_order。只用标准库读 docx（它就是一个 zip 包）。
 """
@@ -18,9 +19,9 @@ import re
 import zipfile
 from xml.etree import ElementTree as ET
 
-GAME_TYPES = ("match", "spell", "order")
-ITEM_TYPES = ("spell", "order")
-PER_LEVEL = {"spell": 12, "order": 6}          # 一关最多几道题
+GAME_TYPES = ("match", "spell", "order", "verb")
+ITEM_TYPES = ("spell", "order", "verb")
+PER_LEVEL = {"spell": 12, "order": 6, "verb": 5}          # 一关最多几道题
 
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 _CJK = re.compile(r"[㐀-鿿豈-﫿]")
@@ -107,6 +108,49 @@ def parse_spell(paragraphs: list[list[tuple[str, str]]]) -> tuple[list[dict], li
     if not items:
         problems.append("没有找到题目：每行要有「英文短语（括号里是要填的词）+ 中文意思」")
     return items, problems, title
+
+
+# ------------------------------------------------------------------ 动词猎手
+
+def parse_verb(paragraphs: list[list[tuple[str, str]]]) -> tuple[list[dict], list[str], str]:
+    """题干格式同 spell；最后题目之后的英文单词行组成选项词库。每题需要四个不同的错误选项。"""
+    found, problems, title = parse_spell(paragraphs)
+    lines = [_clean("".join(t for t, _ in runs)).strip() for runs in paragraphs]
+    question_rows = [i for i, line in enumerate(lines) if "(" in line and _CJK.search(line)]
+    if not question_rows:
+        problems.append("没有找到带括号和中文意思的动词题目")
+        return found, problems, title
+
+    word_line = re.compile(r"[A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*)*")
+    choices: list[str] = []
+    for line in lines[question_rows[-1] + 1:]:
+        if line and not _CJK.search(line) and word_line.fullmatch(line):
+            choices.extend(line.split())
+
+    if not choices:
+        problems.append("没有找到英文选项词库")
+        return found, problems, title
+    choice_keys = [answer_key(word) for word in choices]
+    if len(set(choice_keys)) != len(choice_keys):
+        problems.append("选项词库里有重复单词")
+
+    answer_keys = [answer_key(item["answer"]) for item in found]
+    if len(set(answer_keys)) != len(answer_keys):
+        problems.append("题目答案有重复单词")
+    choice_key_set = set(choice_keys)
+    missing = [item["answer"] for item in found if answer_key(item["answer"]) not in choice_key_set]
+    if missing:
+        problems.append("选项词库缺少答案：" + "、".join(missing))
+    for item in found:
+        candidates = choice_key_set - {answer_key(item["answer"])}
+        if len(candidates) < 4:
+            problems.append("每道题需要五个不同选项：%s 当前只有 %d 个错误选项" %
+                            (item["answer"], len(candidates)))
+            break
+
+    for item in found:
+        item["choices"] = choices
+    return found, problems, title
 
 
 # ------------------------------------------------------------------ 排排坐
@@ -198,9 +242,9 @@ def parse_order(paragraphs: list[list[tuple[str, str]]]) -> tuple[list[dict], li
 
 def parse(game_type: str, data: bytes) -> tuple[list[dict], list[str], str]:
     if game_type not in ITEM_TYPES:
-        raise ItemError("游戏类型只能是 spell 或 order")
+        raise ItemError("游戏类型只能是 spell、order 或 verb")
     paragraphs = docx_paragraphs(data)
-    return (parse_spell if game_type == "spell" else parse_order)(paragraphs)
+    return {"spell": parse_spell, "order": parse_order, "verb": parse_verb}[game_type](paragraphs)
 
 
 def levels(game_type: str, items: list[dict], unit: str = "") -> list[dict]:
@@ -216,4 +260,4 @@ def levels(game_type: str, items: list[dict], unit: str = "") -> list[dict]:
 
 def speech_text(game_type: str, item: dict) -> str:
     """这道题朗读的英文：拼写是整个短语，排排坐是整句。"""
-    return item.get("text") if game_type == "spell" else item.get("answer", "")
+    return item.get("text", item.get("answer", "")) if game_type in ("spell", "verb") else item.get("answer", "")

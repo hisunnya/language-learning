@@ -96,12 +96,12 @@ def classes_of(db: Database, scope: tenancy.Scope) -> list[str]:
     return [r["class_name"] for r in rows]
 
 
-GAMES = ("all", "match", "spell", "order")
+GAMES = ("all", "match", "spell", "order", "verb")
 
 
 def board(db: Database, scope: tenancy.Scope, user: dict | None, class_name: str = "", period: str = "all",
           now: float | None = None, game: str = "all") -> dict:
-    """game：all = 总分；match / spell / order = 只算这一种玩法的积分（奖状也按这四个榜分别算）。"""
+    """game：all = 总分；其他值只算对应玩法的积分（奖状也按各玩法榜分别算）。"""
     period = "week" if period == "week" else "all"
     game = game if game in GAMES else "all"
     cfg = get_config(db)

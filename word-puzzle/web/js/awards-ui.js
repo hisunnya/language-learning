@@ -19,7 +19,8 @@
     all:   { zh: '总分', en: 'Overall' },
     match: { zh: '中英配对', en: 'Matching' },
     spell: { zh: '单词大比拼', en: 'Spell It' },
-    order: { zh: '排排坐', en: 'Line Up' }
+    order: { zh: '翻译排排坐', en: 'Translation Line-Up' },
+    verb: { zh: '动词猎手', en: 'Verb Hunter' }
   };
   var NAVY = '#0E1F3D', IVORY = '#FFFCF4';
   var SERIF_EN = 'Georgia, "Times New Roman", "Noto Serif", serif';

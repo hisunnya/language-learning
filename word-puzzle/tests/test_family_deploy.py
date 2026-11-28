@@ -545,6 +545,35 @@ class TestDeployAllUpdatesTheContainer(unittest.TestCase):
         self.assertIn("LEXICA_PUBLIC_URL", env)
         self.assertNotRegex(script, r"\b10\.\d+\.\d+\.\d+\b", "私有地址不能写进脚本")
 
+    def test_source_swap_preserves_old_copy_and_refuses_a_git_worktree(self):
+        script = next(ROOT.parent.glob("deploy-all-*.sh")).read_text(encoding="utf-8")
+        block = script.split("<<'CONTAINER_SWAP'\n", 1)[1].split("\nCONTAINER_SWAP", 1)[0]
+        for worktree in (False, True):
+            with self.subTest(worktree=worktree), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                current = root / "language-learning"
+                current.mkdir()
+                (current / "old.txt").write_text("old", encoding="utf-8")
+                if worktree:
+                    (current / ".git").mkdir()
+                source = root / "source"
+                source.mkdir()
+                (source / "new.txt").write_text("new", encoding="utf-8")
+                subprocess.run(["tar", "czf", str(root / "lexica-src.tgz"), "-C", str(source), "."], check=True)
+                done = subprocess.run(["bash"], input=block.replace("/root/", str(root) + "/"),
+                                      capture_output=True, text=True)
+                if worktree:
+                    self.assertNotEqual(done.returncode, 0)
+                    self.assertTrue((current / "old.txt").exists())
+                    self.assertFalse((current / "new.txt").exists())
+                else:
+                    self.assertEqual(done.returncode, 0, done.stderr)
+                    self.assertTrue((current / "new.txt").exists())
+                    self.assertFalse((current / "old.txt").exists())
+                    previous = list(root.glob("lexica-release.*.previous"))
+                    self.assertEqual(len(previous), 1)
+                    self.assertEqual((previous[0] / "old.txt").read_text(encoding="utf-8"), "old")
+
 
 class TestSiteFooterAndPrivacy(unittest.TestCase):
     """备案要求：每个对外页面最下面都有备案号；页脚里有隐私说明链接；隐私说明页本身符合页面规范（双语、配色、页眉）。"""

@@ -33,6 +33,39 @@ check('拼写计分：提示扣 3、拼错扣 2、拼对至少 1 分、看答案
   eq(C.spellPoints({ solved: false }), 0);
 });
 
+check('动词猎手计分和答案判断：第五次提交才答对也得零分', () => {
+  eq(C.verbCheck('look after', 'Look After'), true);
+  eq(C.verbCheck('', 'look after'), false);
+  eq(C.verbPoints({ solved: true }), 10);
+  eq(C.verbPoints({ solved: true, wrong: 2 }), 6);
+  eq(C.verbPoints({ solved: true, wrong: 3 }), 4);
+  eq(C.verbPoints({ solved: true, wrong: 4 }), 0);
+  eq(C.verbPoints({ solved: true, wrong: 5 }), 0);
+  eq(C.verbPoints({ solved: true, wrong: 9 }), 0);
+  eq(C.verbPoints({ solved: false, wrong: 0 }), 0);
+});
+
+check('动词猎手：每题恰有一个正确答案和四个不重复的随机选项', () => {
+  const items = 'abcdefghij'.split('').map((answer) => ({ answer }));
+  const pool = 'abcdefghijxyzwv'.split('');
+  const dealt = C.dealVerbChoices(items, pool, 12345);
+  eq(dealt, C.dealVerbChoices(items, pool, 12345), '同种子可复现');
+  eq(dealt.map((options) => options.length), Array(10).fill(5));
+  items.forEach((item, i) => {
+    const options = dealt[i];
+    eq(new Set(options.map(C.key)).size, 5, '选项不得重复');
+    eq(options.filter((word) => C.verbCheck(word, item.answer)).length, 1, '每题只有一个正确答案');
+    if (options.filter((word) => !C.verbCheck(word, item.answer)).length !== 4) throw new Error('每题应有四个错误选项');
+  });
+  if (JSON.stringify(dealt) === JSON.stringify(C.dealVerbChoices(items, pool, 54321))) throw new Error('新种子应重新随机分配选项');
+  let rejected = false;
+  try { C.dealVerbChoices(items.slice(0, 1), ['a', 'b', 'c', 'd'], 1); } catch (e) { rejected = true; }
+  if (!rejected) throw new Error('答案缺失或错误选项不足时应拒绝开始');
+  rejected = false;
+  try { C.dealVerbChoices(items, ['a', 'a', ...pool.slice(2)], 1); } catch (e) { rejected = true; }
+  if (!rejected) throw new Error('重复选项应被拒绝');
+});
+
 check('提示：先字母个数，再首字母', () => {
   eq(C.spellHint('soar', 1), '_ _ _ _');
   eq(C.spellHint('soar', 2), 's _ _ _');

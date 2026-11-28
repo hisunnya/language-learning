@@ -695,7 +695,7 @@ class Database:
         return dict(row) if row else None
 
     def insert_item_bank(self, meta: dict, items: list[dict]) -> int:
-        """新题型的题库：banks 一行（game_type = spell / order，word_count = 题数）+ bank_items 每题一行。"""
+        """新题型的题库：banks 一行（game_type = spell / order / verb，word_count = 题数）+ bank_items 每题一行。"""
         bid = self.insert_bank(dict(meta, unit_mode="all"), [])
         try:
             with self._tx() as conn:

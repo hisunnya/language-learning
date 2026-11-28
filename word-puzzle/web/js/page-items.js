@@ -1,13 +1,14 @@
 /* ============================================================
-   page-items.js —— 新题型的网站页面（spell.html 单词大比拼、order.html 排排坐 共用）
-   从 /api/banks/{id} 取题库，题库分了几关就先选关；然后交给 spell-ui.js / order-ui.js。
-   排排坐的录音交给 /api/recordings，服务器识别后给分；成绩交给 /api/scores（排排坐的分数由服务器重新算）。
+   page-items.js —— 新题型网站页面共用
+   从 /api/banks/{id} 取题库；动词猎手把整套题作为一局。
+   翻译排排坐的录音交给 /api/recordings，服务器识别后给分；成绩交给 /api/scores（分数由服务器重新算）。
    ============================================================ */
 (function () {
   'use strict';
 
-  var GAME = document.body.getAttribute('data-game');           /* spell | order */
-  var PAGES = { match: '/play.html', spell: '/spell.html', order: '/order.html' };
+  var GAME = document.body.getAttribute('data-game');           /* spell | order | verb */
+  var PAGES = { match: '/play.html', spell: '/spell.html', order: '/order.html', verb: '/verb.html' };
+  var I18N_PREFIX = { spell: 'sp', order: 'or', verb: 'vh' };
   function t(key, params) { return WPI18N.t(key, params); }
   function $(id) { return document.getElementById(id); }
   function qs(name) {
@@ -25,9 +26,11 @@
 
   function heading() {
     if (!bank) return;
-    document.title = t(GAME === 'spell' ? 'sp_docTitle' : 'or_docTitle', { title: bank.title });
+    document.title = t(I18N_PREFIX[GAME] + '_docTitle', { title: bank.title });
     $('igTitle').textContent = bank.title;
-    $('igSub').textContent = t(GAME === 'spell' ? 'sp_rules' : 'or_rules');
+    $('igSub').textContent = GAME === 'verb'
+      ? t('vh_startInfo', { n: groups.reduce(function (sum, group) { return sum + group.items.length; }, 0) })
+      : t(I18N_PREFIX[GAME] + '_rules');
   }
 
   function token() {
@@ -45,7 +48,7 @@
     return API.upload('/api/recordings', fd).then(function (res) { return res.recording; });
   }
 
-  var current = 0;
+  var current = 0, verbItems = [], verbOrds = [], verbChoices = [];
   function ordsOf(k) {
     var start = 0;
     for (var j = 0; j < k; j++) start += groups[j].items.length;
@@ -57,11 +60,34 @@
     var ords = ordsOf(k);
     var cfg = {
       items: groups[k].items, ords: ords, backHref: home(), playToken: token,
-      audioUrl: function (i) { return API.path('/api/banks/' + bank.id + '/items/' + ords[i] + '/audio'); },
       save: function (report) { return WPAdapter.save(report, { bank_id: bank.id, title: bank.title }); }
     };
+    if (GAME === 'verb') {
+      cfg.items = verbItems;
+      cfg.ords = verbOrds;
+      cfg.choices = verbChoices;
+      cfg.levelCount = groups.length;
+      try {
+        game = WPVerbUI.start($('igMount'), cfg);
+      } catch (e) {
+        if (e.message === 'verb_choices_invalid') fail('vh_dataError');
+        else throw e;
+      }
+      return;
+    }
+    cfg.audioUrl = function (i) { return API.path('/api/banks/' + bank.id + '/items/' + ords[i] + '/audio'); };
     if (GAME === 'order' && AuthUI.info().user) cfg.upload = upload;
-    game = (GAME === 'spell' ? WPSpellUI : WPOrderUI).start($('igMount'), cfg);
+    var ui = GAME === 'spell' ? WPSpellUI : WPOrderUI;
+    game = ui.start($('igMount'), cfg);
+  }
+
+  function pickVerb() {
+    if (!verbItems.length) return;
+    $('igStart').hidden = false;
+    $('igStart').onclick = function () {
+      $('igStart').hidden = true;
+      start(0);
+    };
   }
 
   function pickLevel() {
@@ -80,7 +106,8 @@
   WPI18N.onChange(function () {
     if (failing) fail(failing);
     heading();
-    if (!game && groups.length > 1) pickLevel();
+    if (!game && GAME === 'verb') pickVerb();
+    else if (!game && groups.length > 1) pickLevel();
   });
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -93,10 +120,22 @@
       groups = (res.groups || []).filter(function (g) { return g.items && g.items.length; });
       heading();
       if (!groups.length) { fail('ig_empty'); return; }
+      if (GAME === 'verb') {
+        groups.forEach(function (group, level) {
+          var groupOrds = ordsOf(level);
+          group.items.forEach(function (item, i) {
+            verbItems.push(item);
+            verbOrds.push(groupOrds[i]);
+          });
+        });
+        verbChoices = (verbItems[0].choices || []).slice();
+      }
       var info = AuthUI.info();
       if (info.user) API.post('/api/recent', { bank_id: id }).catch(function () { });
       try { WPRecent.add(localStorage, WPRecent.userKey(info), id, Date.now()); } catch (e) { }
-      if (groups.length > 1) pickLevel(); else start(0);
+      if (GAME === 'verb') pickVerb();
+      else if (groups.length > 1) pickLevel();
+      else start(0);
     }).catch(function (e) { fail('', e.message || t('ig_loadFail')); });
   });
 })();

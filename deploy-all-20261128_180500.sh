@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261127_164043.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261128_180500.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -81,6 +81,8 @@ for path in \
   word-puzzle/web/js/page-honors.js \
   word-puzzle/web/spell.html \
   word-puzzle/web/order.html \
+  word-puzzle/web/verb.html \
+  word-puzzle/web/js/verb-ui.js \
   hub/deploy/install.sh \
   hub/deploy/lingua-grove.conf \
   hub/deploy/site-proxy.conf \
@@ -137,10 +139,22 @@ if [[ -n "$LEXICA_CTID" ]]; then
     --exclude='nvidia-exam/raw-files' --exclude='nvidia-exam/tools' \
     word-puzzle hub topic-app/topic-app ham-exam chemistry physics nvidia-exam backends)
   pct push "$LEXICA_CTID" "$SRC_TGZ" /root/lexica-src.tgz
-  # 解到一个新目录再整个换上去：仓库里删掉的文件，容器里也跟着没有（直接解到旧目录上会把它们留下来）
-  pct exec "$LEXICA_CTID" -- bash -lc "rm -rf /root/language-learning.new && mkdir -p /root/language-learning.new \
-    && tar xzf /root/lexica-src.tgz -C /root/language-learning.new && rm -rf /root/language-learning \
-    && mv /root/language-learning.new /root/language-learning && rm -f /root/lexica-src.tgz"
+  # 只替换无 git 的代码副本；旧副本保留，解包失败时不动当前目录。
+  pct exec "$LEXICA_CTID" -- bash -s <<'CONTAINER_SWAP'
+set -euo pipefail
+[[ ! -L /root/language-learning && ! -e /root/language-learning/.git ]] || {
+  echo "拒绝替换符号链接或 git 工作树" >&2
+  exit 1
+}
+stage="$(mktemp -d /root/lexica-release.XXXXXX)"
+tar xzf /root/lexica-src.tgz -C "$stage"
+if [[ -d /root/language-learning ]]; then
+  mv /root/language-learning "$stage.previous"
+  echo "旧代码副本保留在 $stage.previous"
+fi
+mv "$stage" /root/language-learning
+rm -f /root/lexica-src.tgz
+CONTAINER_SWAP
   # 访问记录里要跳过的前置代理 = 宿主机：WP_TRUSTED_PROXIES 只收 IP，LINGUA_SERVER_NAME 是域名时先解析成 IPv4
   TRUSTED_PROXY="$SERVER_NAME"
   if [[ ! "$TRUSTED_PROXY" =~ ^[0-9.]+$ ]]; then
@@ -225,15 +239,15 @@ check_path /nvidia-exam/css/style.css
 check_path /backends/
 check_path /backends/js/backends.js
 check_path /backends/css/backends.css
-check_path /words/
-check_path /words/api/banks
 check_path /word-puzzle/
 check_path /word-puzzle/css/app.css
 check_path /word-puzzle/spell.html
 check_path /word-puzzle/me.html
 check_path /word-puzzle/js/awards-ui.js
 check_path /word-puzzle/order.html
+check_path /word-puzzle/verb.html
 check_path /word-puzzle/js/item-core.js
+check_path /word-puzzle/js/verb-ui.js
 check_path /word-puzzle/img/icon.svg
 check_path /word-puzzle/js/release-presets.js
 check_path /word-puzzle/js/i18n.js
@@ -241,6 +255,10 @@ check_path /word-puzzle/js/i18n-lexica.js
 check_path /word-puzzle/leaderboard.html
 check_path /word-puzzle/css/leaderboard.css
 check_path /word-puzzle/js/page-leaderboard.js
+if [[ -n "$LEXICA_CTID" ]]; then
+  check_path /words/
+  check_path /words/api/banks
+fi
 
 retry "词境 API 健康检查失败或返回异常" health_ok
 printf '    OK /word-puzzle/api/health\n'
@@ -258,6 +276,7 @@ cat <<EOF
   NVIDIA 认证模拟考试：http://$SERVER_NAME/nvidia-exam/
   总后台：http://$SERVER_NAME/backends/   （要老师账号，不放在主页上）
   词境学生版：http://$SERVER_NAME/word-puzzle/   （要登录，不放在主页上）
+  动词猎手：http://$SERVER_NAME/word-puzzle/verb.html   （要登录）
 
 $([[ -n "$LEXICA_CTID" ]] && echo "整站在容器 $LEXICA_CTID 里，已经更新（服务：pct exec $LEXICA_CTID -- systemctl status word-puzzle-family）；浏览器 Ctrl+Shift+R 强刷。" || echo "没有写 LEXICA_CTID：只更新了这台机器（词境服务：systemctl status word-puzzle），容器没有更新。")
 EOF

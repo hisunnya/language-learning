@@ -5,7 +5,7 @@
 * 榜 = 学生自己在积分榜上看到的那个：超管设了总榜就是总榜（参加总榜的那些班）；否则是「同学」——
   和积分榜同一条规则（leaderboard.CLASSMATES：同一个班级名、并且至少有一位共同的老师），
   所以「我在积分榜上是第一」和「我当了一天榜首」永远是同一件事。没有班级或没有老师的学生不参加。
-* 四个榜各算各的：总分，以及中英配对、单词大比拼、排排坐各自的积分。
+* 五个榜各算各的：总分，以及中英配对、单词大比拼、排排坐、动词猎手各自的积分。
 * 累计天数：一个学生在某个榜上当过多少天榜首（不要求连续，跨周接着算）。正好到 10 / 15 / 30 天，
   发铜 / 银 / 金奖状；每个学生每个榜（总分或某个玩法）每个档次只发一次（换了班、规则重算也不重复发）。
 * 一天 = 北京时间的一个自然日；一天结束后才结算那一天。
@@ -23,14 +23,14 @@ from . import leaderboard, tenancy
 from .db import Database
 
 THRESHOLDS = (10, 15, 30)
-RULES = "weekly-cumulative-10-15-30-classmates"   # 规则版本：改了规则就换一个名字，旧的榜首记录会作废重算
+RULES = "weekly-cumulative-10-15-30-classmates-verb"   # 新增动词猎手榜，重新结算各玩法的历史榜首
 
 
 def tier_of(days: int) -> str:
     """档次：不到 15 天铜，不到 30 天银，30 天金（也兼容以前发过的别的天数）。"""
     return "gold" if days >= 30 else "silver" if days >= 15 else "bronze"
 
-GAMES = ("all", "match", "spell", "order")
+GAMES = ("all", "match", "spell", "order", "verb")
 MAX_BACKFILL = 120
 _lock = threading.Lock()          # 同一时间只让一个请求补算
 
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS board_leaders (
 CREATE TABLE IF NOT EXISTS awards (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id     INTEGER NOT NULL,
-    game        TEXT NOT NULL,          -- all / match / spell / order
+    game        TEXT NOT NULL,          -- all / match / spell / order / verb
     days        INTEGER NOT NULL,       -- 10 / 15 / 30（门槛天数）
     board       TEXT NOT NULL,          -- 哪个榜：overall（总榜），或 c|<班级名>（同学榜；早期的奖状是 t<老师>|<班级>）
     board_label TEXT NOT NULL,          -- 发奖状时这个榜的名字（总榜标题或班级名）

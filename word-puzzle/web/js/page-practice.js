@@ -65,7 +65,7 @@
       return API.get('/api/banks/' + encodeURIComponent(id));
     }).then(function (res) {
       bank = res.bank;
-      if (bank.game_type === 'spell' || bank.game_type === 'order') {      /* 读音练习只有中英配对的题库有；新题型直接去玩 */
+      if (['spell', 'order', 'verb'].indexOf(bank.game_type) >= 0) {      /* 读音练习只有中英配对的题库有；新题型直接去玩 */
         location.replace(API.path('/' + bank.game_type + '.html?bank=' + bank.id));
         return;
       }

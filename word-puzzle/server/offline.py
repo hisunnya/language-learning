@@ -34,8 +34,9 @@ PRACTICE_CSS_FILE = WEB / "css" / "practice.css"
 PRACTICE_UI_FILE = WEB / "js" / "practice-ui.js"
 ITEMS_CSS_FILE = WEB / "css" / "items.css"
 ITEM_CORE_FILE = WEB / "js" / "item-core.js"
-ITEM_UI_FILES = {"spell": WEB / "js" / "spell-ui.js", "order": WEB / "js" / "order-ui.js"}
-ITEM_KIND_NAMES = {"spell": "单词大比拼", "order": "排排坐"}
+ITEM_UI_FILES = {"spell": WEB / "js" / "spell-ui.js", "order": WEB / "js" / "order-ui.js",
+                 "verb": WEB / "js" / "verb-ui.js"}
+ITEM_KIND_NAMES = {"spell": "单词大比拼", "order": "翻译排排坐", "verb": "动词猎手"}
 
 TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -429,26 +430,53 @@ var WP_DATA = {data};
 /* ---------------- 启动 ---------------- */
 (function () {{
   function t(key, params) {{ return WPI18N.t(key, params); }}
-  var spell = WP_DATA.game === 'spell', game = null;
+  var game = null, prefix = {{ spell: 'sp', order: 'or', verb: 'vh' }}[WP_DATA.game];
   function head() {{
-    document.title = t(spell ? 'sp_docTitle' : 'or_docTitle', {{ title: WP_DATA.title }});
+    document.title = t(prefix + '_docTitle', {{ title: WP_DATA.title }});
     document.getElementById('offTitle').textContent = WP_DATA.title;
     document.getElementById('offSub').textContent = WP_DATA.subtitle;
-    document.getElementById('offRules').textContent = t(spell ? 'sp_rules' : 'or_rules');
+    document.getElementById('offRules').textContent = t(prefix + '_rules');
     document.documentElement.lang = WPI18N.lang() === 'en' ? 'en' : 'zh-CN';
     document.getElementById('btn-lang').textContent = WPI18N.lang() === 'en' ? '中文' : 'English';
   }}
   function start(k) {{
     var group = WP_DATA.groups[k];
-    game = (spell ? WPSpellUI : WPOrderUI).start(document.getElementById('igMount'), {{
+    var cfg = {{
       items: group.items, ords: group.ords,
-      audioUrl: function (i) {{ return WP_DATA.audio[String(group.ords[i])] || ''; }},
       save: function (report) {{ WPAdapter.save(report, WP_DATA.meta); }},
       playToken: function () {{ return ''; }}
-    }});
+    }};
+    if (WP_DATA.game === 'verb') {{
+      cfg.items = [];
+      cfg.ords = [];
+      WP_DATA.groups.forEach(function (level) {{
+        cfg.items = cfg.items.concat(level.items);
+        cfg.ords = cfg.ords.concat(level.ords);
+      }});
+      cfg.choices = cfg.items[0].choices || [];
+      cfg.levelCount = WP_DATA.groups.length;
+      game = WPVerbUI.start(document.getElementById('igMount'), cfg);
+      return;
+    }}
+    cfg.audioUrl = function (i) {{ return WP_DATA.audio[String(group.ords[i])] || ''; }};
+    var ui = WP_DATA.game === 'spell' ? WPSpellUI : WPOrderUI;
+    game = ui.start(document.getElementById('igMount'), cfg);
   }}
   function pick() {{
     var mount = document.getElementById('igMount');
+    if (WP_DATA.game === 'verb') {{
+      var total = WP_DATA.groups.reduce(function (sum, group) {{ return sum + group.items.length; }}, 0);
+      mount.innerHTML = '<div class="card"><h2>' + t('vh_startTitle') + '</h2><p class="sub">' +
+        t('vh_startInfo', {{ n: total }}) +
+        '</p><div class="ig-actions"><button type="button" class="btn" data-verb-start>' +
+        t('home_play') + '</button></div></div>';
+      mount.onclick = function (ev) {{
+        if (!ev.target.closest('[data-verb-start]')) return;
+        mount.onclick = null;
+        start(0);
+      }};
+      return;
+    }}
     mount.innerHTML = '<div class="card"><h2>' + t('ig_pickLevel') + '</h2><div class="list">' + WP_DATA.groups.map(function (g, k) {{
       return '<div class="item"><div class="main"><b>' + WPItemCore.levelName(g, k, t).replace(/</g, '&lt;') + '</b> <small>' + t('ig_levelCount', {{ n: g.items.length }}) +
         '</small></div><div class="ops"><button type="button" class="btn sm" data-level="' + k + '">' + t('home_play') + '</button></div></div>';
@@ -459,10 +487,13 @@ var WP_DATA = {data};
     }};
   }}
   document.getElementById('btn-lang').onclick = function () {{ WPI18N.setLang(WPI18N.lang() === 'en' ? 'zh' : 'en'); }};
-  WPI18N.onChange(function () {{ head(); if (!game && WP_DATA.groups.length > 1) pick(); }});
+  WPI18N.onChange(function () {{
+    head();
+    if (!game && (WP_DATA.game === 'verb' || WP_DATA.groups.length > 1)) pick();
+  }});
   WPTheme.init(document.getElementById('offline-theme'));
   head();
-  if (WP_DATA.groups.length > 1) pick(); else start(0);
+  if (WP_DATA.game === 'verb' || WP_DATA.groups.length > 1) pick(); else start(0);
 }})();
 </script>
 </body>
@@ -472,7 +503,7 @@ var WP_DATA = {data};
 
 def build_items_html(bank: dict, groups: list[dict], audio: dict[int, bytes] | None = None,
                      when: time.struct_time | None = None) -> tuple[str, str]:
-    """新题型（单词大比拼 / 排排坐）的离线单文件页：题目和每道题的读音全部内嵌。排排坐可以录音、自己回放，但不评分。"""
+    """新题型（单词大比拼 / 排排坐 / 动词猎手）的离线单文件页：题目和每道题的读音全部内嵌。排排坐可以录音、自己回放，但不评分。"""
     game = bank.get("game_type")
     if game not in ITEM_UI_FILES:
         raise ValueError("不是新题型的题库")

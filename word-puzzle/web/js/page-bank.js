@@ -86,7 +86,7 @@
     var rel = b.relation || 'owner';
     if (rel === 'shared') src += ' <span class="pill good">' + esc(t('bank_relShared')) + '</span>';
     var canEdit = rel === 'owner', canDelete = rel !== 'system';
-    var type = b.game_type === 'spell' || b.game_type === 'order' ? b.game_type : 'match';
+    var type = ['spell', 'order', 'verb'].indexOf(b.game_type) >= 0 ? b.game_type : 'match';
     if (type !== 'match') src += ' <span class="pill type">' + esc(t('type_' + type)) + '</span>';
     var ops = type === 'match'
       ? '<a class="btn sm ghost" href="' + esc(API.path('/practice.html?bank=' + b.id)) + '">' + esc(t('bank_practice')) + '</a>' +

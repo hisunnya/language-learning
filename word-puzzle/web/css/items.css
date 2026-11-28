@@ -1,4 +1,4 @@
-/* 新题型（单词大比拼、排排坐）的样式。颜色全部用 app.css 里每套配色都有的变量。 */
+/* 新题型（单词大比拼、排排坐、动词猎手）的样式。颜色全部用 app.css 里每套配色都有的变量。 */
 
 .ig-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .ig-progress { color: var(--ink2); font-size: 13px; font-weight: 600; }
@@ -41,6 +41,24 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 /* 拖着走的那张卡片 */
 .ig-ghost { position: fixed; left: 0; top: 0; z-index: 1000; margin: 0; pointer-events: none; cursor: grabbing;
   box-shadow: 0 14px 30px rgba(0, 0, 0, .28); border-color: var(--blue); background: var(--card); will-change: transform; }
+.verb-phrase { display: block; color: var(--heading); font-size: 24px; font-weight: 700; line-height: 1.55; text-align: center; }
+.verb-bilingual { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: stretch;
+  min-width: 0; padding: 14px; border: 1px solid var(--blue); border-radius: 12px; background: var(--panel); }
+.verb-cn { color: var(--heading); font-size: 17px; font-weight: 700; line-height: 1.65; text-align: center; }
+.verb-slot { min-width: 7em; min-height: 46px; padding: 5px 12px; border: 2px dashed var(--blue); border-radius: 10px;
+  background: var(--field-bg); color: var(--field-ink); font: inherit; font-size: 21px; text-align: center; vertical-align: middle; }
+.verb-slot.right { border-style: solid; border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, var(--card)); }
+.verb-slot.wrong { border-color: var(--red); animation: ig-shake .3s; }
+.verb-instruction { margin: 12px 0 8px; color: var(--ink2); font-size: 14px; }
+.verb-timer { color: var(--heading); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.verb-actions { justify-content: center; }
+.verb-finish-note { min-height: 1.4em; margin: 8px 0 0; color: var(--ink2); font-size: 13px; text-align: center; }
+.verb-pool { display: flex; flex-wrap: wrap; gap: 9px; min-height: 48px; }
+.verb-word { border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 14px; background: var(--card); color: var(--ink);
+  box-shadow: 0 2px 0 var(--line); font: inherit; font-weight: 700; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.verb-word:hover, .verb-word.selected { border-color: var(--blue); background: var(--blue-l); }
+.verb-word:active { cursor: grabbing; }
+.verb-word[hidden] { display: none; }
 /* 松手会落到的位置 */
 .ig-hole { display: inline-block; flex: none; border: 2px dashed var(--blue); border-radius: 10px;
   background: color-mix(in srgb, var(--blue) 10%, transparent); }
@@ -66,13 +84,14 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 .ig-big { font-size: 34px; font-weight: 800; color: var(--heading); }
 
 /* 首页：先选游戏类型。每种玩法一个色块（颜色取自当前配色，换配色跟着变），右下角一个「进入」按钮 */
-.type-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 14px; }
+.type-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
 /* 选中玩法的题库列表：在网格里占满一整行；电脑上排在三张卡片后面，手机上（一列）紧跟在选中的那张后面 */
 .type-cards > .in-types { --tc: var(--blue); grid-column: 1 / -1; order: 99; padding: 4px 12px 12px;
   background: color-mix(in srgb, var(--tc) 9%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, var(--line));
   border-left: 6px solid var(--tc); border-top: 2px dashed color-mix(in srgb, var(--tc) 55%, var(--line)); border-radius: 0 0 14px 14px; }
 .type-cards > .in-types.t-spell { --tc: var(--orange); }
 .type-cards > .in-types.t-order { --tc: var(--green); }
+.type-cards > .in-types.t-verb { --tc: var(--red); }
 /* 选中的卡片往下伸，盖住和列表之间的空隙，像文件夹的标签：卡片和它的题库是一体的，中间一条虚线 */
 .type-card.on { border-bottom: 0; border-radius: 14px 14px 0 0; margin-bottom: -12px; padding-bottom: 26px; box-shadow: none; position: relative; z-index: 1; }
 .type-card.on:hover { transform: none; }
@@ -93,6 +112,7 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
   border-left: 6px solid var(--tc); background: color-mix(in srgb, var(--tc) 9%, var(--card)); transition: transform .1s, box-shadow .15s; }
 .type-card.t-spell { --tc: var(--orange); }
 .type-card.t-order { --tc: var(--green); }
+.type-card.t-verb { --tc: var(--red); }
 .type-card:hover { transform: translateY(-1px); box-shadow: 0 6px 16px color-mix(in srgb, var(--tc) 22%, transparent); }
 .type-card b { font-size: 17px; color: var(--heading); }
 .type-card small { color: var(--ink2); line-height: 1.5; }
@@ -106,3 +126,6 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 .rec-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .rec-list audio { height: 32px; max-width: 220px; }
 .rec-item { display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; }
+@media (max-width: 560px) {
+  .verb-bilingual { padding: 11px; }
+}

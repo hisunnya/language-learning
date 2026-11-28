@@ -80,7 +80,7 @@ def bank_where(scope: Scope, include_deleted: bool = False) -> tuple[str, tuple]
     if scope.kind == GUEST:
         return alive + " AND (b.owner_id IS NULL OR b.owner_id IN (SELECT id FROM users WHERE role='admin'))", ()
     if scope.kind == PUBLIC:
-        # 只有中英配对：公开版只有配对游戏和读音练习两个页面，单词大比拼 / 排排坐（要录音、要登录）在那里打不开
+        # 只有中英配对：公开版只有配对游戏和读音练习两个页面；新题型需要登录
         return (alive + " AND b.owner_id IS NULL AND b.game_type='match' AND b.level1 IN (" + ",".join("?" * len(PUBLIC_STAGES)) + ")",
                 PUBLIC_STAGES)
     return "0", ()

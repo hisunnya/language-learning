@@ -130,6 +130,18 @@ class TestWhoSeesWhat(LeaderboardCase):
 
 
 class TestRanking(LeaderboardCase):
+    def test_game_filter_includes_verb_scores(self):
+        cls = self.fresh_class(self.ta, "玩法")
+        me_no, me_id = self.pupil(self.ta, "动词玩家", cls)
+        _, mate_id = self.pupil(self.ta, "配对玩家", cls)
+        self.play(me_id, 200)
+        self.play(mate_id, 100)
+        for uid, points in ((me_id, 20), (mate_id, 30)):
+            self.db.insert_score({"score": points, "game_type": "verb"}, user_id=uid)
+
+        res = self.board(self.login_as(me_no, "Teach3r!pw"), game="verb")
+        self.assertEqual([(e["name"], e["points"]) for e in res["entries"]], [("配对玩家", 30), ("动词玩家", 20)])
+
     def test_top_ten_ties_zero_points_and_my_own_rank_outside_the_top(self):
         cls = self.fresh_class(self.ta, "榜")
         ids = [self.pupil(self.ta, "同学%02d" % i, cls) for i in range(13)]
@@ -291,7 +303,7 @@ class TestLeaderboardPage(unittest.TestCase):
         self.assertIn('id="portalHeaderControls"', html)
         self.assertIn('id="lbTitle"', html)
         self.assertEqual(html.count('data-period="'), 2, "总榜 / 本周")
-        self.assertEqual(html.count('data-game="'), 4, "总分 / 中英配对 / 单词大比拼 / 排排坐")
+        self.assertEqual(html.count('data-game="'), 5, "总分 / 中英配对 / 单词大比拼 / 翻译排排坐 / 动词猎手")
         self.assertNotRegex(html, r'id="lbGames"[^>]*hidden', "学生也能切换看各个游戏的榜")
         js = (WEB / "js" / "page-leaderboard.js").read_text(encoding="utf-8")
         self.assertIn("'&game=' + state.game", js)

@@ -101,9 +101,13 @@ class TestWeeklyCumulative(AwardsCase):
     def test_each_game_has_its_own_weekly_board(self):
         self.daily(self.a, MON, 10, 500, "match")
         self.daily(self.b, MON, 10, 30, "spell")
+        self.daily(self.c, MON, 10, 40, "verb")
         self.settle_to(d(9))
         self.assertIn(("all", 10, "2026-10-05", "2026-10-14"), self.mine(self.a))
         self.assertEqual(self.mine(self.b), [("spell", 10, "2026-10-05", "2026-10-14")], "总分不是第一，但单词大比拼是")
+        self.assertEqual(sorted(self.mine(self.c)),
+                         [("all", 10, "2026-10-05", "2026-10-14"), ("verb", 10, "2026-10-05", "2026-10-14")],
+                         "动词猎手有独立累计奖状；丙丙所在班级的总分榜也单独累计")
 
     def test_ties_count_for_everyone_tied(self):
         self.daily(self.a, MON, 10, 40)

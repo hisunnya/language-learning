@@ -45,9 +45,10 @@ fi
 say "部署五个前端项目"
 [[ -f "$REPO_DIR/chemistry/index.html" ]] || die "缺少化学探秘页面"
 [[ -f "$REPO_DIR/physics/index.html" ]] || die "缺少物理探秘页面"
-install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT" "$NX_ROOT"
+install -d "$HUB_ROOT" "$HUB_ROOT/shared" "$HUB_ROOT/backends" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT" "$NX_ROOT"
 cp -a "$REPO_DIR/hub/index.html" "$REPO_DIR/hub/privacy.html" "$REPO_DIR/hub/css" "$REPO_DIR/hub/js" "$HUB_ROOT/"
 cp -a "$REPO_DIR/hub/shared/." "$HUB_ROOT/shared/"
+cp -a "$REPO_DIR/backends/." "$HUB_ROOT/backends/"
 # 每次部署给 css/js 链接打上新版本号，浏览器一定会重新取。
 sed -i "s/__ASSET_VERSION__/$(date +%Y%m%d%H%M%S)/g" "$HUB_ROOT/index.html"
 cp -a "$REPO_DIR/topic-app/topic-app/." "$TOPICS_ROOT/"
@@ -59,7 +60,7 @@ cp -a "$REPO_DIR/chemistry/index.html" "$REPO_DIR/chemistry/css" \
 cp -a "$REPO_DIR/physics/index.html" "$REPO_DIR/physics/css" \
   "$REPO_DIR/physics/data" "$REPO_DIR/physics/js" "$PHYS_ROOT/"
 cp -a "$REPO_DIR/nvidia-exam/index.html" "$REPO_DIR/nvidia-exam/css" \
-  "$REPO_DIR/nvidia-exam/data" "$REPO_DIR/nvidia-exam/js" "$NX_ROOT/"
+  "$REPO_DIR/nvidia-exam/data" "$REPO_DIR/nvidia-exam/js" "$REPO_DIR/nvidia-exam/docs" "$NX_ROOT/"
 chown -R www-data:www-data "$HUB_ROOT" "$TOPICS_ROOT" "$HAM_ROOT" "$CHEM_ROOT" "$PHYS_ROOT" "$NX_ROOT"
 
 say "写入 conf.d 总入口并将词境挂到 /word-puzzle/"

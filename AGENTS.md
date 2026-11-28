@@ -336,8 +336,8 @@ titles, headers, README and the hub.
 
 ### 5.2 Deployment layout on the server
 
-**What runs where today (2026-11-21).** The whole site is served by one unprivileged LXC container
-(hostname `lexica`, on the home PVE host, id and addresses in `AGENTS.local.md`). Inside it:
+**What runs where today (2026-11-28).** The production site is served by one unprivileged LXC container
+(hostname `lexica`, on PVE03; private identifiers and addresses are in `AGENTS.local.md`). Inside it:
 
 | Inside the container | What |
 |---|---|
@@ -350,16 +350,17 @@ titles, headers, README and the hub.
 
 URL map of the one nginx entrance: `/` homepage (`hub/`), `/privacy.html`, `/topics/`, `/ham/`, `/chemistry/`,
 `/physics/`, `/nvidia-exam/` (static, no login), `/word-puzzle/` (Lexica, login required for everything), `/words/` (public Lexica,
-no login, see 9.2). Public access goes Tailscale Funnel → `127.0.0.1:8081`; the host's port 80 forwards everything
-to the container too (`hub/deploy/site-proxy.conf`), so the LAN sees exactly the same site.
+no login, see 9.2). Public access continues through Tailscale Funnel → `127.0.0.1:8081`; the host's port 80 forwards
+everything to the container too (`hub/deploy/site-proxy.conf`), so the LAN sees exactly the same site.
 
-**Deploying** (on the PVE host, as root): `bash pre-deploy.sh` (database and code snapshot into the backup disk,
-the 10 newest kept) → `git pull` → `bash deploy-all-<timestamp>.sh`. With `LEXICA_CTID` and `LEXICA_PUBLIC_URL`
+**Deploying**: test first on the development VM (6.2.1), then deploy to PVE03 production (as root):
+`bash pre-deploy.sh` → `git pull` → `bash deploy-all-<timestamp>.sh`. With `LEXICA_CTID` and `LEXICA_PUBLIC_URL`
 in `deploy.local.env`, deploy-all packs `word-puzzle hub topic-app/topic-app ham-exam chemistry physics nvidia-exam` into a
 tarball, `pct push`es it into the container, unpacks it next to the old checkout, swaps it in and runs
 `word-puzzle/deploy/family/install.sh` there (dependencies, code sync, systemd units, nginx config, health check).
 It then updates the host's forwarding (`hub/deploy/install.sh`). The database is never touched by a deploy; schema
-changes are migrations in `server/db.py` (`PRAGMA user_version`, now 3) that run at backend start.
+changes are migrations in `server/db.py` (`PRAGMA user_version`, now 3) that run at backend start. After production
+is updated, synchronize the same code and production data to the private cloud copy as described below.
 
 The older host-level layout (`/srv/word-puzzle`, `/var/www/<module>`, `word-puzzle/deploy/install.sh`) is the retired
 home edition. Its installers still exist and deploy-all still runs them on the host when `LEXICA_CTID` is not set,
@@ -374,52 +375,40 @@ but nothing public is served from there any more.
 - A full handover overview (architecture, how to test and deploy, private files, open items) is
   `docs/交接说明.md`.
 
-### 5.3 Environments: workstation, development VM, home test, cloud production
+### 5.3 Environments: workstation, development VM, PVE03 production, private cloud copy
 
 | Environment | Where | Used for |
 |---|---|---|
-| Workstation + development VM (6.2.1) | macOS, Ubuntu arm64 | unit tests, rehearsing the installers |
-| **Test** | the home PVE (6.2) | staging: the same code and the same installer, with a daily copy of the production data |
-| **Production** | one Debian 13 server of a cloud provider in mainland China (Beijing), see 6.4 | the real student edition: backend, database and backups on one machine, nginx in front on 80 / 443 |
+| Workstation + development VM (6.2.1) | macOS, Ubuntu arm64 | development, tests, and deployment rehearsal |
+| **Test** | development VM (6.2.1) | test the actual deployment scripts before production |
+| **Production** | home PVE03 (6.2) | real student edition, reached through the existing Tailscale Funnel |
+| **Private copy** | cloud server (6.4) | matching copy of production code and data; not publicly exposed |
 
-`word-puzzle/deploy/cloud/` installs the production server (`部署说明.md` there is the runbook):
+`word-puzzle/deploy/cloud/` manages the private cloud copy (`部署说明.md` there is the runbook):
 `install.sh` reuses `deploy/family/install.sh` (with `WP_CLOUD=1`) for the backend, database, systemd units,
-backup and watchdog, and adds the public nginx entrance (`render-nginx.sh`); `harden.sh` limits SSH to keys and
-installs fail2ban; `enable-tls.sh` issues the Let's Encrypt certificate once the domain is filed (备案) and resolves
-to the server. The site content of the public entrance is generated from the family nginx config, so the two never
-drift apart. The home edition (LAN, no login) is retired; the Funnel setup of the home container is left as it is.
-`migrate-data.sh` swaps a consistent database backup into the cloud (check by default, `--apply` to do it: snapshot of
-the old database first, stop, swap, health check, row counts must match, automatic rollback on any failure) and
-`sync-from-home.sh` drives it from the workstation (`rehearse` leaves the home service running, `cutover --yes` stops it
-first and restarts it if the cutover fails). The database is replaced as a whole: accounts created on the cloud before the
-cutover are discarded, the home accounts come over. Live databases are only opened by the service account, never by root
-(a root-owned `-shm` next to a WAL database stops the service from opening it).
+`harden.sh` limits SSH to keys and installs fail2ban. The existing Tailscale Funnel on PVE03 remains the production
+entrance. The cloud copy must stay private: do not open public HTTP/HTTPS access, enable public TLS, or perform a
+production cutover until the owner explicitly changes this instruction. `sync-from-home.sh` copies the production
+database to the cloud while leaving the production service running; the `cutover` mode is not authorized by the current
+operating arrangement. Live databases are only opened by the service account, never by root (a root-owned `-shm` next
+to a WAL database stops the service from opening it).
 
 - The domain and server address are private values (6): `AGENTS.local.md`, never a tracked file.
-- Before there is a certificate the site is reachable only from the server itself (SSH tunnel): clear text over the
-  public internet is not acceptable. Serving the public before the filing is approved is not done.
 - Never run frp, proxies, VPNs or reverse tunnels on the cloud server (the provider forbids traffic penetration and
   illegal proxying and shuts such instances down), and never put the database back on a home machine.
-- Code is pushed to the server from the workstation (`scp` of a tarball), not pulled from GitHub there (6.4).
+- Code is copied from the workstation to the cloud with a tarball, not pulled from GitHub there (6.4).
 
-**The cloud server is kept in step with the home server at all times** (decided 2026-11-22). Both hold the
-same code and the same data; the cloud is one stage ahead, ready to take over the moment the filing is
-approved. So after every change that reaches the home server:
+**The cloud server is kept in step with PVE03 production**. Both hold matching code and data, but the cloud copy is
+private and is not a public failover target until the owner explicitly changes the arrangement. After each production
+update:
 
-1. **Code**: pack the same tarball the home server gets (`word-puzzle hub topic-app/topic-app ham-exam
+1. **Code**: pack the same tarball PVE03 receives (`word-puzzle hub topic-app/topic-app ham-exam
    chemistry physics nvidia-exam backends`) and `scp` it to the cloud, then run `deploy/cloud/install.sh` there.
    The cloud's own `deploy-all` script does not exist — the cloud is deployed from the workstation.
-2. **Data**: `sync-from-home.sh rehearse --apply` moves the whole database over (the home service keeps
-   running; `cutover` is only for the moment the filing is approved and the cloud takes over).
-   This is real student data on both machines — both are private, neither is public before the filing.
-3. **Check**: open the cloud through an SSH tunnel and walk the entrances. The forwarding is already
-   configured in `~/.ssh/config` for the cloud host (`LocalForward`), so a plain `ssh <别名>` brings the
-   tunnel up with it — no `-L` needed. It is bound to both `127.0.0.1:8081` (this machine) and the
-   workstation's LAN address (so a phone on the same network can reach it). The cloud's tunnel entry is
-   plain HTTP (`deploy/family/install.sh` installs a separate set of forwarding headers when
-   `WP_CLOUD=1`), so the session cookie carries no `Secure` flag and the browser keeps it on a
-   non-secure origin. Chrome only treats `localhost` as a secure origin, so a `Secure` cookie would be
-   dropped on the LAN address.
+2. **Data**: run `sync-from-home.sh rehearse --apply` to copy the production database to the cloud; the PVE03 service
+   keeps running. This contains real student data and must remain private.
+3. **Check**: verify the copy through the approved private access path without opening public web ports. Do not use
+   `cutover` unless the owner explicitly changes the deployment arrangement.
 
 **Every commit ships a new `deploy-all-<YYYYMMDD_HHMMSS>.sh`.** Rename the
 previous one with `git mv` to the new timestamp (never keep two side by side),
@@ -459,11 +448,10 @@ fails on private-looking addresses, tailnet host names and e-mail addresses.
   network and from a phone on mobile data. Funnel's bandwidth is limited and its
   reachability from China is not guaranteed.
 
-### 6.2 The home server (PVE): today's live site, later the test environment
+### 6.2 The home server (PVE03): production
 
-A PVE (Proxmox VE) host on the home network. Until the cloud server (6.4) takes over after the ICP filing, the
-container `lexica` on this host **is** the live site (reached through Tailscale Funnel, 5.2); after the cutover it
-becomes the test environment with a daily copy of the production data (5.3).
+A PVE (Proxmox VE) host on the home network. The container `lexica` on this host is the production site, reached
+through the existing Tailscale Funnel (5.2). It remains production while the cloud server is a private copy.
 
 It runs **Debian 13 (trixie)**, not Ubuntu — PVE is built on Debian. Anything
 that names a distribution must use `debian`/`trixie` there: the nginx.org apt
@@ -492,14 +480,16 @@ do not restart those services as a side effect of a deploy.
 
 ### 6.2.1 The development VM
 
-An Ubuntu 26.04 arm64 VM used as the test target for the deploy scripts. It is
+An Ubuntu 26.04 arm64 VM used as the test environment and target for deployment-script verification. It is
 reachable over SSH with passwordless `sudo`, so `sudo bash deploy-all-<timestamp>.sh`
-(with its own `deploy.local.env`) runs there for real. Never grant passwordless
-`sudo` on the production host.
+(with its own `deploy.local.env`) runs there for real before applying the same release to production. Never grant
+passwordless `sudo` on the production host.
 
-### 6.4 The cloud production server (mainland China)
+### 6.4 The private cloud copy (mainland China)
 
-Unlike the home network (6.1), a server in a mainland data centre does **not** reach everything directly:
+Unlike the home network (6.1), a server in a mainland data centre does **not** reach everything directly. This server
+currently holds a private copy of production code and data; it is not publicly exposed and is not the active production
+site:
 
 - **GitHub is slow and unreliable** (a single request took about 8 s when measured): push code from the workstation
   or the development VM, never `git pull` on the server.
@@ -507,21 +497,18 @@ Unlike the home network (6.1), a server in a mainland data centre does **not** r
 - **Edge TTS works from there** (measured: `en-US-AriaNeural`, about 2–3 s for the first synthesis of a word, about 13 KB
   per clip, then served from the cache). Edge Neural TTS stays mandatory (7); espeak-ng remains the fallback only.
 - The instance is a lightweight-server plan whose bandwidth peak is a ceiling, not a promise. Traffic is not limited.
-- A website for the public on a mainland server needs the ICP filing; until it is approved the provider blocks the
-  domain on 80 / 443, so the certificate cannot be issued yet (`enable-tls.sh` explains this when it fails).
-- SSH: key only (`harden.sh`), the provider firewall allows 22 / 80 / 443 and nothing else.
+- Do not open public HTTP/HTTPS or enable TLS on this copy until the owner explicitly authorizes it. SSH access remains
+  key-only (`harden.sh`).
 - Backups: the daily database backup lands in a directory on the same machine, so it protects against mistakes, not
-  against losing the machine. The provider snapshot and the daily pull to the test environment (started from home,
-  read-only, because the home broadband is behind NAT) cover that.
+  against losing the machine. Keep the production database synchronized here using the existing production-to-cloud
+  sync process.
 
 ### 6.3 Where the work happens
 
-Development happens on a macOS workstation and on the development VM
-(6.2.1) in parallel; deployment is a copy to the production host plus a service reload.
-The scripts need root, systemd and nginx, so they cannot run on macOS: verify
-them on the development VM. A change that has only been verified on the
-workstation or the development VM has **not** been verified in production —
-say so.
+Development happens on a macOS workstation and on the development VM (6.2.1). Test and rehearse deployment on the
+development VM, then deploy to PVE03 production (6.2) while retaining Tailscale Funnel. Synchronize the released code
+and data to the private cloud copy (6.4). A change verified only on the workstation or development VM has **not** been
+verified in production — say so.
 
 ---
 
@@ -655,13 +642,16 @@ scores and audio are rate-limited per address, the API as a whole in nginx. The 
 ### 9.3 Game types, scoring, recordings and speech recognition
 
 A bank has `game_type` — `match` (the original matching game), `spell` (单词大比拼,
-fill the bracketed word of a phrase) or `order` (排排坐, put English fragments of a sentence in order, then record
+fill the bracketed word of a phrase), `order` (翻译排排坐, put English fragments of a sentence in order, then record
 the sentence). Items of the new types live in `bank_items` (JSON, format in `server/items.py`, parsed from the
 teachers' Word files: brackets = answer; one fragment per line, yellow = key phrase kept highlighted, green line =
-reference answer, which the joined fragments must equal). `tools/import_items.py` imports a .docx (teachers'
-upload page comes later). Students pick the game type first on the home page. The pure rules are in
-`web/js/item-core.js` (node test `tests/js/item_core.test.js`); `spell-ui.js` / `order-ui.js` run both on the site
-and in the offline single-file page. Level names are built in the page (`WPItemCore.levelName`, i18n keys `ig_level` / `ig_levelPart`) from
+reference answer, which the joined fragments must equal), and `verb` (动词猎手, drag the correct verb from the
+bank of choices into each answer box). Items of the new types live in `bank_items` (JSON, format in
+`server/items.py`, parsed from teachers' Word files). `tools/import_items.py` imports a .docx (teachers' upload
+page comes later). Students pick the game type first on the home page. The pure rules are in
+`web/js/item-core.js` (node test `tests/js/item_core.test.js`); `spell-ui.js`, `order-ui.js`, and `verb-ui.js` run
+both on the site and in the offline single-file page. Level names are built in the page
+(`WPItemCore.levelName`, i18n keys `ig_level` / `ig_levelPart`) from
 `{unit, part, parts}` that `items.levels` returns. Points: spell 10 per item (hint −3, wrong −2, at least 1 when solved);
 order 10 for the arrangement (−2 per wrong check, at least 2) + 30 for a valid recording + up to 20 bonus =
 word accuracy of the recognised text against the reference. The order score is computed by the server

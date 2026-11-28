@@ -1,9 +1,10 @@
 /* ============================================================
-   item-core.js —— 新题型的纯运算（不碰页面）：单词大比拼（spell）、排排坐（order）
+   item-core.js —— 新题型的纯运算（不碰页面）：单词大比拼（spell）、排排坐（order）、动词猎手（verb）
    ------------------------------------------------------------
    网站版和离线单文件页共用；node 里也能直接跑（tests/js/item_core.test.js）。
    计分规则（和 server/items.py 的 ORDER_* 保持一致，排排坐的最终分数由服务器按同样规则算）：
      拼写：每题 10 分；用一次提示扣 3 分，拼错一次扣 2 分；最后拼对至少得 1 分；看答案得 0 分。
+     动词猎手：每题 10 分；每次选错扣 2 分；总共提交五次才答对得 0 分；跳过得 0 分。
      排排坐：每句拼接 10 分，每检查出错一次扣 2 分、最少 2 分；提交有效朗读 30 分；
              朗读和标准句子越接近，额外奖励越多，最多 20 分（服务器识别后给）。
    ============================================================ */
@@ -11,6 +12,7 @@
   'use strict';
 
   var SPELL = { full: 10, hint: 3, wrong: 2, floor: 1 };
+  var VERB = { full: 10, wrong: 2, floor: 0, maxAttempts: 5 };
   var ORDER = { arrange: 10, wrong: 2, floor: 2, recording: 30, bonusMax: 20 };
 
   function squash(text) { return String(text == null ? '' : text).replace(/\s+/g, ' ').trim(); }
@@ -44,6 +46,16 @@
     return Math.max(SPELL.floor, SPELL.full - SPELL.hint * (state.hints || 0) - SPELL.wrong * (state.wrong || 0));
   }
 
+  function verbPoints(state) {
+    if (!state.solved) return 0;
+    if ((state.wrong || 0) + 1 >= VERB.maxAttempts) return 0;
+    return Math.max(VERB.floor, VERB.full - VERB.wrong * (state.wrong || 0));
+  }
+
+  function verbCheck(choice, answer) {
+    return choice != null && key(choice) === key(answer);
+  }
+
   /* 提示：第一次只给字母个数，第二次再给首字母 */
   function spellHint(answer, level) {
     var letters = String(answer).split('');
@@ -70,6 +82,35 @@
     } while (n > 1 && tries < 20 && out.every(function (v, k) { return v === k; }));
     if (n > 1 && out.every(function (v, k) { return v === k; })) { tmp = out[0]; out[0] = out[1]; out[1] = tmp; }
     return out;
+  }
+
+  /* 每题从完整词库随机抽四个非答案词，与正确答案一起打乱。 */
+  function dealVerbChoices(items, pool, seed) {
+    if (!Array.isArray(items) || !Array.isArray(pool) || !items.length) throw new Error('verb_choices_invalid');
+    var answerKeys = {}, poolKeys = {};
+    items.forEach(function (item) {
+      var k = key(item && item.answer);
+      if (!k || answerKeys[k]) throw new Error('verb_choices_invalid');
+      answerKeys[k] = true;
+    });
+    pool.forEach(function (word) {
+      var k = key(word);
+      if (!k || poolKeys[k]) throw new Error('verb_choices_invalid');
+      poolKeys[k] = true;
+    });
+    Object.keys(answerKeys).forEach(function (k) {
+      if (!poolKeys[k]) throw new Error('verb_choices_invalid');
+    });
+    return items.map(function (item, k) {
+      var answerKey = key(item.answer);
+      var candidates = pool.filter(function (word) { return key(word) !== answerKey; });
+      if (candidates.length < 4) throw new Error('verb_choices_invalid');
+      var decoys = shuffle(candidates.length, (seed + (k + 1) * 1013904223) >>> 0)
+        .slice(0, 4).map(function (i) { return candidates[i]; });
+      var options = [item.answer].concat(decoys);
+      var order = shuffle(options.length, (seed + (k + 1) * 2654435761) >>> 0);
+      return order.map(function (i) { return options[i]; });
+    });
   }
 
   function fragmentText(fragment) {
@@ -120,9 +161,10 @@
   }
 
   global.WPItemCore = {
-    SPELL: SPELL, ORDER: ORDER,
+    SPELL: SPELL, VERB: VERB, ORDER: ORDER,
     squash: squash, key: key, distance: distance,
     spellCheck: spellCheck, spellPoints: spellPoints, spellHint: spellHint,
+    verbCheck: verbCheck, verbPoints: verbPoints, dealVerbChoices: dealVerbChoices,
     rng: rng, shuffle: shuffle, fragmentText: fragmentText,
     orderCheck: orderCheck, orderSentence: orderSentence, placeAt: placeAt,
     orderArrangePoints: orderArrangePoints, orderPoints: orderPoints, levelName: levelName

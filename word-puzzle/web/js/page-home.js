@@ -47,9 +47,9 @@
     });
   }
 
-  /* 游戏类型：中英配对（原来的）、单词大比拼、排排坐。每个题库只属于一种 */
-  var TYPES = ['match', 'spell', 'order'];
-  var PAGES = { match: '/play.html', spell: '/spell.html', order: '/order.html' };
+  /* 游戏类型：中英配对（原来的）、单词大比拼、排排坐、动词猎手。每个题库只属于一种 */
+  var TYPES = ['match', 'spell', 'order', 'verb'];
+  var PAGES = { match: '/play.html', spell: '/spell.html', order: '/order.html', verb: '/verb.html' };
   function typeOf(b) { return TYPES.indexOf(b.game_type) >= 0 ? b.game_type : 'match'; }
   function typeFromHash() { var m = /type=(\w+)/.exec(location.hash); return m && TYPES.indexOf(m[1]) >= 0 ? m[1] : ''; }
   var chosen = typeFromHash();
@@ -70,7 +70,7 @@
       '  <div class="ops">' + ops + '</div></div>';
   }
 
-  /* 先选玩法：登录的学生三种玩法都看得到（没开放题库的也显示，点进去提示「暂未开放」，先让他们知道有这些玩法）；
+  /* 先选玩法：登录的学生四种玩法都看得到（没开放题库的也显示，点进去提示「暂未开放」，先让他们知道有这些玩法）；
      公开版 /words/ 只有中英配对，就不显示选择。选过的记在地址的 #type= 里，从游戏返回时还是这一种 */
   function countOf(type) { return banks.filter(function (b) { return typeOf(b) === type; }).length; }
   function availableTypes() {
@@ -86,7 +86,7 @@
       chosen = types[0] || 'match';
       box.parentNode.insertBefore(list, box.nextSibling);     /* 只有一种玩法：题库列表回到原来的位置 */
       list.style.order = '';
-      list.classList.remove('in-types', 't-match', 't-spell', 't-order');
+      list.classList.remove('in-types', 't-match', 't-spell', 't-order', 't-verb');
       list.hidden = false;
       return;
     }

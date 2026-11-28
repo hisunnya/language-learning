@@ -366,6 +366,15 @@ class TestDeployment(unittest.TestCase):
         self.assertIn("location ^~ /nvidia-exam/", NGINX)
         self.assertIn("alias /var/www/nvidia-exam/;", NGINX)
 
+    def test_installer_publishes_the_back_office(self):
+        script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('"$HUB_ROOT/backends"', script)
+        self.assertIn('cp -a "$REPO_DIR/backends/." "$HUB_ROOT/backends/"', script)
+
+    def test_installer_publishes_nvidia_guides(self):
+        script = (HUB / "deploy" / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('"$REPO_DIR/nvidia-exam/docs" "$NX_ROOT/"', script)
+
     def test_mounts_without_trailing_slash_redirect(self):
         for name in ("topics", "ham", "chemistry", "physics", "nvidia-exam", "word-puzzle"):
             self.assertIn("location = /%s {\n        return 301 /%s/;" % (name, name), NGINX)
@@ -380,6 +389,7 @@ class TestDeployment(unittest.TestCase):
                      "/topics/", "/nvidia-exam/", "/nvidia-exam/data/bank.json",
                      "/word-puzzle/api/health"):
             self.assertIn(path, text)
+        self.assertRegex(text, r'if \[\[ -n "\$LEXICA_CTID" \]\]; then\s+check_path /words/\s+check_path /words/api/banks\s+fi')
 
     def test_assets_are_not_cached_for_days(self):
         """改了样式部署后必须立刻看得到：不能再缓存 7 天。"""

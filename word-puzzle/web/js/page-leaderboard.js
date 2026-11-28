@@ -12,7 +12,7 @@
   function $(id) { return document.getElementById(id); }
 
   var GAME_KEY = 'wp_lb_game';      /* 记住上次看的是哪个榜（总分 / 某一种玩法） */
-  function savedGame() { try { var g = localStorage.getItem(GAME_KEY); return /^(all|match|spell|order)$/.test(g || '') ? g : 'all'; } catch (e) { return 'all'; } }
+  function savedGame() { try { var g = localStorage.getItem(GAME_KEY); return /^(all|match|spell|order|verb)$/.test(g || '') ? g : 'all'; } catch (e) { return 'all'; } }
   var state = { period: 'all', cls: '', game: savedGame(), data: null, picked: false };
 
   /* 奖牌：金 / 银 / 铜，拉丝金属质感（写死颜色，不跟配色走）：双圈圆盘 + 深色丝带 + 衬线数字。 */

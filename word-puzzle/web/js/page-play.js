@@ -41,7 +41,7 @@
 
     API.get('/api/banks/' + encodeURIComponent(bankId)).then(function (res) {
       var bank = res.bank;
-      if (bank.game_type === 'spell' || bank.game_type === 'order') {      /* 新题型有自己的页面 */
+      if (['spell', 'order', 'verb'].indexOf(bank.game_type) >= 0) {      /* 新题型有自己的页面 */
         location.replace(API.path('/' + bank.game_type + '.html?bank=' + bank.id));
         return;
       }
