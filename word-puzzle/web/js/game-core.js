@@ -11,21 +11,21 @@
   'use strict';
 
   var LEVEL_TIME = 60;        /* 每关基础时间（秒） */
-  var LEVEL_BONUS_MAX = 20;   /* 过关结转到下一关的最多奖励秒数 */
+  var LEVEL_BONUS_MAX = 0;
   var LEVEL_LIMIT_MAX = LEVEL_TIME + LEVEL_BONUS_MAX;
-  /* 2026-11-21 起分值减半（原来 100 / 20 / 20 / 10）：和新题型（每题 10 分、每句最多 60 分）放在同一个积分榜上不至于差太多 */
-  var PAIR_SCORE = 50;       /* 每配对成功基础分 */
-  var COMBO_STEP = 10;        /* 连击每级加分 */
-  var COMBO_CAP = 5;          /* 连击加成最多 5 级（+50） */
+  var PAIR_SCORE = 20;
+  var COMBO_STEP = 2;
+  var COMBO_CAP = 7;
   var MISS_TIME = 3;          /* 配错扣秒 */
-  var MISS_SCORE = 10;        /* 配错扣分 */
-  var TIME_BONUS = 5;        /* 剩余每秒折算分 */
+  var MISS_SCORE = 4;
+  var TIME_BONUS = 0.2;      /* 完成后的速度奖，上限为作答与连击分的 20% */
 
   function Game(opts) {
     opts = opts || {};
     this.levels = opts.levels || [];   /* [{name, words:[{en,cn,ipa}]}] */
     this.levelTime = opts.levelTime || LEVEL_TIME;
     this.onEvent = opts.onEvent || function () {};
+    this.policy = {};
     this.state = {
       lv: 0,
       score: 0,
@@ -43,7 +43,7 @@
       levelStartScore: 0,
       gen: 0,
       levelStartAt: 0,
-      paused: false,      /* 页面切到后台时暂停计时 */
+      paused: false,
       pausedLeft: 0,
       levelStats: [],
       wrongLog: []        /* 每次配错：哪个英文词被配了哪个中文 */
@@ -66,6 +66,16 @@
       var level = this.levels[st.lv];
       var pairs = (level && level.words) ? level.words : [];
       st.total_pairs = pairs.length;
+      st.limit = this.policy.time_limit || Math.max(1, Math.round(this.levelTime * (this.policy.time_factor || 1)));
+      st.pairStates = pairs.map(function (_, i) { return { ord: i, solved: false, wrong: 0 }; });
+      st.comboEvents = [];
+      st.secondsAdded = 0;
+      st.comboBonus = 0;
+      st.rawScore = 0;
+      st.endedAt = 0;
+      st.roundRecorded = false;
+      st.best = 0;
+      st.wrongLog = [];
       st.matched = 0;
       st.sel = null;
       st.combo = 0;
@@ -73,8 +83,7 @@
       st.timeLeft = st.limit;
       st.playing = true;
       st.paused = false;
-      /* 整局只记一次开始时间：duration 要覆盖所有关卡，不能每换一关就清零 */
-      if (!st.startedAt) st.startedAt = Date.now();
+      st.startedAt = Date.now();
       st.levelStartAt = Date.now();
       st.levelStartScore = st.score;
       st.gen++;
@@ -107,8 +116,10 @@
     pick: function (card) {
       var st = this.state;
       if (!st.playing || st.paused || !card) return null;
+      if (this.tick() && !st.playing) return null;
       var level = this.levels[st.lv];
       if (!level || !level.words[card.id]) return null;
+      if (st.pairStates[card.id].solved) return null;
 
       if (st.sel) {
         var prev = st.sel.card;
@@ -134,13 +145,23 @@
 
         if (st.sel.id === card.id) {
           /* 配对成功 */
-          var gain = PAIR_SCORE + Math.min(st.combo, COMBO_CAP) * COMBO_STEP;
-          st.combo++;
+          var eligible = !st.pairStates[card.id].wrong;
+          st.combo = eligible ? st.combo + 1 : 0;
+          var extra = PAIR_SCORE * [0, 0, .1, .2, .4, .6, .8, 1][Math.min(7, st.combo)];
+          var gain = PAIR_SCORE + extra;
+          var seconds = st.combo < 2 ? 0 : st.combo < 5 ? 1 : 2;
+          seconds = Math.max(0, Math.min(seconds, Math.min(10, Math.floor(st.limit * .2)) - st.secondsAdded));
+          st.secondsAdded += seconds;
+          st.deadline += seconds * 1000;
+          st.comboBonus += extra;
+          st.comboEvents.push({ ord: card.id, eligible: eligible });
+          st.pairStates[card.id].solved = true;
           if (st.combo > st.best) st.best = st.combo;
-          st.score += gain;
+          st.rawScore += gain;
+          st.score = st.levelStartScore + Math.round(st.rawScore * (this.policy.score_factor == null ? 1 : this.policy.score_factor));
           st.matched++;
           this.emit({
-            type: 'match', word: card.word, gain: gain, combo: st.combo,
+            type: 'match', word: card.word, gain: gain, combo: st.combo, seconds: seconds,
             enCard: enCard, cnCard: cnCard
           });
           st.sel = null;
@@ -151,7 +172,10 @@
         /* 配对错误 */
         st.combo = 0;
         st.wrong++;
-        st.score = Math.max(0, st.score - MISS_SCORE);
+        st.pairStates[enCard.id].wrong++;
+        st.comboEvents.push({ ord: enCard.id, eligible: false, break: true });
+        st.rawScore = Math.max(0, st.rawScore - MISS_SCORE);
+        st.score = st.levelStartScore + Math.round(st.rawScore * (this.policy.score_factor == null ? 1 : this.policy.score_factor));
         st.deadline -= MISS_TIME * 1000;
         st.timeLeft = Math.max(0, (st.deadline - Date.now()) / 1000);
         st.wrongLog.push({
@@ -190,15 +214,18 @@
       var st = this.state;
       if (!st.playing) return;
       st.playing = false;
-      var bonus = Math.floor(st.timeLeft) * TIME_BONUS;
-      st.score += bonus;
+      st.timeLeft = Math.max(0, (st.deadline - Date.now()) / 1000);
+      var bonus = st.rawScore * TIME_BONUS * Math.min(1, st.timeLeft / st.limit);
+      st.score = st.levelStartScore + Math.round((st.rawScore + bonus) *
+        (this.policy.score_factor == null ? 1 : this.policy.score_factor));
+      st.endedAt = Date.now();
       var nextBonus = Math.min(LEVEL_BONUS_MAX, Math.floor(st.timeLeft / 2));
       var nextLimit = Math.min(st.limit + nextBonus, LEVEL_LIMIT_MAX);
       this.recordLevel();
       this.emit({
         type: 'levelClear',
         score: st.score,
-        bonus: bonus,
+        bonus: Math.round(bonus * (this.policy.score_factor == null ? 1 : this.policy.score_factor)),
         best: st.best,
         nextBonus: nextBonus,
         nextLimit: nextLimit,
@@ -211,12 +238,13 @@
       var st = this.state;
       if (!st.playing) return;
       st.playing = false;
+      st.endedAt = Date.now();
       this.recordLevel();
       this.emit({ type: 'timeUp', score: st.score,
                   stats: st.levelStats[st.levelStats.length - 1] });
     },
 
-    /** 进入下一关（时间随上一关剩余时间增长） */
+    /** 进入下一关，重新计算该关时限 */
     next: function () {
       var st = this.state;
       if (st.lv >= this.levels.length - 1) return false;
@@ -234,7 +262,7 @@
       this.buildBoard();
     },
 
-    /** 暂停计时（页面被切到后台）：剩余时间冻结，期间不能点牌 */
+    /** 暂停计时：剩余时间冻结，期间不能点牌 */
     pause: function () {
       var st = this.state;
       if (!st.playing || st.paused) return false;
@@ -265,8 +293,17 @@
       this.buildBoard();
     },
 
+    elapsed: function () {
+      var st = this.state;
+      if (!st.startedAt) return 0;
+      return Math.min(st.limit + (st.secondsAdded || 0),
+        Math.max(0, Math.round(((st.endedAt || Date.now()) - st.startedAt) / 1000)));
+    },
+
     recordLevel: function () {
       var st = this.state;
+      if (st.roundRecorded || !st.startedAt) return;
+      st.roundRecorded = true;
       st.levelStats.push({
         level: st.lv,
         name: (this.levels[st.lv] && this.levels[st.lv].name) || ('第' + (st.lv + 1) + '关'),
@@ -275,35 +312,45 @@
         total: st.total_pairs,
         wrong: st.wrong,
         bestCombo: st.best,
-        duration: Math.round((Date.now() - st.levelStartAt) / 1000)
+        duration: this.elapsed(),
+        answers: st.pairStates.map(function (s) { return Object.assign({}, s); })
       });
     },
 
     /** 本次游玩的完整报告，用于写后端 */
     report: function () {
       var st = this.state;
-      var detail = st.levelStats.slice();
+      var detail = st.roundRecorded ? st.levelStats.slice(-1) : [];
       if (!detail.length) {
         /* 还没通关就退出：把当前这一关也记进去 */
         detail.push({
           level: st.lv,
           name: (this.levels[st.lv] && this.levels[st.lv].name) ||
                 ('第' + (st.lv + 1) + '关'),
-          score: st.score,
+          score: st.score - st.levelStartScore,
           matched: st.matched,
           total: st.total_pairs,
           wrong: st.wrong,
           bestCombo: st.best,
-          duration: Math.round((Date.now() - st.levelStartAt) / 1000)
+          duration: this.elapsed(),
+          answers: (st.pairStates || []).map(function (s) { return Object.assign({}, s); })
         });
       }
       return {
-        score: st.score,
+        score: st.score - st.levelStartScore,
+        level: st.lv,
+        rule_version: 4,
+        play_token: this.policy.play_token || '',
+        combo_events: (st.comboEvents || []).slice(),
+        initial_seconds: st.limit,
+        time_left: st.timeLeft,
+        bonus_seconds: st.secondsAdded || 0,
+        combo_bonus: st.comboBonus || 0,
         matched: st.matched,
         total_pairs: st.total_pairs,
         wrong: st.wrong,
         best_combo: st.best,
-        duration: Math.round((Date.now() - st.startedAt) / 1000),
+        duration: this.elapsed(),
         level_count: detail.length,
         detail: detail,
         wrong_log: st.wrongLog.slice()

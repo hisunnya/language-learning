@@ -129,3 +129,41 @@ mark.ig-key { background: var(--mark-bg); color: var(--mark-ink); border-radius:
 @media (max-width: 560px) {
   .verb-bilingual { padding: 11px; }
 }
+.ig-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  color: var(--blue);
+}
+.ig-policy { font-size: .85rem; color: var(--ink2); }
+.ig-reward, .reward-toast {
+  padding: .6rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: .6rem;
+  background: var(--blue-l);
+  color: var(--blue);
+  font-weight: 800;
+  animation: ig-reward-pop .4s ease-out;
+}
+.or-scoring-progress {
+  height: .5rem;
+  overflow: hidden;
+  border-radius: .5rem;
+  background: var(--blue-l);
+}
+.or-scoring-progress > i {
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: var(--blue);
+  animation: or-scoring-slide 1.2s ease-in-out infinite alternate;
+}
+.or-scoring-label { animation: or-scoring-blink 1s ease-in-out infinite alternate; }
+@keyframes ig-reward-pop {
+  from { transform: scale(.96); opacity: .4; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes or-scoring-slide { to { transform: translateX(180%); } }
+@keyframes or-scoring-blink { to { opacity: .4; } }
+@media (prefers-reduced-motion: reduce) {
+  .ig-reward, .reward-toast, .or-scoring-progress > i, .or-scoring-label { animation: none; }
+}

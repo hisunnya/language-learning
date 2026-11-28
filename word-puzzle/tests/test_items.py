@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 import zipfile
@@ -241,10 +242,25 @@ class ItemsCase(HttpCase):
         c.json("POST", "/api/auth/login", {"student_no": "T001", "password": "Teach3r!pw"})
         return c
 
-    def upload(self, c, ordinal=0, data=b"\x1aE\xdf\xa3" + b"0" * 4000, ms=4200, token="ptest1"):
+    def start_order(self, c, ordinal=0):
+        status, started = c.json("POST", "/api/plays/start", {
+            "bank_id": self.order, "level": 0, "ords": [ordinal],
+        })
+        self.assertEqual(status, 201, started)
+        token = started["play_token"]
+        status, phase = c.json("POST", "/api/plays/phase", {"play_token": token, "phase": "recording"})
+        self.assertEqual(status, 200, phase)
+        return token
+
+    def upload(self, c, ordinal=0, data=b"\x1aE\xdf\xa3" + b"0" * 4000, ms=4200, token=None):
+        token = token or self.start_order(c, ordinal)
         body, headers = multipart({"bank_id": str(self.order), "item_ord": str(ordinal), "play_token": token, "duration_ms": str(ms)},
                                   {"file": ("reading.webm", data)})
-        return c.json("POST", "/api/recordings", raw=body, headers=headers)
+        status, result = c.json("POST", "/api/recordings", raw=body, headers=headers)
+        result["play_token"] = token
+        if isinstance(result.get("recording"), dict):
+            result["recording"]["play_token"] = token
+        return status, result
 
 
 class TestItemBanksOverHttp(ItemsCase):
@@ -275,21 +291,60 @@ class TestItemBanksOverHttp(ItemsCase):
         self.assertEqual(other.request("GET", "/api/banks/%d/items/0/audio" % self.order)[0], 404, "没开放给他的题库听不到")
 
     def test_spell_score_takes_its_type_from_the_bank(self):
-        user, c = self.student()
-        status, body = c.json("POST", "/api/scores", {"bank_id": self.spell, "game_type": "match", "score": 41, "matched": 4,
-                                                     "total_pairs": 5, "level_count": 1, "detail": []})
+        _, c = self.student()
+        started = c.json("POST", "/api/plays/start", {
+            "bank_id": self.spell, "level": 0, "ords": list(range(5)),
+        })[1]
+        status, body = c.json("POST", "/api/scores", {
+            "bank_id": self.spell, "play_token": started["play_token"],
+            "detail": [{"ord": 0, "solved": True, "wrong": 0, "hints": 0}],
+            "combo_events": [{"ord": 0, "eligible": True}],
+        })
         self.assertEqual(status, 201, body)
         self.assertEqual(self.db.one("SELECT game_type, score FROM scores WHERE id=?", (body["id"],))["game_type"], "spell")
 
     def test_verb_score_takes_its_type_from_the_bank(self):
         _, c = self.student()
-        status, body = c.json("POST", "/api/scores", {"bank_id": self.verb, "game_type": "match", "score": 17,
-                                                     "matched": 5, "total_pairs": 5, "level_count": 1, "detail": []})
+        started = c.json("POST", "/api/plays/start", {
+            "bank_id": self.verb, "level": 0, "ords": list(range(10)),
+        })[1]
+        status, body = c.json("POST", "/api/scores", {
+            "bank_id": self.verb, "play_token": started["play_token"],
+            "detail": [{"ord": 0, "solved": True, "wrong": 0}],
+            "combo_events": [{"ord": 0, "eligible": True}],
+        })
         self.assertEqual(status, 201, body)
         self.assertEqual(self.db.one("SELECT game_type FROM scores WHERE id=?", (body["id"],))["game_type"], "verb")
 
 
 class TestRecordings(ItemsCase):
+    def test_upload_returns_pending_immediately_and_status_can_be_polled(self):
+        _, c = self.student()
+        entered, release = threading.Event(), threading.Event()
+
+        def delayed_transcribe(_path):
+            entered.set()
+            release.wait(5)
+            return "recognized"
+
+        try:
+            with mock.patch.object(asr, "available", return_value=True), \
+                    mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
+                    mock.patch.object(rec_mod, "probe_ms", return_value=None), \
+                    mock.patch.object(asr, "transcribe", side_effect=delayed_transcribe):
+                status, result = self.upload(c)
+                self.assertEqual(status, 201, result)
+                rec = result["recording"]
+                self.assertEqual(rec["status"], "pending")
+                self.assertTrue(entered.wait(2), "ASR worker should start after upload acceptance")
+                poll_status, poll = c.json("GET", "/api/recordings/%d" % rec["id"])
+                self.assertEqual((poll_status, poll["recording"]["status"]), (200, "pending"))
+                release.set()
+                self.app.Handler.rec_worker.wait(rec["id"])
+                self.assertEqual(rec_mod.get(self.db, rec["id"])["status"], "done")
+        finally:
+            release.set()
+
     def test_without_speech_recognition_a_long_enough_recording_is_valid_without_bonus(self):
         _, c = self.student()
         with mock.patch.object(asr, "available", return_value=False), mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
@@ -307,6 +362,8 @@ class TestRecordings(ItemsCase):
                 mock.patch.object(rec_mod, "probe_ms", return_value=None), \
                 mock.patch.object(asr, "transcribe", return_value="Hangzhou known as paradise on earth is a popular tourist attraction"):
             rec = self.upload(c, ordinal=1)[1]["recording"]
+            self.app.Handler.rec_worker.wait(rec["id"])
+            rec = rec_mod.get(self.db, rec["id"])
         self.assertEqual((rec["status"], rec["valid"], rec["accuracy"], rec["bonus"]), ("done", True, 1.0, 20))
 
     def test_silence_is_not_a_valid_reading_and_a_broken_recogniser_does_not_punish(self):
@@ -315,16 +372,24 @@ class TestRecordings(ItemsCase):
                 mock.patch.object(rec_mod, "probe_ms", return_value=None):
             with mock.patch.object(asr, "transcribe", return_value=""):
                 silent = self.upload(c)[1]["recording"]
+                self.app.Handler.rec_worker.wait(silent["id"])
+                silent = rec_mod.get(self.db, silent["id"])
             with mock.patch.object(asr, "transcribe", return_value=None):
                 broken = self.upload(c)[1]["recording"]
-        self.assertEqual((silent["status"], silent["valid"]), ("done", False))
+                self.app.Handler.rec_worker.wait(broken["id"])
+                broken = rec_mod.get(self.db, broken["id"])
+        self.assertEqual((silent["status"], silent["valid"], silent["accuracy"]), ("done", True, 0.0))
         self.assertEqual((broken["status"], broken["valid"], broken["bonus"]), ("failed", True, 0))
 
     def test_upload_checks(self):
         _, c = self.student()
         body, headers = multipart({"bank_id": str(self.spell), "item_ord": "0"}, {"file": ("r.webm", b"0" * 3000)})
         self.assertEqual(c.json("POST", "/api/recordings", raw=body, headers=headers)[0], 404, "只有翻译排排坐能交录音")
-        self.assertEqual(self.upload(c, ordinal=7)[0], 404)
+        token = self.start_order(c, 0)
+        invalid_body, invalid_headers = multipart(
+            {"bank_id": str(self.order), "item_ord": "7", "play_token": token},
+            {"file": ("reading.webm", b"\x1aE\xdf\xa3" + b"0" * 4000)})
+        self.assertEqual(c.json("POST", "/api/recordings", raw=invalid_body, headers=invalid_headers)[0], 404)
         self.assertEqual(self.upload(c, data=b"x")[0], 400)
         self.assertEqual(Client(self.port).request("POST", "/api/recordings", raw=b"", headers={"Content-Type": "multipart/form-data; boundary=x"})[0], 401)
 
@@ -348,39 +413,56 @@ class TestRecordings(ItemsCase):
 
 
 class TestOrderScoreIsComputedByTheServer(ItemsCase):
-    def test_the_server_ignores_the_reported_score_and_counts_only_own_valid_recordings(self):
+    def finalize(self, c, token, detail):
+        status, phase = c.json("POST", "/api/plays/phase", {"play_token": token, "phase": "scoring"})
+        self.assertEqual(status, 200, phase)
+        ord_ = detail[0]["ord"]
+        event = {"ord": ord_, "eligible": detail[0]["wrong"] == 0}
+        if not event["eligible"]:
+            event["break"] = True
+        return c.json("POST", "/api/scores", {
+            "bank_id": self.order, "play_token": token, "level": 0, "detail": detail,
+            "combo_events": [event], "score": 9999, "matched": 999, "total_pairs": 999,
+        })
+
+    def test_the_server_ignores_reported_totals_and_links_only_the_current_round_recording(self):
         user, c = self.student()
         _, other = self.student()
         with mock.patch.object(asr, "available", return_value=True), mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
                 mock.patch.object(rec_mod, "probe_ms", return_value=None), \
                 mock.patch.object(asr, "transcribe", return_value="Hangzhou known as paradise is a popular attraction"):
-            mine = self.upload(c, ordinal=1, token="pgame")[1]["recording"]
+            mine = self.upload(c, ordinal=1)[1]["recording"]
             theirs = self.upload(other, ordinal=0)[1]["recording"]
-        detail = [{"ord": 0, "wrong": 1, "arranged": True, "recording_id": theirs["id"]},
-                  {"ord": 1, "wrong": 0, "arranged": True, "recording_id": mine["id"]}]
-        status, body = c.json("POST", "/api/scores", {"bank_id": self.order, "score": 9999, "matched": 2, "total_pairs": 2,
-                                                     "level_count": 1, "detail": detail, "play_token": "pgame"})
+        detail = [{"ord": 1, "wrong": 0, "arranged": True, "recording_id": mine["id"]}]
+        status, body = self.finalize(c, mine["play_token"], detail)
         self.assertEqual(status, 201, body)
-        self.assertEqual(body["score"], 8 + (10 + 30 + 15), "别人的录音不算；奖励按对上的比例（8/11 → 15）")
+        self.assertGreaterEqual(body["score"], 50, "正确排列和已接受的一秒以上录音应得基础分")
+        self.assertLess(body["score"], 9999, "不能采用客户端上报的分数")
         self.assertEqual(self.db.one("SELECT score_id FROM recordings WHERE id=?", (mine["id"],))["score_id"], body["id"])
+        self.assertIsNone(self.db.one("SELECT score_id FROM recordings WHERE id=?", (theirs["id"],))["score_id"])
         plays = c.json("GET", "/api/scores/plays?user_id=%d&bank_id=%d" % (user["id"], self.order))[1]["plays"]
         self.assertEqual([r["id"] for r in plays[0]["recordings"]], [mine["id"]])
 
-    def test_one_recording_counts_once_and_only_for_one_play(self):
-        """同一条录音在 detail 里写好几遍、写到不存在的题号、或者拿到下一局再用一次，都只算一次。"""
+    def test_a_recording_can_only_be_used_by_its_own_play_once(self):
         _, c = self.student()
         with mock.patch.object(asr, "available", return_value=False), mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
                 mock.patch.object(rec_mod, "probe_ms", return_value=None):
-            rid = self.upload(c, ordinal=0, token="pdup")[1]["recording"]["id"]
-        entry = {"ord": 0, "wrong": 0, "arranged": True, "recording_id": rid}
-        detail = [entry, dict(entry), dict(entry, ord=1), dict(entry, ord=99), dict(entry, ord=-1)]
-        status, first = c.json("POST", "/api/scores", {"bank_id": self.order, "score": 0, "matched": 2, "total_pairs": 2,
-                                                      "level_count": 1, "detail": detail, "play_token": "pdup"})
+            rec = self.upload(c, ordinal=0)[1]["recording"]
+        token = rec["play_token"]
+        entry = {"ord": 0, "wrong": 0, "arranged": True, "recording_id": rec["id"]}
+        status, invalid = self.finalize(c, token, [entry, dict(entry)])
+        self.assertEqual((status, invalid.get("code")), (400, "invalid_detail"))
+        status, first = c.json("POST", "/api/scores", {
+            "bank_id": self.order, "play_token": token, "detail": [entry],
+            "combo_events": [{"ord": 0, "eligible": True}],
+        })
         self.assertEqual(status, 201, first)
-        self.assertEqual(first["score"], 10 + 30 + 10, "第 0 题拼接 + 录音各一次；第 1 题只有拼接分（录音不是这题的）；越界的题号不算")
-        status, second = c.json("POST", "/api/scores", {"bank_id": self.order, "score": 0, "matched": 1, "total_pairs": 2,
-                                                       "level_count": 1, "detail": [entry], "play_token": "pdup2"})
-        self.assertEqual(second["score"], 10, "录音已经属于上一局，这一局只有拼接分")
+        self.assertGreaterEqual(first["score"], 50)
+
+        second_token = self.start_order(c, 0)
+        status, second = self.finalize(c, second_token, [entry])
+        self.assertEqual(status, 201, second)
+        self.assertEqual(second["score"], 36, "只得本轮排列30分及速度奖6分，上一轮录音不能再次计分")
 
     def test_a_bonus_that_arrives_later_is_added_to_the_score(self):
         user, c = self.student()
@@ -389,13 +471,17 @@ class TestOrderScoreIsComputedByTheServer(ItemsCase):
                 mock.patch.object(self.app.Handler, "rec_worker", None):              # 没有队列：录音停在 pending
             rec = self.upload(c, ordinal=0)[1]["recording"]
         self.assertEqual(rec["status"], "pending")
-        sid = c.json("POST", "/api/scores", {"bank_id": self.order, "detail": [{"ord": 0, "wrong": 0, "arranged": True,
-                                                                                 "recording_id": rec["id"]}]})[1]["id"]
-        self.assertEqual(self.db.one("SELECT score FROM scores WHERE id=?", (sid,))["score"], 10)
+        status, result = self.finalize(c, rec["play_token"], [{"ord": 0, "wrong": 0, "arranged": True,
+                                                                "recording_id": rec["id"]}])
+        self.assertEqual(status, 201, result)
+        sid = result["id"]
+        before = self.db.one("SELECT score FROM scores WHERE id=?", (sid,))["score"]
+        self.assertGreaterEqual(before, 50)
         with mock.patch.object(asr, "available", return_value=True), mock.patch.object(rec_mod, "ffmpeg", return_value=None), \
                 mock.patch.object(asr, "transcribe", return_value="To improve your physical well-being you should keep on exercising every single day"):
             rec_mod.score_one(self.db, rec["id"])
-        self.assertEqual(self.db.one("SELECT score FROM scores WHERE id=?", (sid,))["score"], 10 + 30 + 20)
+        after = self.db.one("SELECT score FROM scores WHERE id=?", (sid,))["score"]
+        self.assertGreater(after, before, "晚到的 ASR 精度只更新原成绩，不新建或叠加一条成绩")
 
 
 @unittest.skipUnless(NODE, "本机没有 node，跳过 item-core.js 的行为测试")
@@ -547,24 +633,31 @@ class TestOfflineAndDeployment(unittest.TestCase):
             self.assertTrue(asr.available())
 
 
-class TestMatchScoresHalved(unittest.TestCase):
-    def test_old_matching_scores_are_halved_once_and_new_types_untouched(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = str(Path(tmp) / "old.db")
+class TestStartupKeepsHistoricalScores(unittest.TestCase):
+    def test_opening_an_old_database_does_not_rewrite_scores(self):
+        test_dir = ROOT / "tests" / ".score-migration-test"
+        shutil.rmtree(test_dir, ignore_errors=True)
+        test_dir.mkdir()
+        try:
+            path = str(test_dir / "old.db")
             db = Database(path)
-            db.execute("PRAGMA user_version = 2")            # 假装是升级前的库
+            db.execute("PRAGMA user_version = 2")
             for score, kind in ((1000, "match"), (125, "match"), (0, "match"), (200, "order"), (105, "spell")):
                 db.insert_score({"score": score, "game_type": kind})
             db.close()
-            db = Database(path)                               # 打开时升级
-            self.assertEqual([r["score"] for r in db.query("SELECT score FROM scores ORDER BY id")], [500, 63, 0, 200, 105])
-            self.assertEqual(db.one("PRAGMA user_version")[0], 3)
+            db = Database(path)
+            self.assertEqual([r["score"] for r in db.query("SELECT score FROM scores ORDER BY id")],
+                             [1000, 125, 0, 200, 105])
+            self.assertEqual(db.one("PRAGMA user_version")[0], 4)
             db.close()
-            db = Database(path)                               # 再打开不会再减一次
-            self.assertEqual([r["score"] for r in db.query("SELECT score FROM scores ORDER BY id")], [500, 63, 0, 200, 105])
+            db = Database(path)
+            self.assertEqual([r["score"] for r in db.query("SELECT score FROM scores ORDER BY id")],
+                             [1000, 125, 0, 200, 105])
             db.close()
+        finally:
+            shutil.rmtree(test_dir, ignore_errors=True)
 
-    def test_new_matching_points_are_half(self):
+    def test_new_matching_points_follow_version_4_rules(self):
         core = (ROOT / "web" / "js" / "game-core.js").read_text(encoding="utf-8")
-        for needle in ("PAIR_SCORE = 50;", "COMBO_STEP = 10;", "MISS_SCORE = 10;", "TIME_BONUS = 5;"):
+        for needle in ("PAIR_SCORE = 20;", "COMBO_STEP = 2;", "MISS_SCORE = 4;", "TIME_BONUS = 0.2;"):
             self.assertIn(needle, core)

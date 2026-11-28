@@ -753,15 +753,25 @@ class TestHTTP(unittest.TestCase):
             connection.close()
 
     def test_scores(self):
-        self.post("/api/scores", {
-            "bank_id": 1, "bank_title": "测试", "device": "d-test",
-            "score": 1234, "matched": 10, "total_pairs": 20,
-            "wrong": 2, "best_combo": 5, "duration": 30, "level_count": 1,
-            "detail": [{"level": 0, "score": 1234}],
+        from server import app as app_mod, scoring
+        bank = app_mod.Handler.db.get_bank(1)
+        started = self.post("/api/plays/start", {
+            "bank_id": 1, "device": "d-test-123456", "level": 0,
+        })
+        play = dict(app_mod.Handler.db.one(
+            "SELECT * FROM game_plays WHERE token=?", (started["play_token"],)))
+        ords = scoring._round_expected(app_mod.Handler.db, play)
+        answer_ord = ords[0]
+        result = self.post("/api/scores", {
+            "bank_id": 1, "device": "d-test-123456", "play_token": started["play_token"],
+            "score": 1234, "level": 0,
+            "detail": [{"level": 0, "answers": [{"ord": answer_ord, "solved": True, "wrong": 0}]}],
+            "combo_events": [{"ord": answer_ord, "eligible": True}],
         })
         res = self.get("/api/scores?limit=10")
-        self.assertGreaterEqual(res["stats"]["best"], 1234)
-        self.assertTrue(any(s["bank_title"] == "测试" for s in res["scores"]))
+        self.assertGreater(res["stats"]["best"], 0)
+        self.assertLess(result["score"], 1234, "服务端从本轮明细重算，忽略客户端总分")
+        self.assertTrue(any(s["bank_title"] == bank["title"] for s in res["scores"]))
 
     def test_unknown_api_404(self):
         with self.assertRaises(urllib.error.HTTPError) as ctx:

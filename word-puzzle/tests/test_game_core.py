@@ -26,6 +26,21 @@ NODE = shutil.which("node") or shutil.which("nodejs")
 
 @unittest.skipUnless(NODE, "本机没有 node，跳过 game-core.js 的行为测试")
 class TestGameCore(unittest.TestCase):
+    def test_round_rewards(self) -> None:
+        proc = subprocess.run([NODE, str(ROOT / "tests/js/rewards.test.js")],
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_spelling_timer(self) -> None:
+        proc = subprocess.run([NODE, str(ROOT / "tests/js/spell_ui.test.js")],
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_round_adapter(self) -> None:
+        proc = subprocess.run([NODE, str(ROOT / "tests/js/adapter_rounds.test.js")],
+                              capture_output=True, text=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
     def test_game_core_behaviour(self) -> None:
         proc = subprocess.run(
             [NODE, str(JS_TEST)],
@@ -71,8 +86,8 @@ class TestAudioPrefetchIsWired(unittest.TestCase):
         src = UI_FILE.read_text(encoding="utf-8")
         pick = src.index("picked = +b2.getAttribute('data-l');")
         self.assertIn("self.prefetchLevel(picked)", src[pick:pick + 300])
-        start = src.index("g.start(picked);")
-        self.assertIn("self.prefetchLevel(picked)", src[start - 120:start])
+        start = src.index("g.start(index);")
+        self.assertIn("self.prefetchLevel(index)", src[start - 120:start])
         board = src.index("evt.type === 'board'")
         self.assertIn("this.prefetchLevel(evt.level)", src[board:board + 300])
 

@@ -6,7 +6,6 @@
   'use strict';
 
   var C = global.WPItemCore;
-  var GAME_SECONDS = 120;
   function t(key, params) { return global.WPI18N ? global.WPI18N.t(key, params) : key; }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -33,8 +32,8 @@
     this.finishPrompt = false;
     this.reviewing = false;
     this.timedOut = false;
-    this.started = Date.now();
-    this.deadline = this.started + GAME_SECONDS * 1000;
+    this.reward = '';
+    this.loading = true;
     var seed = (Date.now() ^ Math.floor(Math.random() * 4294967296)) >>> 0;
     this.order = C.shuffle(this.sourceItems.length, seed);
     this.items = this.order.map(function (i) { return this.sourceItems[i]; }, this);
@@ -45,20 +44,31 @@
     this.states = this.items.map(function () {
       return { selected: null, wrong: 0, solved: false, skipped: false, feedback: '' };
     });
-    this.render();
-    var self = this;
-    this.timer = setInterval(function () { self.tick(); }, 250);
+    var self = this, generation = this.generation = (this.generation || 0) + 1;
+    this.mount.innerHTML = '<div class="card">' + esc(t('ig_starting')) + '</div>';
+    C.begin(this.cfg, { ords: this.sourceOrds }, function (policy) {
+      if (self.generation !== generation) return;
+      self.round = new C.Round('verb', self.totalItems, policy);
+      self.started = self.round.started;
+      self.loading = false;
+      self.render();
+      self.timer = setInterval(function () { self.tick(); }, 250);
+    }, function (err) {
+      if (self.generation !== generation) return;
+      self.mount.innerHTML = '<div class="card"><p>' + esc(err.message || t('ig_startFailed')) +
+        '</p><button class="btn" id="vhRetry">' + esc(t('ig_again')) + '</button></div>';
+      self.mount.querySelector('#vhRetry').onclick = function () { self.restart(); };
+    });
   };
 
   Game.prototype.active = function () {
-    if (this.done) return false;
-    if (Date.now() >= this.deadline) { this.finish(true); return false; }
+    if (this.done || this.loading) return false;
+    if (this.round.left() <= 0) { this.finish(true); return false; }
     return true;
   };
 
   Game.prototype.timeLabel = function () {
-    var seconds = Math.max(0, Math.ceil((this.deadline - Date.now()) / 1000));
-    return t('vh_timeLeft', { time: Math.floor(seconds / 60) + ':' + ('0' + seconds % 60).slice(-2) });
+    return t('vh_timeLeft', { time: C.clockLabel(this.round) });
   };
 
   Game.prototype.timerHtml = function () {
@@ -72,7 +82,8 @@
   };
 
   Game.prototype.total = function () {
-    return this.states.reduce(function (sum, state) { return sum + C.verbPoints(state); }, 0);
+    var base = this.states.reduce(function (sum, state) { return sum + C.verbPoints(state); }, 0);
+    return this.round.finish(base, this.done && this.solvedCount() === this.totalItems);
   };
 
   Game.prototype.allResults = function () {
@@ -119,6 +130,8 @@
       '<div class="ig-top"><span class="ig-progress">' + esc(t('vh_progress', { i: this.i + 1, n: this.totalItems })) + '</span>' +
       this.timerHtml() +
       '<span class="ig-points">' + esc(t('ig_points', { n: this.total() })) + '</span></div>' +
+      '<p class="sub">' + esc(C.policyText(this.round, t)) + '</p>' +
+      (this.reward ? '<div class="ig-reward" role="status">' + esc(this.reward) + '</div>' : '') +
       '<div class="ig-bar"><i style="width:' + Math.round(this.i / this.totalItems * 100) + '%"></i></div>' +
       '<div class="verb-bilingual">' +
       '<div class="verb-phrase" lang="en">' + (item.before ? '<span>' + esc(item.before) + '</span> ' : '') + slot +
@@ -172,12 +185,18 @@
       state.solved = true;
       state.skipped = false;
       state.feedback = '';
+      var gain = this.round.hit(C.VERB.full, !state.wrong, this.ords[this.i]);
+      this.reward = gain.combo >= 2 ? t('ig_comboReward', { n: gain.combo, points: gain.points, seconds: gain.seconds }) : '';
+      this.checkpoint();
       if (this.solvedCount() === this.totalItems) this.finish();
       else this.render();
       return true;
     }
     state.wrong += 1;
+    this.round.miss(this.ords[this.i]);
+    this.reward = '';
     state.feedback = 'wrong';
+    this.checkpoint();
     this.render();
     return false;
   };
@@ -190,8 +209,10 @@
         if (state.selected != null) {
           if (!this.submit() || this.done) return;
         } else {
+          if (!state.skipped) this.round.miss(this.ords[this.i]);
           state.skipped = true;
           state.feedback = '';
+          this.checkpoint();
         }
       }
       if (this.i + 1 >= this.totalItems) { this.requestFinish(); return; }
@@ -206,6 +227,8 @@
     if (!this.active()) return;
     var state = this.states[this.i];
     if (state.solved || state.skipped) return;
+    this.round.miss(this.ords[this.i]);
+    this.reward = '';
     state.skipped = true;
     state.selected = null;
     state.feedback = '';
@@ -288,19 +311,17 @@
     };
   };
 
-  Game.prototype.finish = function (timedOut) {
-    if (this.done) return;
-    this.done = true;
-    this.timedOut = !!timedOut;
-    clearInterval(this.timer);
-    if (this.cancelDrag) this.cancelDrag();
-    this.states.forEach(function (state) { if (!state.solved) state.skipped = true; });
+  Game.prototype.checkpoint = function () {
+    if (this.cfg.progress) this.cfg.progress(this.report());
+  };
+
+  Game.prototype.report = function () {
     var results = this.allResults(), solved = this.solvedCount();
     var report = {
       score: this.total(), matched: solved, total_pairs: results.length,
-      wrong: this.wrongCount(), best_combo: 0,
-      duration: Math.min(GAME_SECONDS, Math.round((Date.now() - this.started) / 1000)),
-      level_count: this.cfg.levelCount || 1,
+      wrong: this.wrongCount(), best_combo: this.round.best,
+      duration: this.round.elapsed(),
+      level_count: 1,
       detail: results.map(function (result, i) {
         return {
           i: i, ord: result.ordinal, wrong: result.state.wrong, solved: result.state.solved,
@@ -308,7 +329,23 @@
         };
       })
     };
-    if (this.cfg.save) this.cfg.save(report);
+    return Object.assign(report, this.round.report());
+  };
+
+  Game.prototype.finish = function (timedOut) {
+    if (this.done) return;
+    this.done = true;
+    this.round.pause();
+    this.timedOut = !!timedOut;
+    clearInterval(this.timer);
+    if (this.cancelDrag) this.cancelDrag();
+    this.states.forEach(function (state, i) {
+      if (!state.solved && !state.skipped) {
+        this.round.miss(this.ords[i]);
+        state.skipped = true;
+      }
+    }, this);
+    if (this.cfg.save) this.cfg.save(this.report());
     this.renderSummary();
   };
 

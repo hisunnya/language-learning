@@ -233,19 +233,19 @@ async function settle() { for (let i = 0; i < 6; i++) await tick(); }
     assert.ok(env.calls.toast.slice(-1)[0].includes('刚选的是中文'), env.calls.toast.join('|'));
   });
 
-  await test('切到后台暂停计时，回来接着走，不扣切走的时间', (env) => {
+  await test('切到后台仍然计时，回来立即结算已超时的本轮', (env) => {
     const page = startGame(env, 'zh');
     page.onShow();
     env.advance(20000);
-    const before = page.game.state.timeLeft;
     page.onHide();
     env.advance(90000);
-    assert.strictEqual(page.game.state.paused, true);
+    assert.strictEqual(page.game.state.paused, false);
     page.onShow();
     env.advance(5000);
     const left = page.game.state.timeLeft;
-    assert.ok(Math.abs(left - (before - 5)) < 0.5, '剩余 ' + left + '，应约为 ' + (before - 5));
-    assert.strictEqual(page.data.overlay, '', '不应因为切走而超时');
+    assert.strictEqual(left, 0);
+    assert.strictEqual(page.game.state.playing, false);
+    assert.notStrictEqual(page.data.overlay, '', '返回后显示超时结算');
   });
 
   await test('页面卸载后，没跑完的动画定时器不会再 setData', (env) => {

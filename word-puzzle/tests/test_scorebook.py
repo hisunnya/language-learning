@@ -67,10 +67,12 @@ class TestOverHttp(HttpCase):
         return [b["id"] for b in res["banks"]]
 
     def play(self, client, bank_id, score, *, levels=2, matched=12, total=12, duration=60, wrong=0, combo=3):
-        status, _ = client.json("POST", "/api/scores", {
+        user = client.json("GET", "/api/auth/me")[1]["user"]
+        self.app.Handler.db.insert_score({
             "bank_id": bank_id, "bank_title": "t", "score": score, "matched": matched, "total_pairs": total,
-            "wrong": wrong, "best_combo": combo, "duration": duration, "level_count": levels, "detail": []})
-        self.assertEqual(status, 201)
+            "wrong": wrong, "best_combo": combo, "duration": duration, "level_count": levels, "detail": [],
+            "rule_version": 0,
+        }, user_id=user["id"])
 
     def summary(self, client, query=""):
         status, body = client.json("GET", "/api/scores/summary" + query)
@@ -194,9 +196,11 @@ class TestLanEdition(HttpCase):
 
     def test_without_accounts_scores_group_by_device_and_show_the_nickname(self):
         c = Client(self.port)
+        db = self.app.Handler.db
         for score, level_count in ((100, 1), (300, 2)):
-            c.json("POST", "/api/scores", {"bank_title": "老题库", "device": "d-abc", "nickname": "小明", "score": score,
-                                           "matched": 5, "total_pairs": 5, "duration": 30, "level_count": level_count})
+            db.insert_score({"bank_title": "老题库", "device": "d-abc", "nickname": "小明", "score": score,
+                             "matched": 5, "total_pairs": 5, "duration": 30, "level_count": level_count,
+                             "rule_version": 0}, user_id=None)
         rows = c.json("GET", "/api/scores/summary")[1]["rows"]
         row = [r for r in rows if r["device"] == "d-abc"][0]
         self.assertEqual((row["name"], row["class_name"], row["student_no"], row["plays"]), ("小明", "", "", 2))

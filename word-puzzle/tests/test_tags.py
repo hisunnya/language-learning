@@ -267,14 +267,21 @@ class TestTagsOverHttp(HttpCase):
         self.assertEqual(admin.json("POST", "/api/admin/users/%d/tags" % uid, {"tags": "x" * 30})[0], 400)
 
     def test_scores_only_count_on_banks_the_student_can_open(self):
+        from server import scoring
         admin = self.admin()
         _, _, mine = self.student(["初二"])
         shared, hidden = self.new_bank(admin, tags="初二"), self.new_bank(admin, tags="高三")
-        score = {"score": 100, "matched": 1, "total_pairs": 1, "bank_title": "t"}
-        self.assertEqual(mine.json("POST", "/api/scores", dict(score, bank_id=shared))[0], 201)
-        self.assertEqual(mine.json("POST", "/api/scores", dict(score, bank_id=hidden))[0], 404)
-        self.assertEqual(mine.json("POST", "/api/scores", dict(score, bank_id="abc"))[0], 400)
-        self.assertEqual(mine.json("POST", "/api/scores", score)[0], 201, "离线页等没有 bank_id 的成绩照常保存")
+        started = mine.json("POST", "/api/plays/start", {"bank_id": shared, "level": 0})[1]
+        play = dict(self.app.Handler.db.one("SELECT * FROM game_plays WHERE token=?", (started["play_token"],)))
+        answer_ord = scoring._round_expected(self.app.Handler.db, play)[0]
+        report = {"bank_id": shared, "play_token": started["play_token"], "level": 0,
+                  "score": 100, "detail": [{"level": 0, "answers": [{"ord": answer_ord, "solved": True, "wrong": 0}]}],
+                  "combo_events": [{"ord": answer_ord, "eligible": True}]}
+        self.assertEqual(mine.json("POST", "/api/scores", report)[0], 201)
+        self.assertEqual(mine.json("POST", "/api/plays/start", {"bank_id": hidden, "level": 0})[0], 404)
+        self.assertEqual(mine.json("POST", "/api/scores", dict(report, bank_id="abc"))[0], 400)
+        self.assertEqual(mine.json("POST", "/api/scores", {"score": 100})[0], 409,
+                         "离线成绩不能绕过服务端签发的本轮 play_token")
 
     def test_admin_sets_tags_on_one_student_and_on_a_batch(self):
         admin = self.admin()

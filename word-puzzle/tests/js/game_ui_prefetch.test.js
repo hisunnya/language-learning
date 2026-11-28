@@ -47,6 +47,40 @@ function eq(a, b, note) {
 }
 
 (async () => {
+  await check('保存失败后仍能重试同一轮，不签发新的计分轮次', async () => {
+    const { win } = load();
+    const tokens = [];
+    const ui = {
+      game: {
+        state: { startedAt: 1, deadline: Date.now() + 60000 },
+        report: () => ({ play_token: 'same-round', score: 42 })
+      },
+      cfg: { onFinish(report) { tokens.push(report.play_token); return Promise.resolve(tokens.length > 1); } }
+    };
+    eq(await win.WPGameUI.finish.call(ui), false);
+    eq(ui.finished, false);
+    eq(await win.WPGameUI.finish.call(ui), true);
+    eq(ui.finished, true);
+    eq(tokens, ['same-round', 'same-round']);
+  });
+
+  await check('同一轮保存未返回时复用请求，不重复提交', async () => {
+    const { win } = load();
+    let resolve, calls = 0;
+    const ui = {
+      game: {
+        state: { startedAt: 1, deadline: Date.now() + 60000 },
+        report: () => ({ score: 42 })
+      },
+      cfg: { onFinish() { calls++; return new Promise(r => { resolve = r; }); } }
+    };
+    const first = win.WPGameUI.finish.call(ui);
+    eq(win.WPGameUI.finish.call(ui) === first, true);
+    eq(calls, 1);
+    resolve(true);
+    eq(await first, true);
+  });
+
   await check('没有 audioBase（离线页）时一个请求都不发', async () => {
     const { T, calls } = load();
     T.prefetch(words('apple', 'pear'));

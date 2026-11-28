@@ -65,11 +65,15 @@
         pickUnit: bank.unit_mode === 'per-unit',
         backHref: API.path('/'),          /* 回到本模块的首页（/word-puzzle/ 或公开版 /words/），不是网站主页 */
         wordTotal: bank.word_count,
+        begin: function (meta) { return WPAdapter.begin(meta, { bank_id: bank.id }); },
+        progress: function (report) { return WPAdapter.progress(report); },
         /* 在线版使用服务端固定语音引擎；失败时提示，不切换本地声线。 */
         audioBase: API.path('/api/audio/'),
         onFinish: function (report) {
-          WPAdapter.save(report, { bank_id: bank.id, title: bank.title });
-          API.toast(t('play_saved'));
+          return WPAdapter.save(report, { bank_id: bank.id, title: bank.title }).then(function (saved) {
+            if (saved) API.toast(t('play_saved'));
+            return saved;
+          });
         }
       });
       /* 调试钩子：在控制台里可以直接看 game.state / ui.timer */

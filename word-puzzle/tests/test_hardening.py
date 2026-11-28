@@ -235,8 +235,9 @@ class TestHttpHardening(unittest.TestCase):
     def test_normal_post_keeps_the_connection_alive(self):
         conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=10)
         try:
-            body = json.dumps({"score": 1}).encode()
-            conn.request("POST", "/api/scores", body=body,
+            body = json.dumps({"bank_id": self.app.Handler.db.list_banks()[0]["id"],
+                               "device": "hardening-device", "level": 0}).encode()
+            conn.request("POST", "/api/plays/start", body=body,
                          headers={"Content-Type": "application/json"})
             first = conn.getresponse()
             first.read()
@@ -254,8 +255,9 @@ class TestHttpHardening(unittest.TestCase):
         self.assertEqual(status, 403)
 
     def test_same_origin_write_is_allowed(self):
-        body = json.dumps({"score": 1}).encode()
-        status, _, _ = self.request("POST", "/api/scores", body=body, headers={
+        body = json.dumps({"bank_id": self.app.Handler.db.list_banks()[0]["id"],
+                           "device": "hardening-device", "level": 0}).encode()
+        status, _, _ = self.request("POST", "/api/plays/start", body=body, headers={
             "Content-Type": "application/json",
             "Origin": f"http://127.0.0.1:{self.port}"})
         self.assertEqual(status, 201)

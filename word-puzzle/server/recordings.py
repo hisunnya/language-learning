@@ -73,7 +73,7 @@ def probe_ms(path: Path) -> int | None:
 # ------------------------------------------------------------------ 收录音
 
 def store(db: Database, *, user_id: int | None, bank: dict, item_ord: int, play_token: str, data: bytes,
-          mime: str, client_ms: int) -> dict:
+          mime: str, client_ms: int, device: str = "") -> dict:
     """存文件、建一行 recordings，返回这一行。有识别时 status=pending（交给队列），没有时当场判有效。"""
     base = root(db) / time.strftime("%Y%m")
     base.mkdir(parents=True, exist_ok=True)
@@ -98,11 +98,13 @@ def store(db: Database, *, user_id: int | None, bank: dict, item_ord: int, play_
     ms = measured if measured is not None else max(0, min(int(client_ms or 0), MAX_MS))
     rel = str(target.relative_to(root(db)))
     status = "pending" if asr.available() else "noasr"
-    valid = 1 if (status == "noasr" and ms >= MIN_MS) else 0
+    valid = 1 if ms >= MIN_MS else 0
     rid = db.execute(
         "INSERT INTO recordings(user_id, bank_id, item_ord, play_token, file, bytes, duration_ms, status, valid, created_at) "
         "VALUES (?,?,?,?,?,?,?,?,?,?)",
         (user_id, bank["id"], item_ord, play_token[:64], rel, target.stat().st_size, ms, status, valid, int(time.time()))).lastrowid
+    if device:
+        db.execute("UPDATE recordings SET device=? WHERE id=?", (device, rid))
     return get(db, rid)
 
 
@@ -151,7 +153,7 @@ def score_one(db: Database, rid: int) -> dict | None:
                    (1 if long_enough else 0, int(time.time()), rid))
     else:
         acc = asr.accuracy(reference, text)
-        valid = 1 if (long_enough and asr.words(text)) else 0
+        valid = 1 if long_enough else 0
         db.execute("UPDATE recordings SET status='done', transcript=?, accuracy=?, valid=?, bonus=?, scored_at=? WHERE id=?",
                    (text[:500], acc, valid, bonus_for(acc) if valid else 0, int(time.time()), rid))
     rec = get(db, rid)
@@ -161,7 +163,7 @@ def score_one(db: Database, rid: int) -> dict | None:
 
 
 class Worker:
-    """后台识别队列：一条一条来。提交录音的请求可以等某一条的结果（最多 WAIT 秒）。"""
+    """后台识别队列：上传请求立即返回 pending，页面通过状态接口轮询。"""
 
     def __init__(self, db: Database):
         self.db = db
@@ -260,8 +262,12 @@ def rescore(db: Database, score_id: int) -> None:
     """有录音识别完了：按存着的明细重算这一局的总分。
     整个读—算—写在数据库锁里做：请求线程和识别线程同时重算同一局时，后写的不会是一个过时的结果。"""
     with db._lock:
-        row = db.one("SELECT bank_id, user_id, detail FROM scores WHERE id=?", (score_id,))
+        row = db.one("SELECT bank_id, user_id, detail, play_token FROM scores WHERE id=?", (score_id,))
         if not row:
+            return
+        if row["play_token"]:
+            from . import scoring
+            scoring.recording_arrived(db, row["play_token"])
             return
         try:
             detail = json.loads(row["detail"] or "[]")

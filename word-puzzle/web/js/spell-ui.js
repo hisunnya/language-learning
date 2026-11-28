@@ -27,15 +27,43 @@
   }
 
   Game.prototype.restart = function () {
+    clearInterval(this.timer);
+    var self = this, generation = this.generation = (this.generation || 0) + 1;
     this.i = 0;
     this.states = this.items.map(function () { return { hints: 0, wrong: 0, solved: false, gaveUp: false, typed: '' }; });
     this.started = Date.now();
     this.done = false;
-    this.render();
+    this.reward = '';
+    this.loading = true;
+    this.mount.innerHTML = '<div class="card">' + esc(t('ig_starting')) + '</div>';
+    C.begin(this.cfg, { ords: this.cfg.ords }, function (policy) {
+      if (self.generation !== generation) return;
+      self.round = new C.Round('spell', self.items.length, policy);
+      self.loading = false;
+      self.started = self.round.started;
+      self.render();
+      self.timer = setInterval(function () { self.tick(); }, 200);
+    }, function (err) {
+      if (self.generation !== generation) return;
+      self.mount.innerHTML = '<div class="card"><p>' + esc(err.message || t('ig_startFailed')) +
+        '</p><button class="btn" id="spRetry">' + esc(t('ig_again')) + '</button></div>';
+      document.getElementById('spRetry').onclick = function () { self.restart(); };
+    });
   };
 
+  Game.prototype.active = function () {
+    if (this.done || this.loading) return false;
+    if (this.round.left() <= 0) { this.finish(); return false; }
+    return true;
+  };
+  Game.prototype.tick = function () {
+    if (!this.active()) return;
+    var el = document.getElementById('spTimer');
+    if (el) el.textContent = t('ig_timeLeft', { time: C.clockLabel(this.round) });
+  };
   Game.prototype.total = function () {
-    return this.states.reduce(function (sum, s) { return sum + C.spellPoints(s); }, 0);
+    var base = this.states.reduce(function (sum, s) { return sum + C.spellPoints(s); }, 0);
+    return this.round ? this.round.finish(base, this.done && this.states.every(function (s) { return s.solved; })) : 0;
   };
 
   Game.prototype.play = function (i) {
@@ -45,13 +73,17 @@
   };
 
   Game.prototype.render = function () {
+    if (this.loading) return;
     if (this.done) { this.renderSummary(); return; }
     var self = this, item = this.items[this.i], st = this.states[this.i], n = this.items.length;
     var finished = st.solved || st.gaveUp;
     this.mount.innerHTML =
       '<div class="card ig-card">' +
       '<div class="ig-top"><span class="ig-progress">' + esc(t('sp_progress', { i: this.i + 1, n: n })) + '</span>' +
+      '<span class="ig-timer" id="spTimer" role="timer">' + esc(t('ig_timeLeft', { time: C.clockLabel(this.round) })) + '</span>' +
       '<span class="ig-points">' + esc(t('ig_points', { n: this.total() })) + '</span></div>' +
+      '<p class="sub">' + esc(C.policyText(this.round, t)) + '</p>' +
+      (this.reward ? '<div class="ig-reward" role="status">' + esc(this.reward) + '</div>' : '') +
       '<div class="ig-bar"><i style="width:' + Math.round(this.i / n * 100) + '%"></i></div>' +
       '<div class="ig-cn">' + esc(item.cn) + '</div>' +
       '<div class="ig-phrase">' + (item.before ? '<span>' + esc(item.before) + '</span>' : '') +
@@ -93,18 +125,27 @@
   };
 
   Game.prototype.check = function () {
+    if (!this.active()) return;
     var item = this.items[this.i], st = this.states[this.i];
+    if (st.solved || st.gaveUp) return;
     var input = document.getElementById('spInput');
     var result = C.spellCheck(input.value, item.answer);
     if (result === 'empty') { this.say(t('sp_empty'), 'info'); input.focus(); return; }
     if (result === 'right') {
       st.solved = true;
       st.typed = input.value;
+      var gain = this.round.hit(C.SPELL.full, !st.hints && !st.wrong,
+        this.cfg.ords ? this.cfg.ords[this.i] : this.i);
+      this.reward = gain.combo >= 2 ? t('ig_comboReward', { n: gain.combo, points: gain.points, seconds: gain.seconds }) : '';
+      this.checkpoint();
       this.render();
       this.play(this.i);
       return;
     }
     st.wrong += 1;
+    this.round.miss(this.cfg.ords ? this.cfg.ords[this.i] : this.i);
+    this.reward = '';
+    this.checkpoint();
     input.classList.remove('bad');
     void input.offsetWidth;                      /* 重新触发抖动动画 */
     input.classList.add('bad');
@@ -113,35 +154,59 @@
   };
 
   Game.prototype.hint = function () {
+    if (!this.active()) return;
     var st = this.states[this.i];
+    if (st.solved || st.gaveUp) return;
     st.hints = Math.min(2, st.hints + 1);
+    this.round.miss(this.cfg.ords ? this.cfg.ords[this.i] : this.i);
+    this.reward = '';
     st.typed = document.getElementById('spInput').value;
+    this.checkpoint();
     this.render();
   };
 
   Game.prototype.giveUp = function () {
+    if (!this.active()) return;
+    if (this.states[this.i].solved || this.states[this.i].gaveUp) return;
+    this.round.miss(this.cfg.ords ? this.cfg.ords[this.i] : this.i);
+    this.reward = '';
     this.states[this.i].gaveUp = true;
+    this.checkpoint();
     this.render();
     this.play(this.i);
   };
 
   Game.prototype.next = function () {
+    if (!this.active()) return;
     if (this.i + 1 < this.items.length) { this.i += 1; this.render(); return; }
     this.finish();
   };
 
-  Game.prototype.finish = function () {
-    this.done = true;
+  Game.prototype.checkpoint = function () {
+    if (this.cfg.progress) this.cfg.progress(this.report());
+  };
+
+  Game.prototype.report = function () {
     var solved = this.states.filter(function (s) { return s.solved; }).length;
     var report = {
       score: this.total(), matched: solved, total_pairs: this.items.length,
-      wrong: this.states.reduce(function (sum, s) { return sum + s.wrong; }, 0), best_combo: 0,
-      duration: Math.round((Date.now() - this.started) / 1000), level_count: 1,
+      wrong: this.states.reduce(function (sum, s) { return sum + s.wrong; }, 0), best_combo: this.round.best,
+      duration: this.round.elapsed(), level_count: 1,
       detail: this.states.map(function (s, i) {
-        return { i: i, hints: s.hints, wrong: s.wrong, solved: s.solved, gave_up: s.gaveUp, points: C.spellPoints(s) };
-      })
+        return { i: i, ord: this.cfg.ords ? this.cfg.ords[i] : i, hints: s.hints, wrong: s.wrong, solved: s.solved,
+          gave_up: s.gaveUp, points: C.spellPoints(s) };
+      }, this)
     };
-    try { if (this.cfg.save) this.cfg.save(report); } catch (e) { }
+    Object.assign(report, this.round.report());
+    return report;
+  };
+
+  Game.prototype.finish = function () {
+    if (this.done || this.loading) return;
+    this.done = true;
+    this.round.pause();
+    clearInterval(this.timer);
+    if (this.cfg.save) this.cfg.save(this.report());
     this.renderSummary();
   };
 
@@ -157,6 +222,7 @@
     this.mount.innerHTML = '<div class="card ig-summary">' +
       '<h2>' + esc(t('ig_doneTitle')) + '</h2>' +
       '<div class="ig-big">' + esc(t('ig_points', { n: this.total() })) + '</div>' +
+      (this.round.left() <= 0 ? '<p class="sub">' + esc(t('ig_timedOut')) + '</p>' : '') +
       '<p class="sub">' + esc(t('sp_summary', { right: solved, n: this.items.length })) + '</p>' +
       '<div class="scroll"><table><thead><tr><th>' + esc(t('sp_colCn')) + '</th><th>' + esc(t('sp_colPhrase')) + '</th><th>' +
       esc(t('sp_colResult')) + '</th><th>' + esc(t('ig_colPoints')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +

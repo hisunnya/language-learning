@@ -3,17 +3,91 @@
    ------------------------------------------------------------
    网站版和离线单文件页共用；node 里也能直接跑（tests/js/item_core.test.js）。
    计分规则（和 server/items.py 的 ORDER_* 保持一致，排排坐的最终分数由服务器按同样规则算）：
-     拼写：每题 10 分；用一次提示扣 3 分，拼错一次扣 2 分；最后拼对至少得 1 分；看答案得 0 分。
+     拼写：每题 80 分；提示扣 24 分，拼错扣 16 分；拼对至少得 8 分；看答案得 0 分。
      动词猎手：每题 10 分；每次选错扣 2 分；总共提交五次才答对得 0 分；跳过得 0 分。
-     排排坐：每句拼接 10 分，每检查出错一次扣 2 分、最少 2 分；提交有效朗读 30 分；
-             朗读和标准句子越接近，额外奖励越多，最多 20 分（服务器识别后给）。
+     翻译排排坐：每句排列 30 分，错一次扣 6 分、最少 6 分；有效录音 20 分；
+                 准确度奖励 0—35 分。四种玩法另有连击、限额加时和通关速度奖。
    ============================================================ */
 (function (global) {
   'use strict';
 
-  var SPELL = { full: 10, hint: 3, wrong: 2, floor: 1 };
+  var SPELL = { full: 80, hint: 24, wrong: 16, floor: 8 };
   var VERB = { full: 10, wrong: 2, floor: 0, maxAttempts: 5 };
-  var ORDER = { arrange: 10, wrong: 2, floor: 2, recording: 30, bonusMax: 20 };
+  var ORDER = { arrange: 30, wrong: 6, floor: 6, recording: 20, bonusMax: 35 };
+
+  function Round(kind, count, policy) {
+    this.policy = policy || {};
+    this.limit = this.policy.time_limit || Math.max(1, Math.floor(
+      ({ match: 60, verb: 12 * count, spell: 20 * count, order: 30 }[kind]) *
+      (this.policy.time_factor == null ? 1 : this.policy.time_factor)));
+    this.started = Date.now();
+    this.deadline = this.started + this.limit * 1000;
+    this.combo = this.best = this.policy.combo_seed || 0;
+    this.extra = this.secondsAdded = this.pausedTime = 0;
+    this.pausedAt = null;
+    this.events = [];
+    this.solved = {};
+  }
+  Round.prototype.left = function () {
+    return Math.max(0, ((this.pausedAt == null ? Date.now() : this.pausedAt) - this.deadline) / -1000);
+  };
+  Round.prototype.pause = function () { if (this.pausedAt == null) this.pausedAt = Date.now(); };
+  Round.prototype.resume = function () {
+    if (this.pausedAt == null) return;
+    var gap = Date.now() - this.pausedAt;
+    this.pausedTime += gap;
+    this.deadline += gap;
+    this.pausedAt = null;
+  };
+  Round.prototype.elapsed = function () {
+    return Math.min(this.limit + this.secondsAdded, Math.max(0,
+      Math.round(((this.pausedAt == null ? Date.now() : this.pausedAt) -
+        this.started - this.pausedTime) / 1000)));
+  };
+  Round.prototype.miss = function (ord) {
+    this.combo = 0;
+    this.events.push({ ord: ord, eligible: false, break: true });
+  };
+  Round.prototype.hit = function (base, eligible, ord) {
+    if (this.solved[ord]) return { points: 0, seconds: 0, combo: this.combo };
+    this.solved[ord] = true;
+    this.events.push({ ord: ord, eligible: !!eligible });
+    this.combo = eligible ? this.combo + 1 : 0;
+    this.best = Math.max(this.best, this.combo);
+    var ratio = [0, 0, .1, .2, .4, .6, .8, 1][Math.min(7, this.combo)];
+    var points = base * ratio;
+    var seconds = Math.min(this.combo >= 5 ? 2 : this.combo >= 2 ? 1 : 0,
+      Math.max(0, Math.min(10, Math.floor(this.limit * .2)) - this.secondsAdded));
+    this.extra += points;
+    this.secondsAdded += seconds;
+    this.deadline += seconds * 1000;
+    return { points: points, seconds: seconds, combo: this.combo };
+  };
+  Round.prototype.finish = function (base, complete) {
+    var speed = complete ? (base + this.extra) * .2 * Math.min(1, this.left() / this.limit) : 0;
+    return Math.round((base + this.extra + speed) *
+      (this.policy.score_factor == null ? 1 : this.policy.score_factor));
+  };
+  Round.prototype.report = function () {
+    return { play_token: this.policy.play_token || '', rule_version: 4,
+      combo_events: this.events.slice(), time_left: this.left(), initial_seconds: this.limit,
+      combo_bonus: this.extra, bonus_seconds: this.secondsAdded };
+  };
+
+  function begin(cfg, meta, start, fail) {
+    if (!cfg.begin) { start({}); return; }
+    cfg.begin(meta).then(start, fail);
+  }
+
+  function clockLabel(round) {
+    var seconds = Math.ceil(round.left());
+    return Math.floor(seconds / 60) + ':' + ('0' + seconds % 60).slice(-2);
+  }
+  function policyText(round, t) {
+    var p = round.policy;
+    return p.attempt ? t('ig_repeatPolicy', { n: p.attempt,
+      score: Math.round(p.score_factor * 100), time: Math.round(p.time_factor * 100) }) : '';
+  }
 
   function squash(text) { return String(text == null ? '' : text).replace(/\s+/g, ' ').trim(); }
   function key(text) { return squash(text).toLowerCase(); }
@@ -161,7 +235,8 @@
   }
 
   global.WPItemCore = {
-    SPELL: SPELL, VERB: VERB, ORDER: ORDER,
+    SPELL: SPELL, VERB: VERB, ORDER: ORDER, Round: Round, begin: begin,
+    clockLabel: clockLabel, policyText: policyText,
     squash: squash, key: key, distance: distance,
     spellCheck: spellCheck, spellPoints: spellPoints, spellHint: spellHint,
     verbCheck: verbCheck, verbPoints: verbPoints, dealVerbChoices: dealVerbChoices,

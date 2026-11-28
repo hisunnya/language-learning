@@ -383,20 +383,18 @@
         toast(t('g_fullscreenHint'));
       });
       b('btn-replay', function () {
-        self.game.replay(); toast(t('g_levelReset'));
+        self.startLevel(self.game.state.lv, true);
       });
       b('btn-restart', function () {
         self.finish();                 /* 先把这一局的成绩存下来 */
         self.stopTimer();
-        self.game.restart();
         self.showHome();
       });
 
       window.addEventListener('resize', function () { self.layoutCols(); });
-      /* 页面切到后台（切标签页、锁屏）时暂停计时，回来再继续，不让玩家白白被扣时间 */
+      /* 使用绝对截止时间，切后台也不能冻结限时。 */
       document.addEventListener('visibilitychange', function () {
-        if (document.hidden) self.game.pause();
-        else if (self.game.resume()) self.render();
+        if (!document.hidden) { self.game.tick(); self.render(); }
       });
       self.showHome();
       self.render();
@@ -404,6 +402,30 @@
     },
 
     /* ---- 首页 ---- */
+    startLevel: function (index, replay) {
+      if (this.starting) return;
+      var self = this, g = this.game;
+      var previous = this.finish();
+      this.stopTimer();
+      this.starting = true;
+      function start(policy) {
+        self.starting = false;
+        if (replay) g.state.score = g.state.levelStartScore || 0;
+        g.policy = policy || {};
+        hidePanel();
+        self.prefetchLevel(index);
+        g.start(index);
+        if (replay) toast(t('g_levelReset'));
+      }
+      function fail(err) { self.starting = false; toast(err.message || t('ig_startFailed')); }
+      if (this.cfg.begin) {
+        return Promise.resolve(previous).then(function (saved) {
+          if (saved === false) throw new Error(t('ig_scoreNotSaved'));
+          return self.cfg.begin({ level: index });
+        }).then(start, fail);
+      } else start({});
+    },
+
     showHome: function () {
       this.stopTimer();
       var self = this;
@@ -448,12 +470,9 @@
           b2.classList.add('on');
         };
         $('ov-start').onclick = function () {
-          hidePanel();
-          self.finished = false;
           g.state.score = 0; g.state.best = 0; g.state.levelStats = [];
           g.state.limit = g.levelTime;
-          self.prefetchLevel(picked);
-          g.start(picked);
+          self.startLevel(picked, false);
         };
         $('ov-list').onclick = function () { self.showList(); };
         var back = $('ov-back');
@@ -567,7 +586,10 @@
       if (bar) bar.style.width = (st.total_pairs ? st.matched / st.total_pairs * 100 : 0) + '%';
       var tip = $('s-tip');
       if (tip) {
-        tip.textContent = this.cfg.tip || t('g_tip');
+        var p = this.game.policy || {};
+        tip.textContent = p.attempt ? t('ig_repeatPolicy', {
+          n: p.attempt, score: Math.round(p.score_factor * 100), time: Math.round(p.time_factor * 100)
+        }) : this.cfg.tip || t('g_tip');
       }
     },
 
@@ -601,7 +623,7 @@
       var build = function () {
         var homeLabel = t(self.cfg.backHref ? 'g_back' : 'g_toLevels');
         var html = '<h2>' + esc(t('g_clearTitle', { n: lv + 1 })) + '</h2>' +
-          '<div class="big">' + evt.score + '</div>' +
+          '<div class="big">' + evt.stats.score + '</div>' +
           '<div class="kv"><span>' + esc(t('g_levelMatched')) + '</span><b>' + total + ' / ' + total + '</b></div>' +
           '<div class="kv"><span>' + esc(t('g_timeBonus')) + '</span><b>' + esc(t('g_bonusPts', { n: evt.bonus })) + '</b></div>' +
           '<div class="kv"><span>' + esc(t('g_bestCombo')) + '</span><b>x' + evt.best + '</b></div>';
@@ -619,25 +641,23 @@
 
       var bind = function () {
         $('ov-next').onclick = function () {
-          hidePanel();
           if (hasNext) {
-            g.next();
+            self.startLevel(lv + 1, false);
           } else {
-            g.restart();
             self.showHome();
           }
         };
-        $('ov-replay').onclick = function () { hidePanel(); g.replay(); };
+        $('ov-replay').onclick = function () { self.startLevel(lv, true); };
         $('ov-home').onclick = function () {
           hidePanel(); self.finish();
           if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
-          g.restart(); self.showHome();
+          self.showHome();
         };
       };
 
       openPanel(this, build, bind);
       this.render();
-      if (!hasNext) this.finish();
+      this.finish();
     },
 
     showTimeUp: function (evt) {
@@ -649,7 +669,7 @@
 
       var build = function () {
         var homeLabel = t(self.cfg.backHref ? 'g_back' : 'g_toLevels');
-        return '<h2>' + esc(t('g_timeUp')) + '</h2><div class="big">' + evt.score + '</div>' +
+        return '<h2>' + esc(t('g_timeUp')) + '</h2><div class="big">' + evt.stats.score + '</div>' +
           '<div class="kv"><span>' + esc(t('g_levelMatched')) + '</span><b>' + matched + ' / ' + total + '</b></div>' +
           '<div class="kv"><span>' + esc(t('g_wrongCount')) + '</span><b>' + wrong + '</b></div>' +
           '<p>' + esc(t('g_tryAgain')) + '</p>' +
@@ -658,11 +678,11 @@
       };
 
       var bind = function () {
-        $('ov-retry').onclick = function () { hidePanel(); g.replay(); };
+        $('ov-retry').onclick = function () { self.startLevel(st.lv, true); };
         $('ov-home').onclick = function () {
           hidePanel(); self.finish();
           if (self.cfg.backHref) { location.href = self.cfg.backHref; return; }
-          g.restart(); self.showHome();
+          self.showHome();
         };
       };
 
@@ -673,17 +693,27 @@
 
     /** 一局结束（全部通关、时间到、或主动退出）→ 交给 adapter 落库 */
     finish: function () {
-      if (this.finished) return;
+      if (this.finished || !this.game.state.startedAt) return this.saving;
       this.finished = true;
+      var st = this.game.state;
+      if (!st.endedAt) st.endedAt = Date.now();
+      st.timeLeft = Math.max(0, (st.deadline - st.endedAt) / 1000);
+      st.playing = false;
       var report = this.game.report();
-      try {
-        if (this.cfg.onFinish) this.cfg.onFinish(report);
-      } catch (e) { }
+      var self = this;
+      this.saving = Promise.resolve(this.cfg.onFinish ? this.cfg.onFinish(report) : undefined).then(function (saved) {
+        if (saved === false) self.finished = false;
+        return saved;
+      });
+      return this.saving;
     },
 
     /* ---- 生命周期钩子：只负责动画，不负责计分 ---- */
     onEvent: function (evt) {
       if (!evt) return;
+      if ((evt.type === 'match' || evt.type === 'miss') && this.cfg.progress) {
+        this.cfg.progress(this.game.report());
+      }
       var self = this;
       if (evt.type === 'board') {
         this.finished = false;         /* 新的一局开始，允许重新记分 */

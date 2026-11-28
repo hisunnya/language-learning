@@ -58,7 +58,7 @@ class TestMigrationFromTheSingleTeacherVersion(unittest.TestCase):
             self.make_old_db(path)
             db = Database(str(path))
             try:
-                self.assertGreaterEqual(db.one("PRAGMA user_version")[0], 2)      # 之后还有更新的升级（v3 配对分值减半）
+                self.assertGreaterEqual(db.one("PRAGMA user_version")[0], 2)      # 后续 schema 版本继续升级
                 self.assertEqual(sorted(tuple(r) for r in db.query("SELECT user_id, tag, teacher_id FROM user_tags")),
                                  [(8, "一班", 7), (9, "二班", 7)])
                 self.assertEqual(sorted(tuple(r) for r in db.query("SELECT bank_id, tag, teacher_id FROM bank_tags")),
@@ -183,8 +183,10 @@ class TestIsolation(TenantCase):
         self.ta.json("POST", "/api/admin/users/%d/tags" % a_id, {"tags": "成绩班"})
         x = self.bank(self.ta, "成绩书", tags="成绩班")
         a = self.login_as(a_no, "Teach3r!pw")
-        self.assertEqual(a.json("POST", "/api/scores", {"bank_id": x, "bank_title": "t", "score": 77, "matched": 9, "total_pairs": 9,
-                                                         "wrong": 0, "best_combo": 3, "duration": 30, "level_count": 1, "detail": []})[0], 201)
+        self.app.Handler.db.insert_score(
+            {"bank_id": x, "bank_title": "t", "score": 77, "matched": 9, "total_pairs": 9,
+             "wrong": 0, "best_combo": 3, "duration": 30, "level_count": 1, "detail": [],
+             "rule_version": 0}, user_id=a_id)
         a.request("POST", "/api/track", {"event": "view", "vid": "v" * 16 + a_no, "sid": "s" * 16, "path": "/word-puzzle/"})
         see = lambda c, path, key: [r for r in c.json("GET", path)[1][key] if r.get("user_id") == a_id]
         self.assertTrue(see(self.ta, "/api/scores/summary", "rows"))

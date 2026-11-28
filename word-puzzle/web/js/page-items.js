@@ -57,9 +57,13 @@
 
   function start(k) {
     current = k;
-    var ords = ordsOf(k);
+    var ords = GAME === 'spell' ? verbOrds : ordsOf(k);
     var cfg = {
-      items: groups[k].items, ords: ords, backHref: home(), playToken: token,
+      items: GAME === 'spell' ? verbItems : groups[k].items, ords: ords, backHref: home(), playToken: token,
+      begin: function (meta) { return WPAdapter.begin(meta, { bank_id: bank.id }); },
+      progress: function (report) { return WPAdapter.progress(report); },
+      phase: WPAdapter.phase,
+      recording: WPAdapter.recording,
       save: function (report) { return WPAdapter.save(report, { bank_id: bank.id, title: bank.title }); }
     };
     if (GAME === 'verb') {
@@ -83,9 +87,15 @@
 
   function pickVerb() {
     if (!verbItems.length) return;
-    $('igStart').hidden = false;
-    $('igStart').onclick = function () {
-      $('igStart').hidden = true;
+    var button = $('igStart');
+    if (!button) {
+      $('igMount').innerHTML = '<div class="card"><button type="button" class="btn" id="igStart"></button></div>';
+      button = $('igStart');
+    }
+    button.textContent = t('home_play');
+    button.hidden = false;
+    button.onclick = function () {
+      button.hidden = true;
       start(0);
     };
   }
@@ -106,7 +116,7 @@
   WPI18N.onChange(function () {
     if (failing) fail(failing);
     heading();
-    if (!game && GAME === 'verb') pickVerb();
+    if (!game && (GAME === 'verb' || GAME === 'spell')) pickVerb();
     else if (!game && groups.length > 1) pickLevel();
   });
 
@@ -120,7 +130,7 @@
       groups = (res.groups || []).filter(function (g) { return g.items && g.items.length; });
       heading();
       if (!groups.length) { fail('ig_empty'); return; }
-      if (GAME === 'verb') {
+      if (GAME === 'verb' || GAME === 'spell') {
         groups.forEach(function (group, level) {
           var groupOrds = ordsOf(level);
           group.items.forEach(function (item, i) {
@@ -128,12 +138,12 @@
             verbOrds.push(groupOrds[i]);
           });
         });
-        verbChoices = (verbItems[0].choices || []).slice();
+        if (GAME === 'verb') verbChoices = (verbItems[0].choices || []).slice();
       }
       var info = AuthUI.info();
       if (info.user) API.post('/api/recent', { bank_id: id }).catch(function () { });
       try { WPRecent.add(localStorage, WPRecent.userKey(info), id, Date.now()); } catch (e) { }
-      if (GAME === 'verb') pickVerb();
+      if (GAME === 'verb' || GAME === 'spell') pickVerb();
       else if (groups.length > 1) pickLevel();
       else start(0);
     }).catch(function (e) { fail('', e.message || t('ig_loadFail')); });

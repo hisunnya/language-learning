@@ -16,7 +16,7 @@ from tests.test_auth import Client, HttpCase        # noqa: E402
 WEB = ROOT / "web"
 LAN = {"X-Wp-Entry": "lan"}
 SCORE = {"bank_title": "t", "score": 10, "matched": 1, "total_pairs": 1, "wrong": 0, "best_combo": 1,
-         "duration": 5, "level_count": 1, "device": "dev-1", "detail": []}
+         "duration": 5, "level_count": 1, "device": "dev-1234567", "detail": []}
 
 
 class GuestCase(HttpCase):
@@ -68,11 +68,23 @@ class TestAnonymousOnTheLanEntrance(GuestCase):
             self.assertEqual(c.json("GET", path, headers=LAN)[0], 200, path)
 
     def test_anonymous_scores_are_kept_by_device(self):
+        from server import scoring
         c = Client(self.port)
-        status, body = c.json("POST", "/api/scores", SCORE, headers=LAN)
+        bank_id = c.json("GET", "/api/banks", headers=LAN)[1]["banks"][0]["id"]
+        status, started = c.json("POST", "/api/plays/start", {
+            "bank_id": bank_id, "device": SCORE["device"], "level": 0,
+        }, headers=LAN)
+        self.assertEqual(status, 201, started)
+        play = dict(self.app.Handler.db.one("SELECT * FROM game_plays WHERE token=?", (started["play_token"],)))
+        answer_ord = scoring._round_expected(self.app.Handler.db, play)[0]
+        status, body = c.json("POST", "/api/scores", {
+            "bank_id": bank_id, "device": SCORE["device"], "play_token": started["play_token"],
+            "level": 0, "detail": [{"level": 0, "answers": [{"ord": answer_ord, "solved": True, "wrong": 0}]}],
+            "combo_events": [{"ord": answer_ord, "eligible": True}],
+        }, headers=LAN)
         self.assertEqual(status, 201, body)
         rows = c.json("GET", "/api/scores/summary", headers=LAN)[1]["rows"]
-        self.assertTrue(any(r["user_id"] is None and r["device"] == "dev-1" for r in rows))
+        self.assertTrue(any(r["user_id"] is None and r["device"] == SCORE["device"] for r in rows))
 
     def test_every_management_endpoint_asks_for_a_login(self):
         c = Client(self.port)

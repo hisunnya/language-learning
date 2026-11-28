@@ -227,7 +227,7 @@ function match(game, n) {
 check('重玩本关会收回这一关里拿到的分', () => {
   const { game } = newGame();
   match(game, 2);
-  eq(game.state.score, 50 + 60, '先配对两个词（每对 50，第二对多 10 连击分）');
+  eq(game.state.score, 20 + 22, '每对 20，第二对奖励 10%');
   game.replay();
   eq(game.state.score, 0, '重玩后这一关的分应清零');
   eq(game.state.matched, 0);
@@ -267,24 +267,32 @@ check('时间到后重玩同样收回分数', () => {
 
 /* ---------- 时长覆盖整局 ---------- */
 
-check('duration 覆盖所有关卡，不是只算最后一关', () => {
+check('每关单独结算，不重复带入上一关的分数和用时', () => {
+  const events = [];
   const game = new WPGame.Game({
-    levels: [{ name: 'A', words: WORDS }, { name: 'B', words: WORDS }], onEvent: () => {}
+    levels: [{ name: 'A', words: WORDS }, { name: 'B', words: WORDS }], onEvent: e => events.push(e)
   });
   game.start(0);
   clock.now += 40 * 1000;
   match(game, 3);
   game.next();
   clock.now += 25 * 1000;
-  eq(game.report().duration, 65, '第 1 关 40 秒 + 第 2 关 25 秒');
+  eq(game.report().duration, 25);
+  eq(game.report().score, 0, '第二关白卷不能重复保存第一关分数');
+  eq(game.report().detail.length, 1);
+  game.timeUp();
+  eq(typesOf(events, 'timeUp')[0].stats.score, 0, '结算界面也必须显示本轮零分');
+  game.replay();
+  game.timeUp();
+  eq(game.report().score, 0, '重复超时也不能重复入账');
 });
 
-check('重玩一关不会让 duration 归零', () => {
+check('重玩作为独立一轮，用时重新计算', () => {
   const { game } = newGame();
   clock.now += 30 * 1000;
   game.replay();
   clock.now += 10 * 1000;
-  eq(game.report().duration, 40);
+  eq(game.report().duration, 10);
 });
 
 check('从头开始后 duration 重新计', () => {
@@ -302,7 +310,36 @@ check('每关基础时间是 60 秒（网站和小程序一致，见 core_parity
   eq(game.levelTime, 60);
   eq(game.state.timeLeft, 60);
   eq(game.state.limit, 60);
-  eq(WPGame.LEVEL_BONUS_MAX, 20, '结转的加时最多 20 秒，所以每关最长 80 秒');
+  eq(WPGame.LEVEL_BONUS_MAX, 0, '不再把时间结转到下一关');
+});
+
+check('未开始的报告不会把 Unix 时间当游戏用时', () => {
+  const game = new WPGame.Game({ levels: [{ words: WORDS }] });
+  eq(game.report().duration, 0);
+  eq(game.report().score, 0);
+});
+
+check('后台长时间不调度，恢复后的用时仍不超过本轮时限与加时', () => {
+  const { game } = newGame();
+  match(game, 2);
+  clock.now += 3 * 24 * 60 * 60 * 1000;
+  game.tick();
+  const report = game.report();
+  eq(report.duration, 61);
+  eq(report.detail[0].duration, 61);
+  eq(report.score, 42, '超时只结算已经取得的分数');
+});
+
+check('已配对的词不能重复领奖，错题不能延续无错连击', () => {
+  const { game } = newGame(), c = cards(game);
+  game.pick(c.en[0]); game.pick(c.cn[0]);
+  game.pick(c.en[0]); game.pick(c.cn[0]);
+  eq(game.state.matched, 1);
+  eq(game.state.score, 20);
+  game.pick(c.en[1]); game.pick(c.cn[2]);
+  game.pick(c.en[1]); game.pick(c.cn[1]);
+  eq(game.state.combo, 0);
+  eq(game.state.score, 36);
 });
 
 check('暂停期间剩余时间冻结，恢复后接着走', () => {

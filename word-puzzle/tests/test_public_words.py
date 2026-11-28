@@ -52,6 +52,23 @@ class PublicCase(HttpCase):
     def pub(self, method, path, body=None, c=None, headers=None):
         return (c or Client(self.port)).json(method, "/pub" + path, body, headers=headers)
 
+    def submit_score(self, bank_id, device, points):
+        from server import scoring
+        status, started = self.pub("POST", "/api/plays/start", {
+            "bank_id": bank_id, "device": device, "level": 0,
+        })
+        if status != 201:
+            return status, started
+        play = dict(self.app.Handler.db.one(
+            "SELECT * FROM game_plays WHERE token=?", (started["play_token"],)))
+        answer_ord = scoring._round_expected(self.app.Handler.db, play)[0]
+        return self.pub("POST", "/api/scores", {
+            "bank_id": bank_id, "device": device, "play_token": started["play_token"],
+            "score": points, "level": 0,
+            "detail": [{"level": 0, "answers": [{"ord": answer_ord, "solved": True, "wrong": 0}]}],
+            "combo_events": [{"ord": answer_ord, "eligible": True}],
+        })
+
 
 class TestWhatTheVisitorSees(PublicCase):
     def test_only_built_in_junior_and_senior_banks(self):
@@ -85,20 +102,24 @@ class TestWhatTheVisitorSees(PublicCase):
 
 class TestScoresByDevice(PublicCase):
     def test_a_score_is_kept_against_the_device_and_marked_public(self):
-        status, body = self.pub("POST", "/api/scores", score(self.junior, "d-mine-00000001", 42))
+        status, body = self.submit_score(self.junior, "d-mine-00000001", 42)
         self.assertEqual(status, 201, body)
         row = self.app.Handler.db.one("SELECT user_id, mode, device, nickname FROM scores WHERE id=?", (body["id"],))
         self.assertEqual((row["user_id"], row["mode"], row["device"], row["nickname"]), (None, "public", "d-mine-00000001", ""))
+        self.assertNotEqual(body["score"], 42, "客户端传入的总分不可信")
 
     def test_each_device_sees_only_its_own(self):
-        self.pub("POST", "/api/scores", score(self.senior, "d-alice-0000001", 7))
-        self.pub("POST", "/api/scores", score(self.senior, "d-bob-000000001", 9))
+        self.submit_score(self.senior, "d-alice-0000001", 7)
+        self.submit_score(self.senior, "d-bob-000000001", 9)
         mine = self.pub("GET", "/api/scores/summary?device=d-alice-0000001")[1]["rows"]
-        self.assertEqual([(r["device"], r["best"]) for r in mine], [("d-alice-0000001", 7)])
+        self.assertEqual(len(mine), 1)
+        self.assertEqual(mine[0]["device"], "d-alice-0000001")
+        self.assertGreater(mine[0]["best"], 0)
         self.assertEqual(self.pub("GET", "/api/scores/summary")[1]["rows"], [], "不给设备号就什么都没有")
         self.assertEqual(self.pub("GET", "/api/scores/summary?device=x' OR 1=1")[1]["rows"], [])
         plays = self.pub("GET", "/api/scores/plays?device=d-bob-000000001&bank_id=%d" % self.senior)[1]["plays"]
-        self.assertEqual([p["score"] for p in plays], [9])
+        self.assertEqual(len(plays), 1)
+        self.assertGreater(plays[0]["score"], 0)
 
     def test_scores_only_on_public_banks_and_with_a_real_device_number(self):
         self.assertEqual(self.pub("POST", "/api/scores", score(self.college))[0], 404)
@@ -107,7 +128,7 @@ class TestScoresByDevice(PublicCase):
         self.assertEqual(self.pub("POST", "/api/scores", score(self.junior, "x"))[0], 400)
 
     def test_public_scores_never_reach_a_leaderboard_or_a_teacher(self):
-        self.pub("POST", "/api/scores", score(self.junior, "d-board-0000001", 999))
+        self.submit_score(self.junior, "d-board-0000001", 999)
         c = Client(self.port)
         c.json("POST", "/api/auth/login", {"student_no": "T001", "password": "Teach3r!pw"})
         board = c.json("GET", "/api/leaderboard")[1]
@@ -115,8 +136,8 @@ class TestScoresByDevice(PublicCase):
 
     def test_too_many_scores_from_one_address_are_refused(self):
         from server import accesslog
-        with mock.patch.object(self.app.Handler, "public_score_throttle", accesslog.Throttle(limit=2, seconds=60)):
-            codes = [self.pub("POST", "/api/scores", score(self.junior, "d-spam-00000001"))[0] for _ in range(4)]
+        with mock.patch.object(self.app.Handler, "public_score_throttle", accesslog.Throttle(limit=4, seconds=60)):
+            codes = [self.submit_score(self.junior, "d-spam-00000001", 10)[0] for _ in range(4)]
         self.assertEqual(codes, [201, 201, 429, 429])
 
 

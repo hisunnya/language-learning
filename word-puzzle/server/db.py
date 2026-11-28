@@ -321,6 +321,43 @@ CREATE TABLE IF NOT EXISTS recordings (
 CREATE INDEX IF NOT EXISTS ix_rec_user ON recordings(user_id, created_at);
 CREATE INDEX IF NOT EXISTS ix_rec_play ON recordings(play_token);
 CREATE INDEX IF NOT EXISTS ix_rec_status ON recordings(status);
+
+-- 新计分的一局。一个 token 只结算一次，身份、关卡、衰减系数和计时都由服务器固定。
+CREATE TABLE IF NOT EXISTS game_plays (
+    token          TEXT PRIMARY KEY,
+    user_id        INTEGER,
+    device         TEXT NOT NULL DEFAULT '',
+    mode           TEXT NOT NULL DEFAULT 'online',
+    bank_id        INTEGER NOT NULL,
+    game_type      TEXT NOT NULL,
+    level          INTEGER NOT NULL,
+    ords           TEXT NOT NULL DEFAULT '[]',
+    group_key      TEXT NOT NULL,
+    attempt        INTEGER NOT NULL,
+    score_factor   REAL NOT NULL,
+    time_factor    REAL NOT NULL,
+    time_limit     INTEGER NOT NULL,
+    started_at     REAL NOT NULL,
+    expires_at     REAL NOT NULL,
+    phase          TEXT NOT NULL DEFAULT 'playing',
+    phase_started  REAL NOT NULL DEFAULT 0,
+    recording_deadline REAL NOT NULL DEFAULT 0,
+    paused_seconds REAL NOT NULL DEFAULT 0,
+    status         TEXT NOT NULL DEFAULT 'started',
+    score_id       INTEGER,
+    final_score    INTEGER NOT NULL DEFAULT 0,
+    terminal_combo INTEGER NOT NULL DEFAULT 0,
+    seeded_from    TEXT,
+    seed_claimed   INTEGER NOT NULL DEFAULT 0,
+    detail         TEXT NOT NULL DEFAULT '[]',
+    combo_events   TEXT NOT NULL DEFAULT '[]',
+    checkpoint_at  REAL NOT NULL DEFAULT 0,
+    score_snapshot TEXT NOT NULL DEFAULT '{}',
+    checkpoint_elapsed REAL NOT NULL DEFAULT 0,
+    checkpoint_bonus_seconds INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS ix_game_plays_actor ON game_plays(user_id, device, bank_id, game_type, group_key, status);
+CREATE INDEX IF NOT EXISTS ix_game_plays_score ON game_plays(score_id);
 """
 
 
@@ -441,6 +478,21 @@ class Database:
             self.execute("ALTER TABLE scores ADD COLUMN game_type TEXT NOT NULL DEFAULT 'match'")
         if "game_type" not in {row["name"] for row in self.query("PRAGMA table_info(banks)")}:
             self.execute("ALTER TABLE banks ADD COLUMN game_type TEXT NOT NULL DEFAULT 'match'")
+        score_columns = {row["name"] for row in self.query("PRAGMA table_info(scores)")}
+        if "rule_version" not in score_columns:
+            self.execute("ALTER TABLE scores ADD COLUMN rule_version INTEGER NOT NULL DEFAULT 0")
+        if "play_token" not in score_columns:
+            self.execute("ALTER TABLE scores ADD COLUMN play_token TEXT")
+        if "score_factor" not in score_columns:
+            self.execute("ALTER TABLE scores ADD COLUMN score_factor REAL NOT NULL DEFAULT 1")
+        self.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_scores_play_token ON scores(play_token) WHERE play_token IS NOT NULL")
+        play_columns = {row["name"] for row in self.query("PRAGMA table_info(game_plays)")}
+        if "score_snapshot" not in play_columns:
+            self.execute("ALTER TABLE game_plays ADD COLUMN score_snapshot TEXT NOT NULL DEFAULT '{}'")
+        if "checkpoint_elapsed" not in play_columns:
+            self.execute("ALTER TABLE game_plays ADD COLUMN checkpoint_elapsed REAL NOT NULL DEFAULT 0")
+        if "checkpoint_bonus_seconds" not in play_columns:
+            self.execute("ALTER TABLE game_plays ADD COLUMN checkpoint_bonus_seconds INTEGER NOT NULL DEFAULT 0")
         # v1（2026-11）：每关默认词数 12 → 9（手机竖屏一屏正好放下 3×6 张卡）。
         # 只改还是旧默认值 12 的题库；老师特意设成别的数的不动；只做一次（user_version 记着）。
         if self.one("PRAGMA user_version")[0] < 1:
@@ -453,13 +505,14 @@ class Database:
                 self.execute("INSERT OR IGNORE INTO teacher_students(teacher_id, student_id, added_at) "
                              "SELECT ?, id, ? FROM users WHERE role='student'", (owner, int(time.time())))
             self.execute("PRAGMA user_version = 2")
-        # v3（2026-11-21）：中英配对的分值减半（每对 100 → 50，连击、扣分、时间分同比例），历史成绩也按比例减半，
-        # 和新的成绩、新题型放在同一个积分榜上标准一致。只做一次（user_version 记着），新题型的成绩不动。
-        # 「看版本 → 减半 → 改版本」在同一个事务里：中途断电不会留下「已经减半、版本还是 2」，下次启动也就不会再减一次。
+        # v3（2026-11）：只推进 schema 版本，不在启动时改写历史分数。
+        # 旧分数的规则转换由 tools/recalculate_scores.py 预览、备份后显式应用。
         with self._tx() as conn:
             if conn.execute("PRAGMA user_version").fetchone()[0] < 3:
-                conn.execute("UPDATE scores SET score = CAST((score + 1) / 2 AS INTEGER) WHERE game_type='match'")
                 conn.execute("PRAGMA user_version = 3")
+        # v4 只增加新局状态和成绩版本字段，不在启动时改写历史成绩。
+        if self.one("PRAGMA user_version")[0] < 4:
+            self.execute("PRAGMA user_version = 4")
 
     def default_teacher_id(self) -> int:
         """第一位（编号最小的）没被删除的超级管理员；没有就是 0（家庭版、或者还没建管理员）。
@@ -762,15 +815,16 @@ class Database:
             cur = conn.execute(
                 "INSERT INTO scores(bank_id, bank_title, device, nickname, mode, "
                 "score, matched, total_pairs, wrong, best_combo, duration, "
-                "level_count, detail, created_at, user_id, game_type) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                "level_count, detail, created_at, user_id, game_type, rule_version, play_token, score_factor) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (rec.get("bank_id"), rec.get("bank_title", ""),
                  rec.get("device", ""), rec.get("nickname", ""),
                  rec.get("mode", "online"), int(rec.get("score", 0)),
                  int(rec.get("matched", 0)), int(rec.get("total_pairs", 0)),
                  int(rec.get("wrong", 0)), int(rec.get("best_combo", 0)),
                  int(rec.get("duration", 0)), int(rec.get("level_count", 0)),
-                 detail, ts, user_id, rec.get("game_type") or "match"),
+                 detail, ts, user_id, rec.get("game_type") or "match", int(rec.get("rule_version", 0)),
+                 rec.get("play_token"), float(rec.get("score_factor", 1))),
             )
         return int(cur.lastrowid)
 

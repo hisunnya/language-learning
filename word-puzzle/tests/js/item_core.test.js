@@ -25,10 +25,10 @@ check('拼写不分大小写、多余空格不算', () => {
   eq(C.spellCheck('erradicat', 'eradicate'), 'close', '长词差两个字母也算差一点');
 });
 
-check('拼写计分：提示扣 3、拼错扣 2、拼对至少 1 分、看答案 0 分', () => {
-  eq(C.spellPoints({ solved: true }), 10);
-  eq(C.spellPoints({ solved: true, hints: 1, wrong: 1 }), 5);
-  eq(C.spellPoints({ solved: true, hints: 2, wrong: 5 }), 1);
+check('拼写计分：提示扣 24、拼错扣 16、拼对至少 8 分、看答案 0 分', () => {
+  eq(C.spellPoints({ solved: true }), 80);
+  eq(C.spellPoints({ solved: true, hints: 1, wrong: 1 }), 40);
+  eq(C.spellPoints({ solved: true, hints: 2, wrong: 5 }), 8);
   eq(C.spellPoints({ gaveUp: true }), 0);
   eq(C.spellPoints({ solved: false }), 0);
 });
@@ -93,12 +93,12 @@ check('排排坐：按文字判对错，指出第一个放错的位置', () => {
   eq(C.orderCheck(twins, [2, 1, 0]).ok, true, '文字一样的两个片段换位置也算对');
 });
 
-check('排排坐计分：拼接 10、出错扣 2 最少 2；有效朗读 30；奖励另加', () => {
-  eq(C.orderArrangePoints(0), 10);
-  eq(C.orderArrangePoints(3), 4);
-  eq(C.orderArrangePoints(9), 2);
-  eq(C.orderPoints({ arranged: true, wrong: 1, recordingValid: true, bonus: 17 }), 8 + 30 + 17);
-  eq(C.orderPoints({ arranged: true, wrong: 0 }), 10);
+check('翻译排排坐计分：排列 30、出错扣 6 最少 6；有效朗读 20；准确奖另加', () => {
+  eq(C.orderArrangePoints(0), 30);
+  eq(C.orderArrangePoints(3), 12);
+  eq(C.orderArrangePoints(9), 6);
+  eq(C.orderPoints({ arranged: true, wrong: 1, recordingValid: true, bonus: 17 }), 24 + 20 + 17);
+  eq(C.orderPoints({ arranged: true, wrong: 0 }), 30);
   eq(C.orderPoints({ arranged: false, recordingValid: true, bonus: 20 }), 0);
 });
 

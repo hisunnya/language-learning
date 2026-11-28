@@ -14,7 +14,7 @@ const POOL = ['run', 'walk', 'jump', 'eat', 'drive', 'sleep', 'read', 'work'];
 
 function makeWorld(items = ITEMS, ords = items.map((_, i) => i)) {
   const listeners = {};
-  const reports = [];
+  const reports = [], progress = [];
   const timers = new Map();
   let now = 1000000, timerId = 0, onLangChange;
   class Clock extends Date {
@@ -85,10 +85,11 @@ function makeWorld(items = ITEMS, ords = items.map((_, i) => i)) {
   vm.runInContext(fs.readFileSync(path.join(WEB, 'verb-ui.js'), 'utf8'), sandbox);
   const game = window.WPVerbUI.start(mount, {
     items, ords, choices: POOL, levelCount: 2,
-    save(report) { reports.push(report); }
+    save(report) { reports.push(report); },
+    progress(report) { progress.push(report); return Promise.resolve(true); }
   });
   return {
-    window, mount, listeners, game, reports, timers,
+    window, mount, listeners, game, reports, progress, timers,
     advance(ms, tick = true) {
       now += ms;
       if (tick) Array.from(timers.values()).forEach((fn) => fn());
@@ -176,8 +177,10 @@ function ok(condition, message) { if (!condition) throw new Error(message); }
     world.click('#vhSkip');
     world.click('#vhFinishNow');
     ok(report && report.score === 0 && report.matched === 1 && report.wrong === 4, '手动交卷保存整局成绩');
-    ok(report.level_count === 2 && report.detail[0].i === 0 && report.detail[0].ord === firstOrd,
-      '成绩保留本局题号、原题序号和题库分组数');
+    ok(report.level_count === 1 && report.detail[0].i === 0 && report.detail[0].ord === firstOrd,
+      '整套只结算一轮，保留本局题号和原题序号');
+    ok(report.rule_version === 4 && Array.isArray(report.combo_events), '整局报告必须带轮次元数据');
+    ok(world.progress.length > 0 && world.progress[0].detail[0].ord === firstOrd, '作答时同步原题号快照');
   });
 
   await check('空题提示可返回补做，也可以直接交卷', async () => {
@@ -214,7 +217,7 @@ function ok(condition, message) { if (!condition) throw new Error(message); }
     world.chooseAnswer();
     world.click('#vhNext');
     ok(world.game.done && world.reports.length === 1, '最后一题自动交卷且只保存一次');
-    ok(world.reports[0].score === 18 && world.reports[0].matched === 2, '多次尝试扣分保留');
+    ok(world.reports[0].score === 22 && world.reports[0].matched === 2, '18分作答加20%完成速度奖取整');
     ok(world.timers.size === 0, '交卷后停止倒计时');
   });
 
@@ -228,7 +231,7 @@ function ok(condition, message) { if (!condition) throw new Error(message); }
     world.click('#vhReview');
     world.chooseAnswer();
     world.click('#vhFinish');
-    ok(world.game.done && world.reports[0].score === 20, '补答后全部答对就自动交卷');
+    ok(world.game.done && world.reports[0].score === 25, '补答全部正确自动交卷，含二连1分和速度奖');
   });
 
   await check('补答时交卷判错仍可重试，交卷按钮不因选择答案而消失', async () => {
@@ -257,20 +260,17 @@ function ok(condition, message) { if (!condition) throw new Error(message); }
 
   await check('倒计时从开始计算，导航、切换语言和补答提示均不暂停或重置', async () => {
     const world = makeWorld();
-    ok(world.mount.innerHTML.includes('2:00'), '开始显示两分钟');
+    ok(world.mount.innerHTML.includes('0:24'), '两题时限为12×2秒');
     world.advance(1000);
-    ok(world.mount.querySelector('#vhTimer').textContent.includes('1:59'), '更新剩余秒数');
+    ok(world.mount.querySelector('#vhTimer').textContent.includes('0:23'), '更新剩余秒数');
     world.click('#vhNext');
     world.click('#vhNext');
-    world.advance(89000);
-    ok(!world.game.done && world.mount.querySelector('#vhTimer').textContent.includes('0:30'),
-      '原先90秒的时点不再交卷');
-    world.advance(29000);
+    world.advance(22000);
     world.changeLanguage();
     ok(!world.game.done && world.mount.innerHTML.includes('0:01'), '补答提示和语言重绘仍只剩一秒');
     world.advance(1000);
-    ok(world.game.done && world.reports.length === 1, '第120秒立即交卷');
-    ok(world.reports[0].score === 0 && world.reports[0].duration === 120, '空题零分，耗时120秒');
+    ok(world.game.done && world.reports.length === 1, '第24秒立即交卷');
+    ok(world.reports[0].score === 0 && world.reports[0].duration === 24, '白卷零分，耗时24秒');
     ok(world.mount.innerHTML.includes('vh_timeout'), '明确显示超时交卷提示');
     world.advance(2000);
     ok(world.reports.length === 1, '超时只保存一次');
@@ -312,12 +312,12 @@ function ok(condition, message) { if (!condition) throw new Error(message); }
     world.advance(125000, false);
     world.click('#vhNext');
     ok(world.game.done && world.reports[0].score === 0, '截止后点击先交卷，不接受迟到答案');
-    ok(world.reports[0].duration === 120, '延迟回调不会把局时长记成125秒');
+    ok(world.reports[0].duration === 24, '延迟回调的用时也不超出本轮时限');
     world.click('#vhAgain');
-    ok(!world.game.done && world.timers.size === 1 && world.mount.innerHTML.includes('2:00'), '重玩建立唯一的新倒计时');
+    ok(!world.game.done && world.timers.size === 1 && world.mount.innerHTML.includes('0:24'), '重玩建立唯一的新倒计时');
     ok(!world.mount.querySelector('#vhFinish'), '重玩恢复首轮流程，不保留补答交卷按钮');
-    world.advance(119999);
-    ok(!world.game.done, '新局120秒前仍可作答');
+    world.advance(23999);
+    ok(!world.game.done, '新局24秒前仍可作答');
     world.advance(1);
     ok(world.game.done && world.reports.length === 2, '新局到时独立保存');
   });

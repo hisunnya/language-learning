@@ -37,7 +37,7 @@ from server import items as items_mod  # noqa: E402
 from server import asr, recordings as rec_mod  # noqa: E402
 from server import awards as awards_mod  # noqa: E402
 from server import templates as templates_mod  # noqa: E402
-from server import accesslog, hierarchy, leaderboard, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, tts  # noqa: E402
+from server import accesslog, hierarchy, leaderboard, modules, policy, tenancy, ipa, materials, offline, pdf, roster, scorebook, scoring, tts  # noqa: E402
 from server.db import Database, TagError, normalize_category, normalize_tags  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -331,6 +331,16 @@ class Handler(BaseHTTPRequestHandler):
     def _uid(self) -> int | None:
         return self.user["id"] if (self.auth is not None and self.user) else None
 
+    def _play_actor(self, payload: dict) -> tuple[int | None, str, str]:
+        """登录账号是唯一可信身份；匿名入口用现有设备号隔离成绩。"""
+        uid = self._uid()
+        if uid is not None:
+            return uid, "u%d" % uid, "online"
+        device = self._device_param({"device": payload.get("device")})
+        if not device:
+            raise HttpError(400, "设备号不合法", "bad_device")
+        return None, device, "public" if self.public else "online"
+
     def _bank_visible(self, bank: dict | None) -> bool:
         """超管看得到全部；老师看得到自己的、共享给他的、内置的；学生看得到某位老师给他开放的；家庭版访客看得到内置的和超管的。"""
         return tenancy.bank_visible(self.db, self._scope(), bank)
@@ -386,7 +396,8 @@ class Handler(BaseHTTPRequestHandler):
     PUBLIC_ROUTES = (
         ("GET", r"/api/health"), ("GET", r"/api/auth/me"), ("POST", r"/api/track"),
         ("GET", r"/api/meta"), ("GET", r"/api/banks"), ("GET", r"/api/banks/\d+"),
-        ("GET", r"/api/audio/.+"), ("POST", r"/api/scores"), ("GET", r"/api/scores/summary"),
+        ("GET", r"/api/audio/.+"), ("POST", r"/api/plays/start"), ("POST", r"/api/plays/progress"),
+        ("POST", r"/api/scores"), ("GET", r"/api/scores/summary"),
         ("GET", r"/api/scores/plays"), ("GET", r"/api/recent"),
     )
 
@@ -437,6 +448,51 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         self._gate(path)
+
+        # ---- 新计分：服务器签发一轮 token，页面只提交这一关/这一组的明细 ----
+        if path == "/api/plays/start" and method == "POST":
+            payload = self.read_json()
+            if self.public and not self.public_score_throttle.allow(
+                    accesslog.request_info(self.headers, self._peer())["ip"]):
+                raise HttpError(429, "请求太频繁，请稍后再试", "rate_limited")
+            try:
+                bank_id = int(payload.get("bank_id"))
+            except (TypeError, ValueError):
+                raise HttpError(400, "bank_id 不合法", "bad_bank_id") from None
+            bank = db.get_bank(bank_id)
+            if not self._bank_visible(bank):
+                raise HttpError(404, "题库不存在")
+            uid, device, mode = self._play_actor(payload)
+            if self.public and (bank.get("game_type") or "match") != "match":
+                raise HttpError(404, "公开版只开放中英配对")
+            try:
+                started = scoring.begin_play(
+                    db, bank=bank, user_id=uid, device=device, mode=mode,
+                    level=int_param(payload.get("level"), "level"),
+                    ords=payload.get("ords"), previous_play_token=payload.get("previous_play_token", ""))
+            except scoring.PlayError as exc:
+                raise HttpError(exc.status, str(exc), exc.code) from exc
+            return self.send_json(started, status=201)
+
+        if path in ("/api/plays/phase", "/api/plays/progress") and method == "POST":
+            payload = self.read_json()
+            uid, device, mode = self._play_actor(payload)
+            token = payload.get("play_token")
+            try:
+                play = scoring.get_owned_play(db, token, user_id=uid, device=device, mode=mode)
+                bank = db.get_bank(play["bank_id"])
+                if not self._bank_visible(bank):
+                    raise HttpError(404, "题库不存在")
+                if path == "/api/plays/phase":
+                    result = scoring.phase(db, play, str(payload.get("phase") or ""))
+                else:
+                    if self.public and play["game_type"] != "match":
+                        raise HttpError(404, "公开版只开放中英配对")
+                    scoring.checkpoint(db, play, payload)
+                    result = {"ok": True}
+            except scoring.PlayError as exc:
+                raise HttpError(exc.status, str(exc), exc.code) from exc
+            return self.send_json(result)
 
         # ---- 管理员接口（老师和超级管理员；超管专属的在里面另外检查） ----
         if path.startswith("/api/admin/"):
@@ -638,6 +694,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/recordings" and method == "POST":
             self.handle_recording_upload()
             return
+        m = re.fullmatch(r"/api/recordings/(\d+)", path)
+        if m and method == "GET":
+            self.handle_recording_status(int(m.group(1)), query.get("device", ""))
+            return
         m = re.fullmatch(r"/api/recordings/(\d+)/audio", path)
         if m and method == "GET":
             self.handle_recording_audio(int(m.group(1)))
@@ -751,33 +811,32 @@ class Handler(BaseHTTPRequestHandler):
                         raise HttpError(400, "bank_id 不合法") from None
                     if not self._bank_visible(db.get_bank(bank_id)):
                         raise HttpError(404, "题库不存在")
-                # 游戏类型以题库为准，不信客户端报的
-                rec["game_type"] = "match"
                 if rec.get("bank_id") not in (None, ""):
                     try:
-                        found = db.get_bank(int(rec["bank_id"]))
+                        bank_id = int(rec["bank_id"])
                     except (TypeError, ValueError):
-                        found = None
-                    if found:
-                        rec["game_type"] = found.get("game_type") or "match"
-                if uid is not None:
-                    # 身份以登录态为准，不信客户端自己报的设备号和昵称
-                    rec["device"] = "u%d" % uid
-                    rec["nickname"] = self.user["name"]
-                order_detail = None
-                if rec["game_type"] == "order":
-                    # 排排坐的分数由服务器算：拼接按页面报的出错次数，朗读只认这个人在这道题上交过、服务器判过的录音
-                    rec["score"], rec["matched"], order_detail = rec_mod.order_score(db, int(rec["bank_id"]), uid, rec.get("detail"))
-                    rec["detail"] = order_detail
+                        raise HttpError(400, "bank_id 不合法", "bad_bank_id") from None
+                    bank = db.get_bank(bank_id)
+                    if not self._bank_visible(bank):
+                        raise HttpError(404, "题库不存在")
+                else:
+                    bank_id, bank = None, None
+                if not rec.get("play_token"):
+                    raise HttpError(409, "成绩缺少本轮 play_token", "play_required")
+                if not bank:
+                    raise HttpError(400, "新成绩必须关联题库", "bad_bank_id")
+                uid, device, mode = self._play_actor(rec)
                 try:
-                    sid = db.insert_score(rec, user_id=uid)
-                except Exception as exc:
-                    raise HttpError(400, f"成绩保存失败：{exc}") from exc
-                if order_detail is not None:
-                    rec_mod.attach(db, sid, order_detail)
-                    rec_mod.rescore(db, sid)          # 交成绩前刚识别完的录音也算进去
-                self.send_json({"ok": True, "id": sid, "score": db.one("SELECT score FROM scores WHERE id=?", (sid,))["score"]},
-                               status=201)
+                    play = scoring.get_owned_play(
+                        db, rec.get("play_token"), user_id=uid, device=device, mode=mode)
+                    if play["bank_id"] != bank_id or play["game_type"] != (bank.get("game_type") or "match"):
+                        raise HttpError(409, "成绩与 play_token 不匹配", "play_mismatch")
+                    sid, score, duplicate = scoring.finalize(
+                        db, play, rec, nickname=(self.user.get("name", "") if self.user else rec.get("nickname", "")))
+                except scoring.PlayError as exc:
+                    raise HttpError(exc.status, str(exc), exc.code) from exc
+                self.send_json({"ok": True, "id": sid, "score": score, "duplicate": duplicate},
+                               status=200 if duplicate else 201)
                 return
 
         # ---- 成绩汇总：每个学生 × 每套题一行；点开一行看每一次的明细 ----
@@ -909,19 +968,44 @@ class Handler(BaseHTTPRequestHandler):
         name = (upload.get("filename") or "").lower()
         mime = ("audio/mp4" if name.endswith((".m4a", ".mp4")) else "audio/ogg" if name.endswith(".ogg")
                 else "audio/aac" if name.endswith(".aac") else "audio/webm")
-        token = re.sub(r"[^A-Za-z0-9_-]", "", field("play_token"))[:64]
-        who = str(self._uid() or accesslog.request_info(self.headers, self._peer())["ip"])
+        token = field("play_token")
+        if not token:
+            raise HttpError(409, "录音缺少本轮 play_token", "play_required")
+        uid, device, mode = self._play_actor({"device": field("device")})
+        received_at = time.time()
+        try:
+            play = scoring.get_owned_play(db, token, user_id=uid, device=device, mode=mode)
+            if play["bank_id"] != bank_id or play["game_type"] != "order":
+                raise HttpError(409, "录音与 play_token 不匹配", "play_mismatch")
+            scoring.check_upload(play, item_ord, received_at)
+        except scoring.PlayError as exc:
+            raise HttpError(exc.status, str(exc), exc.code) from exc
+        who = str(uid or accesslog.request_info(self.headers, self._peer())["ip"])
         if not self.recording_throttle.allow(who):
             raise HttpError(429, "交得太频繁，请稍后再试", "rate_limited")
         try:
-            rec = rec_mod.store(db, user_id=self._uid(), bank=bank, item_ord=item_ord, play_token=token,
-                                data=upload["data"], mime=mime, client_ms=client_ms)
+            rec = rec_mod.store(db, user_id=uid, bank=bank, item_ord=item_ord, play_token=token,
+                                data=upload["data"], mime=mime, client_ms=client_ms, device=device)
         except ValueError as exc:                       # 服务器量出来超过 30 秒
             raise HttpError(400, str(exc), "too_long") from exc
+        scoring.accept_upload(db, play, item_ord, received_at)
         if rec["status"] == "pending" and self.rec_worker is not None:
             self.rec_worker.submit(rec["id"])
-            rec = self.rec_worker.wait(rec["id"]) or rec
         self.send_json({"ok": True, "recording": rec_mod.public(rec)}, status=201)
+
+    def handle_recording_status(self, rid: int, device: str = "") -> None:
+        rec = rec_mod.get(self.db, rid)
+        if not rec:
+            raise HttpError(404, "没有这条录音")
+        mine = (rec["user_id"] is not None and rec["user_id"] == self._uid())
+        if rec["user_id"] is None and self._uid() is None:
+            wanted = self._device_param({"device": device or self.headers.get("X-Wp-Device", "")})
+            mine = bool(wanted and rec.get("device") == wanted)
+        if not mine:
+            cond, args = tenancy.people_where(self._scope(), "r.user_id")
+            if not self.db.one("SELECT 1 FROM recordings r WHERE r.id=? AND " + cond, (rid, *args)):
+                raise HttpError(404, "没有这条录音")
+        self.send_json({"ok": True, "recording": rec_mod.public(rec)})
 
     def handle_recording_audio(self, rid: int) -> None:
         """回放录音：自己的；老师看得到这个学生的（和成绩同一个范围）。"""

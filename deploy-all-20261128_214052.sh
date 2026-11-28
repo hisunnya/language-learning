@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261128_180500.sh
+# 在生产服务器上 git pull 后运行：sudo bash deploy-all-20261128_214052.sh
 #
 # 这个仓库是公开的：服务器地址、内网地址、公网网址这类私有信息一律不写进仓库，
 # 放在仓库根目录下不进 git 的 deploy.local.env（见 deploy.local.env.example），也可以用同名环境变量覆盖：
@@ -69,8 +69,10 @@ for path in \
   word-puzzle/web/js/page-visits.js \
   word-puzzle/tools/build_public_web.py \
   word-puzzle/tools/import_items.py \
+  word-puzzle/tools/recalculate_scores.py \
   word-puzzle/tools/asr_worker.py \
   word-puzzle/server/items.py \
+  word-puzzle/server/scoring.py \
   word-puzzle/server/recordings.py \
   word-puzzle/server/asr.py \
   word-puzzle/server/awards.py \
@@ -83,6 +85,10 @@ for path in \
   word-puzzle/web/order.html \
   word-puzzle/web/verb.html \
   word-puzzle/web/js/verb-ui.js \
+  word-puzzle/web/js/game-adapter-online.js \
+  word-puzzle/web/js/item-core.js \
+  word-puzzle/web/js/order-ui.js \
+  word-puzzle/web/js/spell-ui.js \
   hub/deploy/install.sh \
   hub/deploy/lingua-grove.conf \
   hub/deploy/site-proxy.conf \
@@ -248,6 +254,9 @@ check_path /word-puzzle/order.html
 check_path /word-puzzle/verb.html
 check_path /word-puzzle/js/item-core.js
 check_path /word-puzzle/js/verb-ui.js
+check_path /word-puzzle/js/game-adapter-online.js
+check_path /word-puzzle/js/order-ui.js
+check_path /word-puzzle/js/spell-ui.js
 check_path /word-puzzle/img/icon.svg
 check_path /word-puzzle/js/release-presets.js
 check_path /word-puzzle/js/i18n.js
@@ -277,6 +286,7 @@ cat <<EOF
   总后台：http://$SERVER_NAME/backends/   （要老师账号，不放在主页上）
   词境学生版：http://$SERVER_NAME/word-puzzle/   （要登录，不放在主页上）
   动词猎手：http://$SERVER_NAME/word-puzzle/verb.html   （要登录）
+  积分规则：四种玩法已启用新版计分；历史重算须另行备份并显式执行，不随安装重复运行。
 
 $([[ -n "$LEXICA_CTID" ]] && echo "整站在容器 $LEXICA_CTID 里，已经更新（服务：pct exec $LEXICA_CTID -- systemctl status word-puzzle-family）；浏览器 Ctrl+Shift+R 强刷。" || echo "没有写 LEXICA_CTID：只更新了这台机器（词境服务：systemctl status word-puzzle），容器没有更新。")
 EOF

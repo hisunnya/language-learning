@@ -75,14 +75,11 @@ Page({
   },
 
   onShow: function () {
-    // 回到前台：用冻结时的剩余时间接着走，切走的这段不算
-    if (this.game) this.game.resume();
+    if (this.game) this.game.tick();
     this.startTicker();
   },
 
   onHide: function () {
-    // 切到别的应用：暂停计时，免得学生回去看一眼消息就被扣时间
-    if (this.game) this.game.pause();
     this.stopTicker();
   },
 

@@ -113,12 +113,15 @@ var WP_DATA = {data};
   WPGameUI.init({{
     game: game,
     title: WP_DATA.title,
+    begin: function (meta) {{
+      return WPAdapter.begin(meta, WP_DATA.meta);
+    }},
     subtitle: WP_DATA.subtitle,
     pickUnit: WP_DATA.pickUnit,    wordTotal: WP_DATA.wordTotal,    homeExtra: WP_DATA.homeExtra,
     audio: WP_DATA.audio,
     backHref: WP_DATA.backHref,
     onFinish: function (report) {{
-      WPAdapter.save(report, WP_DATA.meta);
+      if (!WPAdapter.save(report, WP_DATA.meta)) alert(WPI18N.t('ig_scoreNotSaved'));
     }}
   }});
 }})();
@@ -443,10 +446,15 @@ var WP_DATA = {data};
     var group = WP_DATA.groups[k];
     var cfg = {{
       items: group.items, ords: group.ords,
-      save: function (report) {{ WPAdapter.save(report, WP_DATA.meta); }},
+      begin: function (meta) {{ return WPAdapter.begin(meta, WP_DATA.meta); }},
+      save: function (report) {{
+        var ok = WPAdapter.save(report, WP_DATA.meta);
+        if (!ok) alert(t('ig_scoreNotSaved'));
+        return Promise.resolve(ok);
+      }},
       playToken: function () {{ return ''; }}
     }};
-    if (WP_DATA.game === 'verb') {{
+    if (WP_DATA.game === 'verb' || WP_DATA.game === 'spell') {{
       cfg.items = [];
       cfg.ords = [];
       WP_DATA.groups.forEach(function (level) {{
@@ -455,19 +463,21 @@ var WP_DATA = {data};
       }});
       cfg.choices = cfg.items[0].choices || [];
       cfg.levelCount = WP_DATA.groups.length;
-      game = WPVerbUI.start(document.getElementById('igMount'), cfg);
-      return;
+      if (WP_DATA.game === 'verb') {{
+        game = WPVerbUI.start(document.getElementById('igMount'), cfg);
+        return;
+      }}
     }}
-    cfg.audioUrl = function (i) {{ return WP_DATA.audio[String(group.ords[i])] || ''; }};
+    cfg.audioUrl = function (i) {{ return WP_DATA.audio[String(cfg.ords[i])] || ''; }};
     var ui = WP_DATA.game === 'spell' ? WPSpellUI : WPOrderUI;
     game = ui.start(document.getElementById('igMount'), cfg);
   }}
   function pick() {{
     var mount = document.getElementById('igMount');
-    if (WP_DATA.game === 'verb') {{
+    if (WP_DATA.game === 'verb' || WP_DATA.game === 'spell') {{
       var total = WP_DATA.groups.reduce(function (sum, group) {{ return sum + group.items.length; }}, 0);
-      mount.innerHTML = '<div class="card"><h2>' + t('vh_startTitle') + '</h2><p class="sub">' +
-        t('vh_startInfo', {{ n: total }}) +
+      mount.innerHTML = '<div class="card"><h2>' + t('home_play') + '</h2><p class="sub">' +
+        (WP_DATA.game === 'verb' ? t('vh_startInfo', {{ n: total }}) : t('sp_rules')) +
         '</p><div class="ig-actions"><button type="button" class="btn" data-verb-start>' +
         t('home_play') + '</button></div></div>';
       mount.onclick = function (ev) {{
@@ -489,11 +499,11 @@ var WP_DATA = {data};
   document.getElementById('btn-lang').onclick = function () {{ WPI18N.setLang(WPI18N.lang() === 'en' ? 'zh' : 'en'); }};
   WPI18N.onChange(function () {{
     head();
-    if (!game && (WP_DATA.game === 'verb' || WP_DATA.groups.length > 1)) pick();
+    if (!game && (WP_DATA.game !== 'order' || WP_DATA.groups.length > 1)) pick();
   }});
   WPTheme.init(document.getElementById('offline-theme'));
   head();
-  if (WP_DATA.game === 'verb' || WP_DATA.groups.length > 1) pick(); else start(0);
+  if (WP_DATA.game !== 'order' || WP_DATA.groups.length > 1) pick(); else start(0);
 }})();
 </script>
 </body>

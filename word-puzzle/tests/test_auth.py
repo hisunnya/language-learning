@@ -539,8 +539,14 @@ class TestHttpAuth(HttpCase):
         admin = self.admin()
         score = {"score": 777, "matched": 3, "total_pairs": 3, "bank_title": "t",
                  "device": "spoofed", "nickname": "冒充者", "user_id": 1}
-        self.assertEqual(alice.json("POST", "/api/scores", score)[0], 201)
-        self.assertEqual(bob.json("POST", "/api/scores", dict(score, score=111))[0], 201)
+        self.assertEqual(alice.json("POST", "/api/scores", score)[0], 409, "在线成绩必须由服务端签发的 play_token 结算")
+        db = self.app.Handler.db
+        alice_user = self.svc.get_by_student_no(no1)
+        bob_user = self.svc.get_by_student_no(no2)
+        db.insert_score({"score": 777, "matched": 3, "total_pairs": 3, "bank_title": "t",
+                         "nickname": "甲"}, user_id=alice_user["id"])
+        db.insert_score({"score": 111, "matched": 3, "total_pairs": 3, "bank_title": "t",
+                         "nickname": "乙"}, user_id=bob_user["id"])
         mine = alice.json("GET", "/api/scores")[1]
         self.assertEqual([s["score"] for s in mine["scores"]], [777])
         self.assertEqual(mine["scores"][0]["nickname"], "甲", "昵称以登录信息为准")
@@ -600,8 +606,11 @@ class TestHttpAuth(HttpCase):
     def test_score_export_csv_filters_and_is_safe_for_excel(self):
         no, c = self.ready_student(name="=SUM(A1)", class_name="导出班", college="导出学院")
         other, c2 = self.ready_student(name="别班", class_name="别的班")
-        c.json("POST", "/api/scores", {"score": 500, "matched": 3, "total_pairs": 3, "bank_title": "题库A"})
-        c2.json("POST", "/api/scores", {"score": 900, "matched": 3, "total_pairs": 3, "bank_title": "题库B"})
+        db = self.app.Handler.db
+        db.insert_score({"score": 500, "matched": 3, "total_pairs": 3, "bank_title": "题库A"},
+                        user_id=self.svc.get_by_student_no(no)["id"])
+        db.insert_score({"score": 900, "matched": 3, "total_pairs": 3, "bank_title": "题库B"},
+                        user_id=self.svc.get_by_student_no(other)["id"])
         admin = self.admin()
         status, data = admin.request("GET", "/api/admin/export/scores.csv?class_name=导出班")
         self.assertEqual(status, 200)
@@ -615,7 +624,8 @@ class TestHttpAuth(HttpCase):
 
     def test_admin_page_data_includes_game_stats(self):
         no, c = self.ready_student(class_name="统计班")
-        c.json("POST", "/api/scores", {"score": 321, "matched": 1, "total_pairs": 1})
+        self.app.Handler.db.insert_score({"score": 321, "matched": 1, "total_pairs": 1},
+                                         user_id=self.svc.get_by_student_no(no)["id"])
         users = self.admin().json("GET", "/api/admin/users?class_name=统计班")[1]["users"]
         self.assertEqual((users[0]["games"], users[0]["best"]), (1, 321))
 
@@ -645,7 +655,8 @@ class TestLanEditionIsUnchanged(HttpCase):
         self.assertEqual((status, body["auth_enabled"], body["user"]), (200, False, None))
         self.assertEqual(c.json("GET", "/api/banks")[0], 200)
         self.assertEqual(c.json("GET", "/api/materials")[0], 200)
-        self.assertEqual(c.json("POST", "/api/scores", {"score": 5, "bank_title": "lan"})[0], 201)
+        status, body = c.json("POST", "/api/scores", {"score": 5, "bank_title": "lan"})
+        self.assertEqual((status, body["code"]), (409, "play_required"))
         self.assertEqual(c.json("POST", "/api/auth/login", {"student_no": "a", "password": "b"})[0], 404)
         self.assertEqual(c.json("GET", "/api/admin/users")[0], 404)
         self.assertIsNone(c.last.getheader("Set-Cookie"))

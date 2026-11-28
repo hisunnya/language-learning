@@ -9,6 +9,7 @@
 
   var KEY = 'wp_offline_scores_v1';
   var META_KEY = 'wp_offline_meta_v1';
+  var plays = {};
 
   function read() {
     try {
@@ -30,8 +31,25 @@
   global.WPAdapter = {
     mode: 'offline',
 
+    begin: function (meta, bank) {
+      try {
+        var counts = JSON.parse(localStorage.getItem(META_KEY) || '{}');
+        var key = [bank.bank_id || bank.title, bank.game_type || 'match',
+          meta.ords ? meta.ords.slice().sort(function (a, b) { return a - b; }).join(',') : meta.level || 0].join(':');
+        var n = (counts[key] || 0) + 1, tier = n <= 5 ? 0 : n <= 10 ? 1 : n <= 15 ? 2 : 3;
+        var token = 'offline-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        plays[token] = { key: key, saved: false };
+        return Promise.resolve({ play_token: token, attempt: n, score_factor: [1, .75, .5, .2][tier],
+          time_factor: [1, .8, .6, .4][tier], combo_seed: meta.combo_seed || 0 });
+      } catch (err) {
+        return Promise.reject(err);
+      }
+    },
+
     /** 存一次成绩 */
     save: function (report, meta) {
+      var play = plays[report.play_token];
+      if (play && play.saved) return true;
       var list = read();
       list.unshift({
         ts: Date.now(),
@@ -45,7 +63,17 @@
         level_count: report.level_count,
         detail: report.detail
       });
-      write(list);
+      if (!write(list)) return false;
+      if (play) {
+        try {
+          var counts = JSON.parse(localStorage.getItem(META_KEY) || '{}');
+          if (report.score > 0) counts[play.key] = (counts[play.key] || 0) + 1;
+          localStorage.setItem(META_KEY, JSON.stringify(counts));
+          play.saved = true;
+        } catch (err) {
+          return false;
+        }
+      }
       return true;
     },
 

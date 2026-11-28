@@ -359,7 +359,7 @@ in `deploy.local.env`, deploy-all packs `word-puzzle hub topic-app/topic-app ham
 tarball, `pct push`es it into the container, unpacks it next to the old checkout, swaps it in and runs
 `word-puzzle/deploy/family/install.sh` there (dependencies, code sync, systemd units, nginx config, health check).
 It then updates the host's forwarding (`hub/deploy/install.sh`). The database is never touched by a deploy; schema
-changes are migrations in `server/db.py` (`PRAGMA user_version`, now 3) that run at backend start. After production
+changes are migrations in `server/db.py` (`PRAGMA user_version`, now 4) that run at backend start. After production
 is updated, synchronize the same code and production data to the private cloud copy as described below.
 
 The older host-level layout (`/srv/word-puzzle`, `/var/www/<module>`, `word-puzzle/deploy/install.sh`) is the retired

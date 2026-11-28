@@ -45,15 +45,15 @@ def theme_blocks() -> dict[str, dict[str, str]]:
     return blocks
 
 
-def scoring_constants(source: str) -> dict[str, int]:
+def scoring_constants(source: str) -> dict[str, float]:
     """从 game-core.js 里读出计分常量（两份 core 的名字一样）。"""
     names = ("LEVEL_TIME", "LEVEL_BONUS_MAX", "PAIR_SCORE", "COMBO_STEP", "COMBO_CAP",
              "MISS_TIME", "MISS_SCORE", "TIME_BONUS")
     found = {}
     for name in names:
-        match = re.search(r"var\s+%s\s*=\s*(\d+)\s*;" % name, source)
+        match = re.search(r"var\s+%s\s*=\s*(\d+(?:\.\d+)?)\s*;" % name, source)
         if match:
-            found[name] = int(match.group(1))
+            found[name] = float(match.group(1))
     return found
 
 
@@ -195,9 +195,9 @@ class TestSharedCore(unittest.TestCase):
         c = scoring_constants(read("utils/game-core.js"))
         readme = read("README.md")
         self.assertIn("每对 +%d 分" % c["PAIR_SCORE"], readme)
-        self.assertIn("连击每级 +%d 分" % c["COMBO_STEP"], readme)
+        self.assertIn("二至七连", readme)
         self.assertIn("扣 %d 秒扣 %d 分" % (c["MISS_TIME"], c["MISS_SCORE"]), readme)
-        self.assertIn("每秒折算 %d 分" % c["TIME_BONUS"], readme)
+        self.assertIn("最多 %d%%" % (c["TIME_BONUS"] * 100), readme)
         self.assertIn("每关 %d 秒" % c["LEVEL_TIME"], readme)
         # 2026-11-21 减半以前的旧规则不能当成现行规则写
         self.assertNotIn("每对 +100，连击每级 +20", readme)

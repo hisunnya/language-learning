@@ -14,7 +14,7 @@ from .db import Database
 
 SCORE_COLUMNS = ("s.id, s.user_id, s.device, s.nickname, s.bank_id, s.bank_title, s.score, s.matched, "
                  "s.total_pairs, s.wrong, s.best_combo, s.duration, s.level_count, s.created_at, s.game_type, "
-                 "u.student_no, u.name, u.class_name")
+                 "s.rule_version, u.student_no, u.name, u.class_name")
 
 
 def levels_in_bank(db: Database, bank_id: int | None, cache: dict) -> int | None:
@@ -32,6 +32,8 @@ def levels_in_bank(db: Database, bank_id: int | None, cache: dict) -> int | None
 def is_complete(play: dict, levels: int | None) -> bool:
     if int(play.get("total_pairs") or 0) <= 0 or int(play.get("matched") or 0) < int(play["total_pairs"]):
         return False
+    if int(play.get("rule_version") or 0) >= 4:
+        return True
     return levels is None or int(play.get("level_count") or 0) >= levels
 
 
@@ -114,5 +116,6 @@ def plays_of(db: Database, *, user_id=None, device=None, bank_id=None, bank_titl
         out.append({"id": r["id"], "created_at": r["created_at"], "score": r["score"], "matched": r["matched"],
                     "total_pairs": r["total_pairs"], "wrong": r["wrong"], "best_combo": r["best_combo"],
                     "duration": r["duration"], "level_count": r["level_count"], "levels_total": levels,
-                    "completed": is_complete(r, levels), "game_type": r["game_type"]})
+                    "completed": is_complete(r, levels), "game_type": r["game_type"],
+                    "rule_version": r.get("rule_version", 0)})
     return out
